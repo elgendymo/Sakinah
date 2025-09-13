@@ -1,0 +1,21 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "tasks": {
+    "build": {
+      "inputs": ["src/**", "public/**", "package.json", "tsconfig.json", "next.config.js", ".env.*local"]
+    },
+    "dev": {
+      "inputs": ["src/**", "public/**", "package.json", "tsconfig.json", "next.config.js", ".env.*local"]
+    },
+    "lint": {
+      "inputs": ["src/**", "package.json", "tsconfig.json", ".eslintrc.json"]
+    },
+    "type-check": {
+      "inputs": ["src/**", "package.json", "tsconfig.json"]
+    },
+    "clean": {
+      "inputs": []
+    }
+  }
+}
