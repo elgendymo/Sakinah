@@ -1,19 +1,91 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import '@sakinah/ui/styles';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Islamic Color System */
+    --emerald-50: 236 253 245;
+    --emerald-100: 209 250 229;
+    --emerald-200: 167 243 208;
+    --emerald-300: 110 231 183;
+    --emerald-400: 52 211 153;
+    --emerald-500: 16 185 129;
+    --emerald-600: 5 150 105;
+    --emerald-700: 4 120 87;
+    --emerald-800: 6 95 70;
+    --emerald-900: 6 78 59;
+
+    --gold-50: 255 251 235;
+    --gold-100: 254 243 199;
+    --gold-200: 253 230 138;
+    --gold-300: 252 211 77;
+    --gold-400: 251 191 36;
+    --gold-500: 245 158 11;
+    --gold-600: 217 119 6;
+    --gold-700: 180 83 9;
+    --gold-800: 146 64 14;
+    --gold-900: 120 53 15;
+
+    --sage-50: 246 247 246;
+    --sage-100: 229 232 229;
+    --sage-200: 203 209 203;
+    --sage-300: 165 176 165;
+    --sage-400: 127 143 127;
+    --sage-500: 99 111 99;
+    --sage-600: 79 89 79;
+    --sage-700: 63 71 63;
+    --sage-800: 47 52 47;
+    --sage-900: 31 34 31;
+
+    --navy-400: 59 130 246;
+    --navy-600: 37 99 235;
+    --navy-800: 30 58 138;
+
+    /* Base colors */
+    --background: var(--emerald-50);
+    --foreground: var(--sage-900);
+    --card: 0 0% 100%;
+    --card-foreground: var(--sage-800);
+    --primary: var(--emerald-500);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--gold-500);
+    --secondary-foreground: 0 0% 100%;
+    --accent: var(--emerald-600);
+    --accent-foreground: 0 0% 100%;
+    --muted: var(--sage-100);
+    --muted-foreground: var(--sage-700);
+    --border: var(--sage-200);
+    --radius: 0.5rem;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: 222.2 84% 4.9%;
-      --foreground: 210 40% 98%;
+      --background: var(--sage-900);
+      --foreground: var(--sage-50);
+      --card: var(--sage-800);
+      --card-foreground: var(--sage-100);
+      --primary: var(--emerald-400);
+      --primary-foreground: var(--sage-900);
+      --secondary: var(--gold-400);
+      --secondary-foreground: var(--sage-900);
+      --accent: var(--emerald-500);
+      --accent-foreground: 0 0% 100%;
+      --muted: var(--sage-700);
+      --muted-foreground: var(--sage-300);
+      --border: var(--sage-700);
     }
+  }
+
+  * {
+    border-color: rgb(var(--border) / 0.2);
+  }
+
+  body {
+    background: linear-gradient(135deg, rgb(var(--emerald-50)), rgb(255 255 255), rgb(var(--sage-50)));
+    color: rgb(var(--foreground));
+    min-height: 100vh;
   }
 }
 
@@ -25,15 +97,56 @@
     direction: rtl;
   }
 
+  .islamic-pattern {
+    background-image:
+      radial-gradient(circle at 20% 50%, rgb(var(--emerald-500) / 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgb(var(--gold-500) / 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgb(var(--navy-600) / 0.02) 0%, transparent 50%);
+  }
+
+  .islamic-gradient {
+    background: linear-gradient(135deg,
+      rgb(var(--emerald-50)),
+      rgb(255 255 255) 50%,
+      rgb(var(--sage-50)));
+  }
+
+  .card-islamic {
+    @apply bg-white shadow-md p-6;
+    box-shadow: 0 4px 6px -1px rgb(var(--emerald-500) / 0.08), 0 2px 4px -2px rgb(var(--emerald-500) / 0.06);
+    color: rgb(var(--sage-800));
+  }
+
   .card-hover {
     @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+    @apply hover:shadow-emerald-200/50;
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium;
+    @apply bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-all font-medium;
+    @apply shadow-sm hover:shadow-md hover:shadow-emerald-200/50;
   }
 
   .btn-secondary {
-    @apply bg-primary-100 text-primary-800 px-4 py-2 rounded-lg hover:bg-primary-200 transition-colors font-medium;
+    @apply bg-gold-100 text-gold-800 px-4 py-2 rounded-lg hover:bg-gold-200 transition-all font-medium;
+    @apply border border-gold-200/50;
+  }
+
+  .btn-outline {
+    @apply border-2 border-emerald-600 text-emerald-700 px-4 py-2 rounded-lg;
+    @apply hover:bg-emerald-50 transition-all font-medium;
+  }
+
+  .islamic-divider {
+    @apply relative;
+  }
+
+  .islamic-divider::after {
+    content: '';
+    @apply absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-gold-400/30 to-transparent;
+  }
+
+  .golden-ratio {
+    --ratio: 1.618;
   }
 }

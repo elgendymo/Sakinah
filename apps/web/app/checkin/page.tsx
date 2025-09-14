@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { api } from '@/lib/api';
+import PageContainer from '@/components/PageContainer';
 
 const REFLECTION_PROMPTS = [
   'What am I most grateful for today?',
@@ -67,37 +68,37 @@ export default function CheckinPage() {
   const moodLabels = ['Struggling', 'Neutral', 'Content', 'Happy', 'Blessed'];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <PageContainer
+      title="Daily Muhasabah"
+      subtitle="Reflect on your day and set intentions with Allah's guidance"
+      maxWidth="lg"
+      padding="lg"
+    >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-900 mb-2">
-            Daily Muhasabah
-          </h1>
-          <p className="text-gray-600">Self-accountability before Allah</p>
-          <div className="arabic-text text-primary-700 mt-4 bg-white/50 p-4 rounded-lg">
+          <div className="arabic-text text-emerald-700 mt-4 card-islamic p-4 rounded-lg shadow-sm">
             حاسبوا أنفسكم قبل أن تحاسبوا
           </div>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-sm text-sage-600 mt-2">
             "Hold yourselves accountable before you are held accountable"
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Morning Intention */}
-          <div className="bg-white rounded-lg p-6 shadow-md">
-            <h2 className="text-xl font-semibold text-primary-800 mb-4">
+          <div className="card-islamic rounded-xl p-6 shadow-lg">
+            <h2 className="text-xl font-semibold text-sage-900 mb-4">
               🌅 Morning Intention
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-sage-700 mb-2">
                   What is your spiritual intention for today?
                 </label>
                 <textarea
                   value={intention}
                   onChange={(e) => setIntention(e.target.value)}
                   placeholder="I intend to remember Allah more, be patient with my family, read Quran..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="w-full px-4 py-3 border border-sage-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-colors"
                   rows={3}
                 />
               </div>
@@ -105,8 +106,8 @@ export default function CheckinPage() {
           </div>
 
           {/* Evening Reflection */}
-          <div className="bg-white rounded-lg p-6 shadow-md">
-            <h2 className="text-xl font-semibold text-primary-800 mb-4">
+          <div className="card-islamic rounded-xl p-6 shadow-lg">
+            <h2 className="text-xl font-semibold text-sage-900 mb-4">
               🌙 Evening Reflection
             </h2>
 
@@ -203,7 +204,6 @@ export default function CheckinPage() {
             "Indeed, Allah will not change the condition of a people until they change what is in themselves" (Quran 13:11)
           </p>
         </div>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

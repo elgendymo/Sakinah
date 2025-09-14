@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import PageContainer from '@/components/PageContainer';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -33,8 +34,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+    <PageContainer
+      title="Welcome Back"
+      subtitle="Continue your spiritual journey with Allah's guidance"
+      maxWidth="md"
+      padding="xl"
+      className="flex items-center justify-center"
+    >
+      <div className="card-islamic p-8 rounded-xl shadow-lg max-w-md w-full">
         <h1 className="text-3xl font-bold text-primary-900 mb-6 text-center">
           Welcome to Sakinah
         </h1>
@@ -66,7 +73,7 @@ export default function LoginPage() {
 
         {message && (
           <div className={`mt-4 p-3 rounded-lg text-center ${
-            message.includes('error') ? 'bg-red-100 text-red-700' : 'bg-primary-100 text-primary-700'
+            message.includes('error') ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
           }`}>
             {message}
           </div>
@@ -76,6 +83,6 @@ export default function LoginPage() {
           We'll send you a secure link to sign in. No password needed.
         </p>
       </div>
-    </div>
+    </PageContainer>
   );
 }

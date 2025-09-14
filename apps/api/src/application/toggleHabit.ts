@@ -17,17 +17,25 @@ export async function toggleHabit(input: ToggleHabitInput): Promise<Result<Toggl
     const habitRepo = new HabitRepository();
 
     // Get the habit
-    const habit = await habitRepo.getHabit(input.habitId, input.userId);
+    const habitResult = await habitRepo.getHabit(input.habitId, input.userId);
 
-    if (!habit) {
+    if (!habitResult.ok) {
+      return habitResult;
+    }
+
+    if (!habitResult.value) {
       return Result.error(new NotFoundError('Habit'));
     }
 
+    const habit = habitResult.value;
     const today = new Date().toISOString().split('T')[0];
 
     if (input.completed) {
       // Mark as completed
-      await habitRepo.markCompleted(input.habitId, input.userId, today);
+      const markResult = await habitRepo.markCompleted(input.habitId, input.userId, today);
+      if (Result.isError(markResult)) {
+        return markResult;
+      }
 
       // Update streak
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -35,15 +43,18 @@ export async function toggleHabit(input: ToggleHabitInput): Promise<Result<Toggl
 
       const newStreakCount = isConsecutive ? habit.streakCount + 1 : 1;
 
-      await habitRepo.updateHabit(input.habitId, input.userId, {
-        streakCount: newStreakCount,
-        lastCompletedOn: today,
-      });
+      const streakResult = await habitRepo.updateHabitStreak(input.habitId, input.userId, newStreakCount, today);
+      if (Result.isError(streakResult)) {
+        return streakResult;
+      }
 
       return Result.ok({ streakCount: newStreakCount });
     } else {
       // Mark as not completed
-      await habitRepo.markIncomplete(input.habitId, input.userId, today);
+      const unmarkResult = await habitRepo.markIncomplete(input.habitId, input.userId, today);
+      if (Result.isError(unmarkResult)) {
+        return unmarkResult;
+      }
 
       // Don't reset streak if uncompleting today
       return Result.ok({ streakCount: habit.streakCount });

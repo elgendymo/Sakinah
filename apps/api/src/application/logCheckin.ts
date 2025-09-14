@@ -16,20 +16,29 @@ export async function logCheckin(input: LogCheckinInput): Promise<Result<Checkin
     const today = new Date().toISOString().split('T')[0];
 
     // Check if already checked in today
-    const existing = await checkinRepo.getByDate(input.userId, today);
+    const existingResult = await checkinRepo.getByDate(input.userId, today);
 
-    if (existing) {
+    if (!existingResult.ok) {
+      return existingResult;
+    }
+
+    if (existingResult.value) {
       // Update existing checkin
-      const updated = await checkinRepo.updateCheckin(existing.id, input.userId, {
+      const updateResult = await checkinRepo.updateCheckin(existingResult.value.id, input.userId, {
         mood: input.mood,
         intention: input.intention,
         reflection: input.reflection,
       });
-      return Result.ok(updated);
+
+      if (!updateResult.ok) {
+        return updateResult;
+      }
+
+      return Result.ok(updateResult.value);
     }
 
     // Create new checkin
-    const checkin = await checkinRepo.createCheckin({
+    const createResult = await checkinRepo.createCheckin({
       userId: input.userId,
       date: today,
       mood: input.mood,
@@ -37,7 +46,11 @@ export async function logCheckin(input: LogCheckinInput): Promise<Result<Checkin
       reflection: input.reflection,
     });
 
-    return Result.ok(checkin);
+    if (!createResult.ok) {
+      return createResult;
+    }
+
+    return Result.ok(createResult.value);
   } catch (error) {
     return Result.error(error as Error);
   }

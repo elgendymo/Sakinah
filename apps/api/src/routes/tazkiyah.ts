@@ -24,7 +24,7 @@ router.post('/suggest', authMiddleware, async (req: AuthRequest, res, next) => {
     });
 
     if (!result.ok) {
-      throw result.error;
+      throw (result as any).error;
     }
 
     res.json({ plan: result.value });

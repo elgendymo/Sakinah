@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import { api } from '@/lib/api';
+import PageContainer from '@/components/PageContainer';
 
 const COMMON_STRUGGLES = {
   takhliyah: [
@@ -63,14 +64,15 @@ export default function TazkiyahPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-2xl">
-        <h1 className="text-3xl font-bold text-primary-900 mb-8 text-center">
-          Begin Your Tazkiyah Journey
-        </h1>
+    <PageContainer
+      title="Begin Your Tazkiyah Journey"
+      subtitle="Choose your path of spiritual purification"
+      maxWidth="lg"
+      padding="lg"
+    >
 
         {!suggestedPlan ? (
-          <div className="bg-white rounded-lg p-8 shadow-md">
+          <div className="card-islamic rounded-xl p-8 shadow-lg">
             {/* Mode Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -85,7 +87,7 @@ export default function TazkiyahPage() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="font-semibold text-primary-800">Takhliyah</div>
+                  <div className="font-semibold text-sage-900">Takhliyah</div>
                   <div className="text-sm text-gray-600 mt-1">Remove spiritual diseases</div>
                 </button>
                 <button
@@ -96,7 +98,7 @@ export default function TazkiyahPage() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="font-semibold text-primary-800">Taḥliyah</div>
+                  <div className="font-semibold text-sage-900">Taḥliyah</div>
                   <div className="text-sm text-gray-600 mt-1">Build beautiful virtues</div>
                 </button>
               </div>
@@ -147,8 +149,8 @@ export default function TazkiyahPage() {
             </form>
           </div>
         ) : (
-          <div className="bg-white rounded-lg p-8 shadow-md">
-            <h2 className="text-2xl font-semibold text-primary-800 mb-6">
+          <div className="card-islamic rounded-xl p-8 shadow-lg">
+            <h2 className="text-2xl font-semibold text-sage-900 mb-6">
               Your Personalized Plan
             </h2>
 
@@ -192,7 +194,6 @@ export default function TazkiyahPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }

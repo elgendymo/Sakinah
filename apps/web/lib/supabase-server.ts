@@ -1,12 +1,59 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export function createClient() {
-  const cookieStore = cookies();
+export async function createClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const useSupabase = process.env.NEXT_PUBLIC_USE_SUPABASE === 'true';
+
+  // In development, use mock client unless Supabase is explicitly enabled
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  if (isDevelopment && !useSupabase) {
+    console.info('Using mock auth server client for local development');
+    // Return a mock client that simulates logged-in user for development
+    return {
+      auth: {
+        getSession: () => Promise.resolve({
+          data: {
+            session: {
+              access_token: 'mock-token-for-dev',
+              user: { id: 'test-user-123', email: 'dev@sakinah.app' }
+            }
+          },
+          error: null
+        }),
+        getUser: () => Promise.resolve({
+          data: {
+            user: { id: 'test-user-123', email: 'dev@sakinah.app' }
+          },
+          error: null
+        }),
+        signInWithOtp: () => Promise.resolve({ data: {}, error: null }),
+        signOut: () => Promise.resolve({ error: null }),
+        onAuthStateChange: () => ({ data: { subscription: null }, unsubscribe: () => {} }),
+      },
+    } as any;
+  }
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase environment variables not found, using fallback mock server client');
+    // Return a minimal mock client
+    return {
+      auth: {
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+        signInWithOtp: () => Promise.resolve({ data: {}, error: null }),
+        signOut: () => Promise.resolve({ error: null }),
+        onAuthStateChange: () => ({ data: { subscription: null }, unsubscribe: () => {} }),
+      },
+    } as any;
+  }
+
+  const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl!,
+    supabaseAnonKey!,
     {
       cookies: {
         get(name: string) {

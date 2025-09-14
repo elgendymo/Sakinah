@@ -1,53 +1,53 @@
 import { ContentSnippet, ContentType } from '@sakinah/types';
-import { supabase } from '../db/supabase';
+import { getDatabase } from '../database';
 
 export class ContentRepository {
+  private db = getDatabase();
+
   async getContent(filters: {
     tags?: string[];
     type?: ContentType;
   } = {}): Promise<ContentSnippet[]> {
-    let query = supabase.from('content_snippets').select('*');
-
-    if (filters.type) {
-      query = query.eq('type', filters.type);
-    }
+    let result;
 
     if (filters.tags && filters.tags.length > 0) {
-      query = query.contains('tags', filters.tags);
+      result = await this.db.getContentSnippetsByTags(filters.tags);
+    } else {
+      result = await this.db.getAllContentSnippets();
     }
 
-    const { data: content, error } = await query.limit(20);
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
-    if (error) throw error;
+    let content = result.data || [];
 
-    return content.map(this.mapToModel);
+    // Apply type filter if specified
+    if (filters.type) {
+      content = content.filter(item => item.type === filters.type);
+    }
+
+    // Limit to 20 items
+    return content.slice(0, 20);
   }
 
-  async createContent(data: Omit<ContentSnippet, 'id' | 'createdAt'>): Promise<ContentSnippet> {
-    const { data: content, error } = await supabase
-      .from('content_snippets')
-      .insert({
-        type: data.type,
-        text: data.text,
-        ref: data.ref,
-        tags: data.tags,
-      })
-      .select()
-      .single();
+  async getById(id: string): Promise<ContentSnippet | null> {
+    const result = await this.db.getContentSnippetById(id);
 
-    if (error) throw error;
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
-    return this.mapToModel(content);
+    return result.data;
   }
 
-  private mapToModel(row: any): ContentSnippet {
-    return {
-      id: row.id,
-      type: row.type,
-      text: row.text,
-      ref: row.ref,
-      tags: row.tags,
-      createdAt: row.created_at,
-    };
+  async getAllContent(): Promise<ContentSnippet[]> {
+    const result = await this.db.getAllContentSnippets();
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    return result.data || [];
   }
 }

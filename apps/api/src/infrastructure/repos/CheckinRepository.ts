@@ -1,68 +1,42 @@
 import { Checkin } from '@sakinah/types';
-import { supabase } from '../db/supabase';
+import { Result } from '@/shared/result';
+import { RepositoryResultHandler } from '@/shared/repository-result-handler';
+import { CreateCheckinInput, UpdateCheckinInput } from './types';
+import { getDatabase } from '../database';
 
 export class CheckinRepository {
-  async createCheckin(data: Omit<Checkin, 'id' | 'createdAt'>): Promise<Checkin> {
-    const { data: checkin, error } = await supabase
-      .from('checkins')
-      .insert({
-        user_id: data.userId,
-        date: data.date,
-        mood: data.mood,
-        intention: data.intention,
-        reflection: data.reflection,
-      })
-      .select()
-      .single();
+  private db = getDatabase();
 
-    if (error) throw error;
-
-    return this.mapToModel(checkin);
+  async createCheckin(data: CreateCheckinInput): Promise<Result<Checkin>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      const result = await this.db.createCheckin(data);
+      const handled = RepositoryResultHandler.handleRequiredResult(result, 'Checkin');
+      if (Result.isError(handled)) {
+        throw handled.error;
+      }
+      return handled.value;
+    });
   }
 
-  async getByDate(userId: string, date: string): Promise<Checkin | null> {
-    const { data: checkin, error } = await supabase
-      .from('checkins')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('date', date)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
-    }
-
-    return this.mapToModel(checkin);
+  async getByDate(userId: string, date: string): Promise<Result<Checkin | null>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      const result = await this.db.getCheckinByDate(userId, date);
+      const handled = RepositoryResultHandler.handleSingleResult(result);
+      if (Result.isError(handled)) {
+        throw handled.error;
+      }
+      return handled.value;
+    });
   }
 
-  async updateCheckin(id: string, userId: string, updates: Partial<Checkin>): Promise<Checkin> {
-    const { data: checkin, error } = await supabase
-      .from('checkins')
-      .update({
-        mood: updates.mood,
-        intention: updates.intention,
-        reflection: updates.reflection,
-      })
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return this.mapToModel(checkin);
-  }
-
-  private mapToModel(row: any): Checkin {
-    return {
-      id: row.id,
-      userId: row.user_id,
-      date: row.date,
-      mood: row.mood,
-      intention: row.intention,
-      reflection: row.reflection,
-      createdAt: row.created_at,
-    };
+  async updateCheckin(id: string, userId: string, updates: UpdateCheckinInput): Promise<Result<Checkin>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      const result = await this.db.updateCheckin(id, userId, updates);
+      const handled = RepositoryResultHandler.handleRequiredResult(result, 'Checkin');
+      if (Result.isError(handled)) {
+        throw handled.error;
+      }
+      return handled.value;
+    });
   }
 }

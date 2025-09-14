@@ -1,20 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/shared/logger';
 
-const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
+// Allow missing Supabase config when using SQLite backend
+const usingsqlite = process.env.DB_BACKEND?.toLowerCase() === 'sqlite';
+
+if (!usingsqlite && (!supabaseUrl || !supabaseServiceKey)) {
   logger.error('Missing Supabase environment variables');
   throw new Error('Supabase configuration missing');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+// Only create client if we have valid configuration
+let supabaseInstance: any = null;
+
+if (supabaseUrl && supabaseServiceKey) {
+  supabaseInstance = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+} else if (!usingsqlite) {
+  throw new Error('Supabase configuration required when not using SQLite backend');
+}
+
+export const supabase = supabaseInstance;
 
 export type Database = {
   public: {

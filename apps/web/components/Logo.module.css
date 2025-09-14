@@ -1,0 +1,98 @@
+/* Gentle, minimal logo animation styles */
+.logo-container {
+  display: inline-block;
+  transform-origin: center center;
+}
+
+.logo-image {
+  display: block;
+  border-radius: 50%;
+  animation: slowPulse 4s infinite ease-in-out, slightFloat 6s infinite ease-in-out;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.3));
+}
+
+/* Main pulse animation - very subtle scaling and glow */
+@keyframes slowPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: scale(1.02); /* Only 2% scale - very subtle */
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  }
+}
+
+/* Optional wavy float effect */
+@keyframes slightFloat {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px); /* Very subtle 2px movement */
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Responsive sizes */
+.logo-small {
+  width: 40px;
+  height: 40px;
+}
+
+.logo-medium {
+  width: 80px;
+  height: 80px;
+}
+
+.logo-large {
+  width: 120px;
+  height: 120px;
+}
+
+.logo-xl {
+  width: 160px;
+  height: 160px;
+}
+
+/* Mobile-first responsive approach */
+@media (max-width: 640px) {
+  .logo-responsive {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+@media (min-width: 641px) {
+  .logo-responsive {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .logo-responsive {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* Option to disable animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .logo-image {
+    animation: none;
+  }
+}
+
+/* Static version without animation */
+.logo-static {
+  display: block;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.3));
+}

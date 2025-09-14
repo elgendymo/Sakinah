@@ -19,7 +19,9 @@
       "@/*": ["./app/*"],
       "@/components/*": ["./components/*"],
       "@/lib/*": ["./lib/*"],
-      "@/features/*": ["./features/*"]
+      "@/features/*": ["./features/*"],
+      "@sakinah/ui": ["../../packages/ui/src"],
+      "@sakinah/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

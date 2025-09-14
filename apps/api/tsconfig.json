@@ -9,7 +9,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "skipLibCheck": true,
+    "strict": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 // import { api } from '@/lib/api'; // For future use
+import PageContainer from '@/components/PageContainer';
 
 interface JournalEntry {
   id: string;
@@ -116,42 +117,40 @@ export default function JournalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-900 mb-2">
-            Spiritual Journal
-          </h1>
-          <p className="text-gray-600">A private space for your thoughts and reflections</p>
-        </div>
+    <PageContainer
+      title="Spiritual Journal"
+      subtitle="A private space for your thoughts and reflections"
+      maxWidth="xl"
+      padding="lg"
+    >
 
         {/* New Entry Form */}
-        <div className="bg-white rounded-lg p-6 shadow-md mb-8">
+        <div className="card-islamic rounded-xl p-6 shadow-lg mb-8">
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-sage-700">
                   What's on your heart today?
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowPrompts(!showPrompts)}
-                  className="text-sm text-primary-600 hover:text-primary-700"
+                  className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
                 >
                   {showPrompts ? 'Hide' : 'Show'} prompts
                 </button>
               </div>
 
               {showPrompts && (
-                <div className="mb-4 p-4 bg-primary-50 rounded-lg">
-                  <div className="text-sm text-gray-600 mb-2">Click to use a prompt:</div>
+                <div className="mb-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200/50">
+                  <div className="text-sm text-sage-600 mb-2">Click to use a prompt:</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {JOURNAL_PROMPTS.map((prompt, index) => (
                       <button
                         key={index}
                         type="button"
                         onClick={() => insertPrompt(prompt)}
-                        className="text-left p-2 text-sm text-primary-700 hover:bg-primary-100 rounded transition-colors"
+                        className="text-left p-2 text-sm text-emerald-700 hover:bg-emerald-100 rounded transition-colors"
                       >
                         {prompt}
                       </button>
@@ -164,13 +163,13 @@ export default function JournalPage() {
                 value={newEntry}
                 onChange={(e) => setNewEntry(e.target.value)}
                 placeholder="Write your thoughts, reflections, duas, or spiritual insights..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 resize-none"
+                className="w-full px-4 py-3 border border-sage-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-colors"
                 rows={6}
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-sage-700 mb-2">
                 Tags (optional)
               </label>
               <input
@@ -178,7 +177,7 @@ export default function JournalPage() {
                 value={newTags}
                 onChange={(e) => setNewTags(e.target.value)}
                 placeholder="dua, gratitude, struggle, lesson (separate with commas)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-2 border border-sage-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
 
@@ -196,9 +195,9 @@ export default function JournalPage() {
         <div className="space-y-6">
           {entries.length > 0 ? (
             entries.map((entry) => (
-              <div key={entry.id} className="bg-white rounded-lg p-6 shadow-md">
+              <div key={entry.id} className="card-islamic rounded-xl p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-sage-500">
                     {formatDate(entry.createdAt)}
                   </div>
                   {entry.tags && entry.tags.length > 0 && (
@@ -206,7 +205,7 @@ export default function JournalPage() {
                       {entry.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="px-2 py-1 text-xs bg-primary-100 text-primary-700 rounded-full"
+                          className="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200/50"
                         >
                           {tag}
                         </span>
@@ -226,8 +225,8 @@ export default function JournalPage() {
           ) : (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">📝</div>
-              <p className="text-gray-600 mb-4">No journal entries yet</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sage-600 mb-4">No journal entries yet</p>
+              <p className="text-sm text-sage-500">
                 Start writing to capture your spiritual journey
               </p>
             </div>
@@ -235,17 +234,16 @@ export default function JournalPage() {
         </div>
 
         {/* Reminder */}
-        <div className="mt-12 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg p-6">
+        <div className="mt-12 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl p-6 shadow-lg islamic-pattern">
           <div className="text-center">
             <div className="arabic-text mb-2">
               وَذَكِّرْ فَإِنَّ الذِّكْرَىٰ تَنفَعُ الْمُؤْمِنِينَ
             </div>
-            <p className="text-primary-100 text-sm">
+            <p className="text-white/90 text-sm">
               "And remind, for indeed, the reminder benefits the believers" (Quran 51:55)
             </p>
           </div>
         </div>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

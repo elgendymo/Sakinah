@@ -1,61 +1,87 @@
 import { Plan } from '@sakinah/types';
-import { supabase } from '../db/supabase';
+import { getDatabase } from '../database';
 
 export class PlanRepository {
+  private db = getDatabase();
+
   async createPlan(data: Omit<Plan, 'id' | 'createdAt'>): Promise<Plan> {
-    const { data: plan, error } = await supabase
-      .from('plans')
-      .insert({
-        user_id: data.userId,
-        kind: data.kind,
-        target: data.target,
-        micro_habits: data.microHabits,
-        dua_ids: data.duaIds,
-        content_ids: data.contentIds,
-        status: data.status,
-      })
-      .select()
-      .single();
+    const result = await this.db.createPlan({
+      userId: data.userId,
+      kind: data.kind,
+      target: data.target,
+      microHabits: data.microHabits,
+      duaIds: data.duaIds,
+      contentIds: data.contentIds,
+    });
 
-    if (error) throw error;
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
-    return this.mapToModel(plan);
+    return result.data!;
   }
 
   async getActivePlans(userId: string): Promise<Plan[]> {
-    const { data: plans, error } = await supabase
-      .from('plans')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
+    const result = await this.db.getPlansByUserId(userId);
 
-    if (error) throw error;
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
-    return plans.map(this.mapToModel);
+    const plans = result.data || [];
+    return plans.filter(plan => plan.status === 'active');
+  }
+
+  async getAllUserPlans(userId: string): Promise<Plan[]> {
+    const result = await this.db.getPlansByUserId(userId);
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    return result.data || [];
+  }
+
+  async getPlanById(id: string, userId: string): Promise<Plan | null> {
+    const result = await this.db.getPlanById(id);
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    const plan = result.data;
+    if (plan && plan.userId !== userId) {
+      return null;
+    }
+
+    return plan;
   }
 
   async archivePlan(id: string, userId: string): Promise<void> {
-    const { error } = await supabase
-      .from('plans')
-      .update({ status: 'archived' })
-      .eq('id', id)
-      .eq('user_id', userId);
+    // First verify the plan belongs to the user
+    const plan = await this.getPlanById(id, userId);
+    if (!plan) {
+      throw new Error('Plan not found or access denied');
+    }
 
-    if (error) throw error;
+    const result = await this.db.updatePlanStatus(id, 'archived');
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
   }
 
-  private mapToModel(row: any): Plan {
-    return {
-      id: row.id,
-      userId: row.user_id,
-      kind: row.kind,
-      target: row.target,
-      microHabits: row.micro_habits,
-      duaIds: row.dua_ids,
-      contentIds: row.content_ids,
-      status: row.status,
-      createdAt: row.created_at,
-    };
+  async activatePlan(id: string, userId: string): Promise<void> {
+    // First verify the plan belongs to the user
+    const plan = await this.getPlanById(id, userId);
+    if (!plan) {
+      throw new Error('Plan not found or access denied');
+    }
+
+    const result = await this.db.updatePlanStatus(id, 'active');
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
   }
 }

@@ -125,22 +125,51 @@ Pluggable AI providers via factory pattern:
 
 ## Environment Configuration
 
-### Required Environment Variables
+### Quick Start (No Configuration Needed!)
 ```bash
-# Supabase (both apps)
+# Just run this command - no environment setup required!
+npm run dev
+```
+The application automatically uses SQLite for local development with mock authentication.
+
+### Advanced Configuration (Optional)
+```bash
+# API Configuration (optional - has sensible defaults)
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+FRONTEND_URL=http://localhost:3000
+
+# AI Provider (optional - defaults to rules-based)
+AI_PROVIDER=rules               # or 'llm'
+OPENAI_API_KEY=                 # only needed if using 'llm'
+
+# Database Override (optional - auto-detected)
+DB_BACKEND=sqlite               # or 'supabase'
+
+# Supabase (only needed for production or if USE_SUPABASE=true)
+USE_SUPABASE=true               # enable Supabase in development
+NEXT_PUBLIC_USE_SUPABASE=true   # enable Supabase on frontend
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=      # API only
 SUPABASE_JWT_SECRET=            # API only
-
-# API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-FRONTEND_URL=http://localhost:3000
-
-# AI Provider
-AI_PROVIDER=rules               # or 'llm'
-OPENAI_API_KEY=                 # if using llm
 ```
+
+### Development Modes
+
+1. **Local SQLite Mode (Default)**
+   - No configuration required
+   - Automatic SQLite database with mock authentication
+   - Perfect for development and testing
+   ```bash
+   npm run dev  # That's it!
+   ```
+
+2. **Supabase Mode (Optional)**
+   - For testing with real authentication
+   - Set `USE_SUPABASE=true` and provide Supabase credentials
+   ```bash
+   USE_SUPABASE=true npm run dev
+   ```
 
 ## Core Features Implementation
 

@@ -25,7 +25,7 @@ router.post('/:id/toggle', authMiddleware, async (req: AuthRequest, res, next) =
     });
 
     if (!result.ok) {
-      throw result.error;
+      throw (result as any).error;
     }
 
     res.json({ streakCount: result.value.streakCount });

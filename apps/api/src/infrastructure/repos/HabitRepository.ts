@@ -1,92 +1,132 @@
-import { Habit, HabitSchedule } from '@sakinah/types';
-import { supabase } from '../db/supabase';
+import { Habit } from '@sakinah/types';
+import { Result } from '@/shared/result';
+import { RepositoryResultHandler } from '@/shared/repository-result-handler';
+import { CreateHabitInput, CreateHabitCompletionInput } from './types';
+import { getDatabase } from '../database';
 
 export class HabitRepository {
-  async createHabit(data: {
-    userId: string;
-    planId: string;
-    title: string;
-    schedule: HabitSchedule;
-  }): Promise<Habit> {
-    const { data: habit, error } = await supabase
-      .from('habits')
-      .insert({
-        user_id: data.userId,
-        plan_id: data.planId,
-        title: data.title,
-        schedule: data.schedule,
-        streak_count: 0,
-      })
-      .select()
-      .single();
+  private db = getDatabase();
 
-    if (error) throw error;
-
-    return this.mapToModel(habit);
+  async createHabit(data: CreateHabitInput): Promise<Result<Habit>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      const result = await this.db.createHabit(data);
+      const handled = RepositoryResultHandler.handleRequiredResult(result, 'Habit');
+      if (Result.isError(handled)) {
+        throw handled.error;
+      }
+      return handled.value;
+    });
   }
 
-  async getHabit(id: string, userId: string): Promise<Habit | null> {
-    const { data: habit, error } = await supabase
-      .from('habits')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
+  async getHabit(id: string, userId: string): Promise<Result<Habit | null>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      const result = await this.db.getHabitById(id);
+      const habitResult = RepositoryResultHandler.handleSingleResult(result);
 
-    if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
-    }
+      if (Result.isError(habitResult)) {
+        throw habitResult.error;
+      }
 
-    return this.mapToModel(habit);
+      // Verify the habit belongs to the user
+      const habit = habitResult.value;
+      if (habit && habit.userId !== userId) {
+        return null;
+      }
+
+      return habit;
+    });
   }
 
-  async updateHabit(id: string, userId: string, updates: Partial<Habit>): Promise<void> {
-    const { error } = await supabase
-      .from('habits')
-      .update({
-        streak_count: updates.streakCount,
-        last_completed_on: updates.lastCompletedOn,
-      })
-      .eq('id', id)
-      .eq('user_id', userId);
-
-    if (error) throw error;
+  async getHabitsByUser(userId: string): Promise<Result<Habit[]>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      const result = await this.db.getHabitsByUserId(userId);
+      const handled = RepositoryResultHandler.handleArrayResult(result);
+      if (Result.isError(handled)) {
+        throw handled.error;
+      }
+      return handled.value;
+    });
   }
 
-  async markCompleted(habitId: string, userId: string, date: string): Promise<void> {
-    const { error } = await supabase
-      .from('habit_completions')
-      .upsert({
-        habit_id: habitId,
-        user_id: userId,
-        completed_on: date,
-      });
+  async updateHabitStreak(id: string, userId: string, streakCount: number, lastCompletedOn?: string): Promise<Result<void>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      // First verify the habit belongs to the user
+      const habitResult = await this.getHabit(id, userId);
+      if (Result.isError(habitResult)) {
+        throw habitResult.error;
+      }
+      if (!habitResult.value) {
+        throw new Error('Habit not found or access denied');
+      }
 
-    if (error) throw error;
+      const result = await this.db.updateHabitStreak(id, streakCount, lastCompletedOn);
+      const handled = RepositoryResultHandler.handleVoidResult(result);
+      if (Result.isError(handled)) {
+        throw handled.error;
+      }
+      return handled.value;
+    });
   }
 
-  async markIncomplete(habitId: string, userId: string, date: string): Promise<void> {
-    const { error } = await supabase
-      .from('habit_completions')
-      .delete()
-      .eq('habit_id', habitId)
-      .eq('user_id', userId)
-      .eq('completed_on', date);
+  async markCompleted(habitId: string, userId: string, date: string): Promise<Result<void>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      // Check if already completed on this date
+      const existingResult = await this.db.getHabitCompletionByDate(habitId, userId, date);
+      const existingData = RepositoryResultHandler.handleSingleResult(existingResult);
 
-    if (error) throw error;
+      if (Result.isError(existingData)) {
+        throw existingData.error;
+      }
+
+      if (!existingData.value) {
+        // Create new completion
+        const completionInput: CreateHabitCompletionInput = {
+          habitId,
+          userId,
+          completedOn: date,
+        };
+        const result = await this.db.createHabitCompletion(completionInput);
+        const handled = RepositoryResultHandler.handleVoidResult(result);
+        if (Result.isError(handled)) {
+          throw handled.error;
+        }
+        return handled.value;
+      }
+    });
   }
 
-  private mapToModel(row: any): Habit {
-    return {
-      id: row.id,
-      userId: row.user_id,
-      planId: row.plan_id,
-      title: row.title,
-      schedule: row.schedule,
-      streakCount: row.streak_count,
-      lastCompletedOn: row.last_completed_on,
-      createdAt: row.created_at,
-    };
+  async markIncomplete(habitId: string, userId: string, date: string): Promise<Result<void>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      // Find the completion record
+      const existingResult = await this.db.getHabitCompletionByDate(habitId, userId, date);
+      const existingData = RepositoryResultHandler.handleSingleResult(existingResult);
+
+      if (Result.isError(existingData)) {
+        throw existingData.error;
+      }
+
+      if (existingData.value) {
+        // Delete the completion
+        const result = await this.db.deleteHabitCompletion(existingData.value.id);
+        const handled = RepositoryResultHandler.handleVoidResult(result);
+        if (Result.isError(handled)) {
+          throw handled.error;
+        }
+        return handled.value;
+      }
+    });
+  }
+
+  async getHabitCompletions(habitId: string): Promise<Result<string[]>> {
+    return RepositoryResultHandler.wrapOperation(async () => {
+      const result = await this.db.getHabitCompletionsByHabit(habitId);
+      const completionsResult = RepositoryResultHandler.handleArrayResult(result);
+
+      if (Result.isError(completionsResult)) {
+        throw completionsResult.error;
+      }
+
+      return completionsResult.value.map(completion => completion.completedOn);
+    });
   }
 }

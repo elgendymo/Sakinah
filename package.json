@@ -11,11 +11,15 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/node": "^20.10.0",
     "eslint": "^8.55.0",
     "prettier": "^3.1.0",

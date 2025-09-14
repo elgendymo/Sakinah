@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
+import { RTLToggle } from '@sakinah/ui';
+import { MotionProvider } from '@/components/motion-provider';
+import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
   title: 'Sakinah - Muslim Spiritual Growth Platform',
@@ -15,9 +15,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        {children}
+    <html lang="en" dir="ltr" suppressHydrationWarning={true}>
+      <body className="font-sans antialiased" suppressHydrationWarning={true}>
+        <MotionProvider>
+          <div className="min-h-screen relative">
+            {/* Main Navigation with Logo */}
+            <Navigation />
+
+            {/* Development RTL toggle */}
+            <div className="fixed top-4 right-4 z-50">
+              <RTLToggle />
+            </div>
+
+            {children}
+          </div>
+        </MotionProvider>
       </body>
     </html>
   );

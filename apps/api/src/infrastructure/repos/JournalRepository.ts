@@ -1,43 +1,64 @@
 import { JournalEntry } from '@sakinah/types';
-import { supabase } from '../db/supabase';
+import { getDatabase } from '../database';
 
 export class JournalRepository {
+  private db = getDatabase();
+
   async createEntry(data: Omit<JournalEntry, 'id' | 'createdAt'>): Promise<JournalEntry> {
-    const { data: entry, error } = await supabase
-      .from('journals')
-      .insert({
-        user_id: data.userId,
-        content: data.content,
-        tags: data.tags,
-      })
-      .select()
-      .single();
+    const result = await this.db.createJournalEntry({
+      userId: data.userId,
+      content: data.content,
+      tags: data.tags,
+    });
 
-    if (error) throw error;
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
-    return this.mapToModel(entry);
+    return result.data!;
   }
 
   async getUserEntries(userId: string, limit = 50): Promise<JournalEntry[]> {
-    const { data: entries, error } = await supabase
-      .from('journals')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const result = await this.db.getJournalsByUserId(userId);
 
-    if (error) throw error;
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
-    return entries.map(this.mapToModel);
+    const entries = result.data || [];
+    return entries.slice(0, limit);
   }
 
-  private mapToModel(row: any): JournalEntry {
-    return {
-      id: row.id,
-      userId: row.user_id,
-      content: row.content,
-      tags: row.tags,
-      createdAt: row.created_at,
-    };
+  async getEntry(id: string, userId: string): Promise<JournalEntry | null> {
+    const result = await this.db.getJournalById(id);
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    const entry = result.data;
+    if (entry && entry.userId !== userId) {
+      return null;
+    }
+
+    return entry;
+  }
+
+  async updateEntry(id: string, userId: string, updates: { content?: string; tags?: string[] }): Promise<JournalEntry> {
+    const result = await this.db.updateJournal(id, userId, updates);
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    return result.data!;
+  }
+
+  async deleteEntry(id: string, userId: string): Promise<void> {
+    const result = await this.db.deleteJournal(id, userId);
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
   }
 }

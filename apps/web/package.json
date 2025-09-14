@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@sakinah/types": "*",
+    "@sakinah/ui": "*",
     "@supabase/supabase-js": "^2.39.0",
     "@supabase/ssr": "^0.0.10",
     "next": "15.4.7",
@@ -20,7 +21,8 @@
     "zod": "^3.22.4",
     "clsx": "^2.0.0",
     "date-fns": "^3.0.0",
-    "lucide-react": "^0.294.0"
+    "lucide-react": "^0.294.0",
+    "framer-motion": "^10.16.16"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
