@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { RTLToggle } from '@sakinah/ui';
 import { MotionProvider } from '@/components/motion-provider';
 import Navigation from '@/components/Navigation';
 
@@ -19,13 +18,8 @@ export default function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning={true}>
         <MotionProvider>
           <div className="min-h-screen relative">
-            {/* Main Navigation with Logo */}
+            {/* Main Navigation with Logo and integrated RTL toggle */}
             <Navigation />
-
-            {/* Development RTL toggle */}
-            <div className="fixed top-4 right-4 z-50">
-              <RTLToggle />
-            </div>
 
             {children}
           </div>
