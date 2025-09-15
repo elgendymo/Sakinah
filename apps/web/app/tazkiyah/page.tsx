@@ -166,7 +166,7 @@ export default function TazkiyahPage() {
               <div className="space-y-3">
                 {suggestedPlan.microHabits?.map((habit: any, index: number) => (
                   <div key={index} className="flex items-start">
-                    <span className="text-primary-600 mr-2">•</span>
+                    <span className="text-primary-600 mr-2">-</span>
                     <div>
                       <div className="font-medium">{habit.title}</div>
                       <div className="text-sm text-gray-600">

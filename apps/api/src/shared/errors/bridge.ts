@@ -1,5 +1,5 @@
 import { Result } from '../result';
-import { ErrorCode, DatabaseResult as NewDatabaseResult, DatabaseErrorCode } from './types';
+import { ErrorCode, DatabaseResult as NewDatabaseResult } from './types';
 import { DatabaseResult as LegacyDatabaseResult } from '../../infrastructure/database/types';
 import { ErrorMapper, getDbType } from './errorMapper';
 
@@ -16,10 +16,11 @@ export class ErrorBridge {
   ): NewDatabaseResult<T> {
     if (legacyResult.error) {
       // Create a synthetic database error with proper structure
+      const errorCode = ErrorMapper.mapDatabaseError({ message: legacyResult.error.message }, getDbType());
       return {
         data: legacyResult.data,
         error: {
-          code: ErrorMapper.mapDatabaseError({ message: legacyResult.error.message }, getDbType()),
+          code: errorCode,
           message: legacyResult.error.message,
           details: legacyResult.error
         }
@@ -50,11 +51,11 @@ export class ErrorBridge {
   static convertLegacyResult<T>(
     legacyResult: Result<T, Error>
   ): Result<T, ErrorCode> {
-    if (!legacyResult.ok) {
+    if (Result.isError(legacyResult)) {
       const errorCode = ErrorMapper.mapToApiError(legacyResult.error, getDbType());
       return Result.error(errorCode);
     }
-    return Result.ok(legacyResult.value);
+    return Result.ok(legacyResult.value) as Result<T, ErrorCode>;
   }
 
   /**
@@ -71,8 +72,7 @@ export class ErrorBridge {
    * Handle any database result and convert to standardized Result format
    */
   static handleDatabaseResult<T>(
-    dbResult: LegacyDatabaseResult<T> | NewDatabaseResult<T>,
-    entityName?: string
+    dbResult: LegacyDatabaseResult<T> | NewDatabaseResult<T>
   ): Result<T | null, ErrorCode> {
     // Check if it's the new format (has error.code property)
     const isNewFormat = dbResult.error && 'code' in dbResult.error;
@@ -91,7 +91,7 @@ export class ErrorBridge {
       return Result.error(errorCode);
     }
 
-    return Result.ok(dbResult.data);
+    return Result.ok(dbResult.data) as Result<T | null, ErrorCode>;
   }
 
   /**
@@ -99,9 +99,9 @@ export class ErrorBridge {
    */
   static handleRequiredDatabaseResult<T>(
     dbResult: LegacyDatabaseResult<T> | NewDatabaseResult<T>,
-    entityName: string
+    _entityName: string
   ): Result<T, ErrorCode> {
-    const result = this.handleDatabaseResult(dbResult, entityName);
+    const result = this.handleDatabaseResult(dbResult);
 
     if (result.ok && result.value === null) {
       return Result.error(ErrorCode.NOT_FOUND);
@@ -119,7 +119,7 @@ export class ErrorBridge {
     const result = this.handleDatabaseResult(dbResult);
 
     if (result.ok) {
-      return Result.ok(result.value || []);
+      return Result.ok(result.value ?? []) as Result<T[], ErrorCode>;
     }
 
     return result as Result<T[], ErrorCode>;

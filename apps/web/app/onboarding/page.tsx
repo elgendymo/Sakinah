@@ -15,9 +15,8 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
-  const supabase = createClient();
-
-  const nextStep = () => setStep(prev => prev + 1);
+    createClient();
+    const nextStep = () => setStep(prev => prev + 1);
   const prevStep = () => setStep(prev => prev - 1);
 
   const completeOnboarding = async () => {
@@ -59,15 +58,15 @@ export default function OnboardingPage() {
             <div className="space-y-3 text-sm text-sage-600 mb-8">
               <div className="flex items-center">
                 <span className="text-accent mr-2">✓</span>
-                Privacy-first • All your data stays private
+                Privacy-first | All your data stays private
               </div>
               <div className="flex items-center">
                 <span className="text-accent mr-2">✓</span>
-                Shariah-compliant • Based on Quran & Sunnah
+                Shariah-compliant | Based on Quran & Sunnah
               </div>
               <div className="flex items-center">
                 <span className="text-accent mr-2">✓</span>
-                No social features • Between you and Allah
+                No social features | Between you and Allah
               </div>
             </div>
 

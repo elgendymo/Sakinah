@@ -19,8 +19,8 @@ export async function toggleHabit(input: ToggleHabitInput): Promise<Result<Toggl
     // Get the habit
     const habitResult = await habitRepo.getHabit(input.habitId, input.userId);
 
-    if (!habitResult.ok) {
-      return habitResult;
+    if (Result.isError(habitResult)) {
+      return Result.error(habitResult.error);
     }
 
     if (!habitResult.value) {

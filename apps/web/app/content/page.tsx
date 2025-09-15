@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase-browser';
-import { api } from '@/lib/api';
 import PageContainer from '@/components/PageContainer';
 
 interface ContentSnippet {
@@ -37,8 +35,6 @@ export default function ContentLibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
-
-  const supabase = createClient();
 
   useEffect(() => {
     loadContent();
@@ -332,7 +328,7 @@ export default function ContentLibraryPage() {
 
         {/* Footer note */}
         <div className="text-center text-sm text-fg-muted mt-12 pt-8 border-t border-border-muted">
-          <p>Content is curated from authentic Islamic sources • Always verify with scholars for important matters</p>
+          <p>Content is curated from authentic Islamic sources | Always verify with scholars for important matters</p>
         </div>
     </PageContainer>
   );
