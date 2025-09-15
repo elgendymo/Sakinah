@@ -1,7 +1,14 @@
+const withNextIntl = require('next-intl/plugin')('./i18n.ts');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@sakinah/types', '@sakinah/ui'],
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['*']
+    },
+  },
   async headers() {
     return [
       {
@@ -25,4 +32,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withNextIntl(nextConfig);

@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Languages } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import LogoCSS from './LogoCSS';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface NavigationProps {
   className?: string;
@@ -12,14 +13,15 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
   const pathname = usePathname();
+  const t = useTranslations('navigation');
 
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: '🏠' },
-    { href: '/habits', label: 'Habits', icon: '🌱' },
-    { href: '/journal', label: 'Journal', icon: '📝' },
-    { href: '/content', label: 'Library', icon: '📚' },
-    { href: '/tazkiyah', label: 'Tazkiyah', icon: '✨' },
-    { href: '/profile', label: 'Profile', icon: '👤' },
+    { href: '/dashboard', label: t('dashboard'), icon: '🏠' },
+    { href: '/habits', label: t('habits'), icon: '🌱' },
+    { href: '/journal', label: t('journal'), icon: '📝' },
+    { href: '/content', label: t('library'), icon: '📚' },
+    { href: '/tazkiyah', label: t('tazkiyah'), icon: '✨' },
+    { href: '/profile', label: t('profile'), icon: '👤' },
   ];
 
   return (
@@ -33,7 +35,7 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
               <LogoCSS size="small" animated={true} />
               <div className="flex flex-col">
                 <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">Sakinah</span>
-                <span className="text-xs text-gold-600 -mt-1">Your sanctuary</span>
+                <span className="text-xs text-gold-600 -mt-1">{t('subtitle') || 'Your sanctuary'}</span>
               </div>
             </Link>
 
@@ -59,19 +61,9 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
                 })}
               </div>
 
-              {/* RTL Toggle Button */}
+              {/* Language Switcher */}
               <div className="flex items-center">
-                <button
-                  onClick={() => {
-                    const newDirection = document.documentElement.dir === 'ltr' ? 'rtl' : 'ltr';
-                    document.documentElement.dir = newDirection;
-                    document.documentElement.lang = newDirection === 'rtl' ? 'ar' : 'en';
-                  }}
-                  className="rtl-toggle-btn w-10 h-10"
-                  title="Toggle RTL/LTR layout"
-                >
-                  <Languages className="h-4 w-4" />
-                </button>
+                <LanguageSwitcher variant="text" />
               </div>
             </div>
           </div>
@@ -86,22 +78,12 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
             <LogoCSS size="small" animated={true} />
             <div className="flex flex-col">
               <span className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">Sakinah</span>
-              <span className="text-xs text-gold-600 -mt-0.5">Your sanctuary</span>
+              <span className="text-xs text-gold-600 -mt-0.5">{t('subtitle') || 'Your sanctuary'}</span>
             </div>
           </Link>
 
-          {/* RTL Toggle Button */}
-          <button
-            onClick={() => {
-              const newDirection = document.documentElement.dir === 'ltr' ? 'rtl' : 'ltr';
-              document.documentElement.dir = newDirection;
-              document.documentElement.lang = newDirection === 'rtl' ? 'ar' : 'en';
-            }}
-            className="rtl-toggle-btn w-9 h-9"
-            title="Toggle RTL/LTR layout"
-          >
-            <Languages className="h-3.5 w-3.5" />
-          </button>
+          {/* Language Switcher */}
+          <LanguageSwitcher variant="text" className="text-xs" />
         </div>
       </header>
 

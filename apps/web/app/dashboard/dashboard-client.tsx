@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase-browser';
 import PageContainer from '@/components/PageContainer';
 import { LocationSelector } from '@/components/LocationSelector';
@@ -31,6 +32,10 @@ interface Location {
 }
 
 export default function DashboardClient({ userId }: DashboardClientProps) {
+  const t = useTranslations('dashboard');
+  const tCommon = useTranslations('common');
+  const tPrayers = useTranslations('prayers');
+  const tHabits = useTranslations('habits');
   const [loading, setLoading] = useState(true);
   const [todayIntention, setTodayIntention] = useState('');
   const [isEditingIntention, setIsEditingIntention] = useState(false);
@@ -38,19 +43,19 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
   const [dhikrCount, setDhikrCount] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTime[]>([
-    { name: 'Fajr', time: '5:30', passed: true },
-    { name: 'Dhuhr', time: '12:45', passed: true },
-    { name: 'Asr', time: '4:15', passed: false },
-    { name: 'Maghrib', time: '7:20', passed: false },
-    { name: 'Isha', time: '8:45', passed: false },
+    { name: tPrayers('fajr'), time: '5:30', passed: true },
+    { name: tPrayers('dhuhr'), time: '12:45', passed: true },
+    { name: tPrayers('asr'), time: '4:15', passed: false },
+    { name: tPrayers('maghrib'), time: '7:20', passed: false },
+    { name: tPrayers('isha'), time: '8:45', passed: false },
   ]);
   const supabase = createClient();
 
   const todaysHabits = [
-    { id: '1', name: 'Morning Adhkar', description: 'Recite morning remembrance', streak: 7, completed: true },
-    { id: '2', name: 'Quran Reading', description: 'Read at least 1 page', streak: 3, completed: false },
-    { id: '3', name: 'Evening Du\'a', description: 'Make du\'a before Maghrib', streak: 12, completed: true },
-    { id: '4', name: 'Istighfar', description: 'Seek forgiveness 100 times', streak: 1, completed: false },
+    { id: '1', name: tHabits('morningAdhkar'), description: tHabits('reciteMorningRemembrance'), streak: 7, completed: true },
+    { id: '2', name: tHabits('quranReading'), description: tHabits('readAtLeastOnePage'), streak: 3, completed: false },
+    { id: '3', name: tHabits('eveningDua'), description: tHabits('makeDuaBeforeMaghrib'), streak: 12, completed: true },
+    { id: '4', name: tHabits('istighfar'), description: tHabits('seekForgiveness100Times'), streak: 1, completed: false },
   ];
 
   const currentPlan: PlanItem[] = [
@@ -161,20 +166,6 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
     }
   };
 
-  const handleCheckin = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        // For development, skip API call that returns HTML error
-        console.log('Checkin saved:', { intention: todayIntention });
-        setTodayIntention('');
-        // Show success feedback
-      }
-    } catch (error) {
-      console.error('Error saving check-in:', error);
-    }
-  };
-
   const handleHabitToggle = (habitId: string, completed: boolean) => {
     // Update habit completion status
     console.log(`Habit ${habitId} toggled to ${completed}`);
@@ -226,7 +217,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-sage-600">Loading your spiritual journey...</p>
+          <p className="text-sage-600">{tCommon('loading')}</p>
         </div>
       </div>
     );
@@ -234,8 +225,8 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
 
   return (
     <PageContainer
-      title="Dashboard"
-      subtitle="Your spiritual progress today"
+      title={t('welcome')}
+      subtitle={t('welcomeMessage')}
       maxWidth="6xl"
       padding="lg"
       center={false}
@@ -255,8 +246,8 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                       <span className="text-white text-xl">🕌</span>
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-sage-800">Today's Prayers</h2>
-                      <p className="text-sm text-sage-600">Your spiritual anchors throughout the day</p>
+                      <h2 className="text-xl font-semibold text-sage-800">{t('todaysPrayers')}</h2>
+                      <p className="text-sm text-sage-600">{t('prayersDescription')}</p>
                     </div>
 
                     {/* Location Selector */}
@@ -266,9 +257,9 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     />
 
                     <div className="ml-4 text-right">
-                      <div className="text-xs text-sage-500 mb-1">Next Prayer</div>
+                      <div className="text-xs text-sage-500 mb-1">{t('nextPrayer')}</div>
                       <div className="text-lg font-semibold text-emerald-600">
-                        {prayerTimes.find(p => !p.passed)?.name || 'All Complete'}
+                        {prayerTimes.find(p => !p.passed)?.name || t('allComplete')}
                         <span className="text-sm text-sage-600 ml-1">
                           at {prayerTimes.find(p => !p.passed)?.time || ''}
                         </span>
@@ -364,9 +355,9 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                   {/* Progress indicator */}
                   <div className="mt-6 pt-4 border-t border-sage-100">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-sage-600">Today's Progress</span>
+                      <span className="text-xs text-sage-600">{t('todaysProgress')}</span>
                       <span className="text-xs font-medium text-sage-700">
-                        {prayerTimes.filter(p => p.passed).length}/{prayerTimes.length} completed
+                        {prayerTimes.filter(p => p.passed).length}/{prayerTimes.length} {t('completed')}
                       </span>
                     </div>
                     <div className="h-2 bg-sage-100 rounded-full overflow-hidden">
@@ -393,8 +384,8 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     <div className="text-2xl">🌅</div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-sage-900">Morning Check-in</h3>
-                    <p className="text-sm text-sage-600">Set your spiritual intention</p>
+                    <h3 className="text-lg font-semibold text-sage-900">{t('morningCheckin')}</h3>
+                    <p className="text-sm text-sage-600">{t('setIntention')}</p>
                   </div>
                 </div>
                 <div className="text-sm text-sage-600 font-medium bg-sage-100 px-3 py-1 rounded-full">
@@ -407,13 +398,13 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                   href="/checkin"
                   className="block w-full bg-gold-100 hover:bg-gold-200 text-gold-800 py-4 px-6 rounded-lg font-medium text-center transition-all shadow-sm"
                 >
-                  Set Today's Intention
+                  {t('setTodaysIntention')}
                 </Link>
               ) : (
                 <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200/50">
                   <div className="flex items-center space-x-2 mb-3">
                     <span className="text-emerald-600 text-lg">✓</span>
-                    <span className="font-medium text-emerald-800">Intention Set</span>
+                    <span className="font-medium text-emerald-800">{t('intentionSet')}</span>
                   </div>
                   <p className="text-sm text-emerald-700 leading-relaxed">
                     {todayIntention}
@@ -430,8 +421,8 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     <div className="text-2xl">🌙</div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-sage-900">Evening Reflection</h3>
-                    <p className="text-sm text-sage-600">Muhasabah & gratitude</p>
+                    <h3 className="text-lg font-semibold text-sage-900">{t('eveningReflection')}</h3>
+                    <p className="text-sm text-sage-600">{t('muhasabahGratitude')}</p>
                   </div>
                 </div>
                 {new Date().getHours() >= 18 && (
@@ -444,15 +435,15 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                   href="/checkin"
                   className="block w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 px-6 rounded-lg font-medium text-center transition-all shadow-sm"
                 >
-                  Complete Evening Reflection
+                  {t('completeEveningReflection')}
                 </Link>
               ) : (
                 <div className="bg-sage-50 rounded-lg p-4 text-center border border-sage-200/50">
                   <div className="text-sage-600 text-sm font-medium mb-1">
-                    Available after Asr prayer (6 PM)
+                    {t('availableAfterAsr')}
                   </div>
                   <div className="text-xs text-sage-500">
-                    Focus on your current intentions for now
+                    {t('focusOnCurrentIntentions')}
                   </div>
                 </div>
               )}
@@ -469,11 +460,11 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                 </div>
                 <div className="relative bg-sage-50 px-6 py-2 mx-auto w-fit">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-semibold text-sage-800 tracking-wide">Today's Spiritual Focus</h2>
+                    <h2 className="text-2xl font-semibold text-sage-800 tracking-wide">{t('todaysSpiritualFocus')}</h2>
                   </div>
                 </div>
               </div>
-              <p className="text-sage-600 mt-4 text-lg leading-relaxed">نور اليوم - Your daily spiritual nourishment</p>
+              <p className="text-sage-600 mt-4 text-lg leading-relaxed">{t('dailyNourishment')}</p>
             </div>
 
             {/* Enhanced Grid Layout */}
@@ -491,8 +482,8 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         <span className="text-white text-lg">📖</span>
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-sage-800">Today's Guidance</h3>
-                        <p className="text-sm text-sage-600">Reflection of the day</p>
+                        <h3 className="text-xl font-semibold text-sage-800">{t('todaysGuidance')}</h3>
+                        <p className="text-sm text-sage-600">{t('reflectionOfDay')}</p>
                       </div>
                     </div>
 
@@ -517,12 +508,12 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">📋</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Today's Plan</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('todaysPlan')}</h3>
                       </div>
                       <div className="space-y-4">
                         {/* Description */}
                         <p className="text-sm text-sage-600 leading-relaxed">
-                          Your spiritual roadmap for today
+                          {t('spiritualRoadmap')}
                         </p>
 
                         {/* Plan Items */}
@@ -559,8 +550,8 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                       item.type === 'dua' ? 'bg-gold-100 text-gold-700' :
                                       'bg-sage-100 text-sage-700'}
                                   `}>
-                                    {item.type === 'habit' ? 'Habit' :
-                                     item.type === 'dua' ? 'Du\'a' : 'Ayah'}
+                                    {item.type === 'habit' ? t('habit') :
+                                     item.type === 'dua' ? t('dua') : t('ayah')}
                                   </span>
                                 </div>
 
@@ -587,9 +578,9 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         {/* Progress summary */}
                         <div className="mt-4 pt-3 border-t border-sage-100">
                           <div className="flex items-center justify-between text-xs text-sage-600 mb-2">
-                            <span>Progress</span>
+                            <span>{t('progress')}</span>
                             <span className="font-medium">
-                              {currentPlan.filter(p => p.completed).length}/{currentPlan.length} completed
+                              {currentPlan.filter(p => p.completed).length}/{currentPlan.length} {t('completed')}
                             </span>
                           </div>
                           <div className="h-1.5 bg-sage-100 rounded-full overflow-hidden">
@@ -607,7 +598,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                           onClick={() => console.log('Navigate to full plan')}
                           className="w-full mt-4 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2"
                         >
-                          View Details
+                          {t('viewDetails')}
                           <span className="text-xs">→</span>
                         </button>
                       </div>
@@ -621,7 +612,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">✓</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Daily Habits</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('dailyHabits')}</h3>
                       </div>
                       <div className="space-y-3">
                         {todaysHabits.map((habit) => (
@@ -668,7 +659,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                             {/* Completion indicator */}
                             {habit.completed && (
                               <div className="flex-shrink-0 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                                Done
+                                {t('done')}
                               </div>
                             )}
                           </div>
@@ -677,9 +668,9 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         {/* Progress summary */}
                         <div className="mt-4 pt-3 border-t border-sage-100">
                           <div className="flex items-center justify-between text-xs text-sage-600">
-                            <span>Progress</span>
+                            <span>{t('progress')}</span>
                             <span className="font-medium">
-                              {todaysHabits.filter(h => h.completed).length}/{todaysHabits.length} completed
+                              {todaysHabits.filter(h => h.completed).length}/{todaysHabits.length} {t('completed')}
                             </span>
                           </div>
                           <div className="mt-2 h-1.5 bg-sage-100 rounded-full overflow-hidden">
@@ -705,8 +696,8 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         <span className="text-white text-lg">🤲</span>
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-sage-800">Morning Du'a</h3>
-                        <p className="text-sm text-sage-600">Start your day with remembrance</p>
+                        <h3 className="text-xl font-semibold text-sage-800">{t('morningDua')}</h3>
+                        <p className="text-sm text-sage-600">{t('startWithRemembrance')}</p>
                       </div>
                     </div>
 
@@ -736,7 +727,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">💚</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Daily Intention</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('dailyIntention')}</h3>
                       </div>
                       <div className="space-y-4">
                         {/* Daily Intention Content */}
@@ -747,7 +738,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                               <textarea
                                 value={tempIntention}
                                 onChange={(e) => setTempIntention(e.target.value)}
-                                placeholder="Write your intention for today..."
+                                placeholder={t('writeIntention')}
                                 className="w-full p-3 bg-white border border-emerald-200 rounded-lg text-sm text-sage-800 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300"
                                 rows={3}
                                 autoFocus
@@ -758,13 +749,13 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                   disabled={!tempIntention.trim()}
                                   className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 px-3 rounded-lg font-medium text-sm transition-all duration-200"
                                 >
-                                  Save
+                                  {t('save')}
                                 </button>
                                 <button
                                   onClick={handleCancelEdit}
                                   className="px-3 py-2 bg-sage-100 hover:bg-sage-200 text-sage-700 rounded-lg font-medium text-sm transition-all duration-200"
                                 >
-                                  Cancel
+                                  {t('cancel')}
                                 </button>
                               </div>
                             </div>
@@ -774,7 +765,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                               {!todayIntention ? (
                                 <div className="p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
                                   <p className="text-sm text-emerald-700 leading-relaxed italic text-center">
-                                    "Today, I intend to worship Allah with sincerity and mindfulness."
+                                    "{t('sampleIntention')}"
                                   </p>
                                 </div>
                               ) : (
@@ -783,7 +774,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                     <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
                                       <span className="text-white text-xs">✓</span>
                                     </div>
-                                    <span className="text-sm font-medium text-emerald-800">Intention Set</span>
+                                    <span className="text-sm font-medium text-emerald-800">{t('intentionSet')}</span>
                                   </div>
                                   <p className="text-sm text-emerald-700 leading-relaxed">
                                     {todayIntention}
@@ -794,10 +785,10 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                               {/* Action Buttons */}
                               {!todayIntention ? (
                                 <button
-                                  onClick={() => handleSetIntention("Today, I intend to worship Allah with sincerity and mindfulness.")}
+                                  onClick={() => handleSetIntention(t('sampleIntention'))}
                                   className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2"
                                 >
-                                  Set Today's Intention
+                                  {t('setTodaysIntention')}
                                   <span className="text-xs">💚</span>
                                 </button>
                               ) : (
@@ -805,7 +796,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                   onClick={handleEditIntention}
                                   className="w-full bg-sage-100 hover:bg-sage-200 text-sage-700 py-2 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2"
                                 >
-                                  Edit Intention
+                                  {t('editIntention')}
                                   <span className="text-xs">✏️</span>
                                 </button>
                               )}
@@ -816,7 +807,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         {/* Reminder */}
                         <div className="pt-3 border-t border-emerald-100">
                           <p className="text-xs text-sage-600 text-center">
-                            💡 Set your daily intention after Fajr prayer
+                            {t('dailyIntentionReminder')}
                           </p>
                         </div>
                       </div>
@@ -834,12 +825,12 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">📿</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Dhikr Counter</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('dhikrCounter')}</h3>
                       </div>
                       <div className="space-y-4">
                         {/* Dhikr Title */}
                         <div className="text-center">
-                          <h4 className="text-lg font-semibold text-sage-800 mb-1">Astaghfirullah</h4>
+                          <h4 className="text-lg font-semibold text-sage-800 mb-1">{t('astaghfirullah')}</h4>
                           <p className="text-xs text-sage-600">أستغفر الله</p>
                         </div>
 
@@ -875,7 +866,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                             {/* Count display */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                               <span className="text-2xl font-bold text-sage-800">{dhikrCount}</span>
-                              <span className="text-xs text-sage-600">of 100</span>
+                              <span className="text-xs text-sage-600">{t('of100')}</span>
                             </div>
                           </div>
 
@@ -894,18 +885,18 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                           {dhikrCount >= 100 ? (
                             <div className="space-y-2">
                               <p className="text-sm font-medium text-gold-700">
-                                🎉 Alhamdulillah! Target reached
+                                {t('alhamdulillahTargetReached')}
                               </p>
                               <button
                                 onClick={handleDhikrReset}
                                 className="text-xs text-sage-600 hover:text-sage-800 underline transition-colors"
                               >
-                                Reset counter
+                                {t('resetCounter')}
                               </button>
                             </div>
                           ) : (
                             <p className="text-xs text-sage-600">
-                              Tap to count your dhikr
+                              {t('tapToCount')}
                             </p>
                           )}
                         </div>
@@ -922,95 +913,15 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                       <div className="w-12 h-12 bg-gradient-to-br from-sage-400 to-sage-500 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="text-white text-xl">🌸</span>
                       </div>
-                      <h3 className="text-lg font-semibold text-sage-800 mb-2">Moment of Reflection</h3>
+                      <h3 className="text-lg font-semibold text-sage-800 mb-2">{t('momentOfReflection')}</h3>
                       <p className="text-sm text-sage-600 leading-relaxed italic">
-                        "In the remembrance of Allah do hearts find rest."
+                        "{t('heartsAtRest')}"
                       </p>
-                      <p className="text-xs text-sage-500 mt-2">— Quran 13:28</p>
+                      <p className="text-xs text-sage-500 mt-2">{t('quranReference')}</p>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Quick Navigation & Actions */}
-          <div className="space-y-8">
-            {/* Quick Navigation */}
-            <div className="card-islamic rounded-xl shadow-lg">
-              <h2 className="text-lg font-semibold text-sage-900 mb-4">Quick Navigation</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <Link
-                  href="/habits"
-                  className="card-islamic rounded-lg p-4 hover:shadow-md transition-all text-center group"
-                >
-                  <div className="text-emerald-600 mb-2">📋</div>
-                  <div className="font-medium text-sage-900">Habits</div>
-                  <div className="text-xs text-sage-600">Track daily habits</div>
-                </Link>
-                <Link
-                  href="/journal"
-                  className="card-islamic rounded-lg p-4 hover:shadow-md transition-all text-center group"
-                >
-                  <div className="text-gold-600 mb-2">📓</div>
-                  <div className="font-medium text-sage-900">Journal</div>
-                  <div className="text-xs text-sage-600">Spiritual reflections</div>
-                </Link>
-              </div>
-            </div>
-
-            {/* Continue Your Journey */}
-            <div className="card-islamic rounded-xl shadow-lg">
-              <div className="text-center mb-8">
-                <h2 className="text-xl font-semibold text-sage-900 mb-2">Continue Your Journey</h2>
-                <p className="text-sage-600">Explore different aspects of your spiritual growth</p>
-              </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Link
-                href="/tazkiyah"
-                className="card-islamic rounded-lg p-6 hover:shadow-md hover:-translate-y-1 transition-all text-center group"
-              >
-                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="text-emerald-600 text-2xl">🌱</div>
-                </div>
-                <h4 className="font-semibold text-sage-900 mb-2">Tazkiyah</h4>
-                <p className="text-sm text-sage-600 leading-relaxed">Begin your purification journey</p>
-              </Link>
-
-              <Link
-                href="/content"
-                className="card-islamic rounded-lg p-6 hover:shadow-md hover:-translate-y-1 transition-all text-center group"
-              >
-                <div className="w-12 h-12 bg-gold-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="text-gold-600 text-2xl">📚</div>
-                </div>
-                <h4 className="font-semibold text-sage-900 mb-2">Library</h4>
-                <p className="text-sm text-sage-600 leading-relaxed">Browse Quran, Hadith & Duas</p>
-              </Link>
-
-              <Link
-                href="/profile"
-                className="card-islamic rounded-lg p-6 hover:shadow-md hover:-translate-y-1 transition-all text-center group"
-              >
-                <div className="w-12 h-12 bg-sage-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="text-sage-600 text-2xl">⚙️</div>
-                </div>
-                <h4 className="font-semibold text-sage-900 mb-2">Settings</h4>
-                <p className="text-sm text-sage-600 leading-relaxed">Manage your preferences</p>
-              </Link>
-
-              <button
-                onClick={handleCheckin}
-                className="card-islamic rounded-lg p-6 hover:shadow-md hover:-translate-y-1 transition-all text-center group"
-              >
-                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="text-emerald-600 text-2xl">📝</div>
-                </div>
-                <h4 className="font-semibold text-sage-900 mb-2">Quick Check-in</h4>
-                <p className="text-sm text-sage-600 leading-relaxed">Save today's intention</p>
-              </button>
-            </div>
             </div>
           </div>
 

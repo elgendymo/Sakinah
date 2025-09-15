@@ -23,7 +23,7 @@ export default function ProfilePage() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
 
   const router = useRouter();
   const supabase = createClient();
