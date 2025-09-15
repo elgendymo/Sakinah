@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { api } from '@/lib/api';
 import PageContainer from '@/components/PageContainer';
+import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
 
 const REFLECTION_PROMPTS = [
   'What am I most grateful for today?',
@@ -24,6 +25,8 @@ export default function CheckinPage() {
   const [improvements, setImprovements] = useState('');
   const [loading, setLoading] = useState(false);
   const [randomPrompt, setRandomPrompt] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const { error, handleError, clearError } = useErrorHandler();
   const supabase = createClient();
 
   useEffect(() => {
@@ -35,10 +38,15 @@ export default function CheckinPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    clearError();
+    setSuccessMessage('');
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      if (!session?.access_token) {
+        handleError(new Error('Please sign in to save your muhasabah'), 'Authentication');
+        return;
+      }
 
       const checkinData = {
         intention,
@@ -55,10 +63,9 @@ export default function CheckinPage() {
       setGratitude(['', '', '']);
       setImprovements('');
 
-      alert('Muhasabah saved! May Allah accept your self-reflection.');
+      setSuccessMessage('Barakallahu feeki! Your muhasabah has been saved. May Allah accept your self-reflection and grant you spiritual growth.');
     } catch (error) {
-      console.error('Error saving checkin:', error);
-      alert('Failed to save. Please try again.');
+      handleError(error, 'Saving Muhasabah');
     } finally {
       setLoading(false);
     }
@@ -74,6 +81,33 @@ export default function CheckinPage() {
       maxWidth="lg"
       padding="lg"
     >
+      {/* Error Display */}
+      {error && (
+        <ErrorDisplay
+          error={error}
+          onDismiss={clearError}
+          onRetry={() => window.location.reload()}
+          className="mb-6"
+        />
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="text-emerald-600 text-lg">✨</div>
+            <div>
+              <p className="text-emerald-800 leading-relaxed">{successMessage}</p>
+              <button
+                onClick={() => setSuccessMessage('')}
+                className="mt-2 text-xs text-emerald-600 hover:text-emerald-700"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         <div className="text-center mb-8">
           <div className="arabic-text text-emerald-700 mt-4 card-islamic p-4 rounded-lg shadow-sm">
             حاسبوا أنفسكم قبل أن تحاسبوا

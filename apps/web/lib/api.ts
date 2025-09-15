@@ -1,7 +1,14 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { apiClient } from './net/apiFetch.client';
 
+// Re-export the enhanced API client for backward compatibility
+export { apiClient };
+
+/**
+ * Legacy API interface for backward compatibility
+ * Uses the new enhanced API client under the hood
+ */
 interface ApiOptions {
-  method?: string;
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   body?: any;
   token?: string;
 }
@@ -9,26 +16,11 @@ interface ApiOptions {
 export async function apiCall<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, token } = options;
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  return apiClient.request<T>(endpoint, {
     method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body,
+    authToken: token
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'API request failed');
-  }
-
-  return response.json();
 }
 
 export const api = {

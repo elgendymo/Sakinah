@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
+import { toUserMessage } from '@/lib/ui/errorUtils';
 
 interface Location {
   city: string;
@@ -38,6 +39,8 @@ export function LocationSelector({ onLocationSelect, currentLocation }: Location
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCities, setFilteredCities] = useState(popularCities);
   const [customLocation, setCustomLocation] = useState('');
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -61,10 +64,18 @@ export function LocationSelector({ onLocationSelect, currentLocation }: Location
   const handleCustomLocation = async () => {
     if (!customLocation) return;
 
+    setLoading(true);
+    setError('');
+
     try {
       // For now, we'll use a simple geocoding API or default to coordinates
       // In production, you'd use Google Geocoding API
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(customLocation)}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to find location: ${response.statusText}`);
+      }
+
       const data = await response.json();
 
       if (data && data[0]) {
@@ -78,9 +89,14 @@ export function LocationSelector({ onLocationSelect, currentLocation }: Location
         };
         handleCitySelect(location);
         setCustomLocation('');
+      } else {
+        setError('Location not found. Please try a different search term.');
       }
     } catch (error) {
-      console.error('Error geocoding location:', error);
+      const userMessage = toUserMessage(error, 'Unable to find location. Please check your internet connection and try again.');
+      setError(userMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -145,23 +161,40 @@ export function LocationSelector({ onLocationSelect, currentLocation }: Location
           </div>
 
           <div className="p-4 border-t border-gray-100">
+            {/* Error Display */}
+            {error && (
+              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {error}
+                <button
+                  onClick={() => setError('')}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Enter custom city, country"
                 value={customLocation}
                 onChange={(e) => setCustomLocation(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCustomLocation()}
+                onKeyDown={(e) => e.key === 'Enter' && !loading && handleCustomLocation()}
+                disabled={loading}
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm
                          text-gray-900 placeholder-gray-400
-                         focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                         focus:outline-none focus:ring-2 focus:ring-emerald-500/20
+                         disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
               <button
                 onClick={handleCustomLocation}
+                disabled={loading || !customLocation.trim()}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm
-                         hover:bg-emerald-700 transition-colors"
+                         hover:bg-emerald-700 transition-colors
+                         disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Add
+                {loading ? 'Finding...' : 'Add'}
               </button>
             </div>
           </div>

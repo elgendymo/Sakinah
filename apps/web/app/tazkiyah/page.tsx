@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import { api } from '@/lib/api';
 import PageContainer from '@/components/PageContainer';
+import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
 
 const COMMON_STRUGGLES = {
   takhliyah: [
@@ -36,10 +37,13 @@ export default function TazkiyahPage() {
   const [suggestedPlan, setSuggestedPlan] = useState<any>(null);
   const router = useRouter();
   const supabase = createClient();
+  const { error, handleError, clearError } = useErrorHandler();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    clearError(); // Clear any previous errors
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -52,8 +56,7 @@ export default function TazkiyahPage() {
       const response = await api.suggestPlan(mode, input, session.access_token) as any;
       setSuggestedPlan(response.plan);
     } catch (error) {
-      console.error('Error getting suggestion:', error);
-      alert('Failed to get suggestion. Please try again.');
+      handleError(error, 'Tazkiyah Plan Generation');
     } finally {
       setLoading(false);
     }
@@ -70,6 +73,14 @@ export default function TazkiyahPage() {
       maxWidth="lg"
       padding="lg"
     >
+      {/* Error Display */}
+      {error && (
+        <ErrorDisplay
+          error={error}
+          onDismiss={clearError}
+          className="mb-6"
+        />
+      )}
 
         {!suggestedPlan ? (
           <div className="card-islamic rounded-xl p-8 shadow-lg">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import PageContainer from '@/components/PageContainer';
+import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
 
 interface Habit {
   id: string;
@@ -19,6 +20,7 @@ export default function HabitsPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completedToday, setCompletedToday] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const { error, handleError, clearError } = useErrorHandler();
   // const searchParams = useSearchParams();
   // const planId = searchParams?.get('planId'); // Future use for filtering
   const supabase = createClient();
@@ -30,6 +32,7 @@ export default function HabitsPage() {
   const loadHabits = async () => {
     try {
       setLoading(true);
+      clearError();
 
       // For consistent testing and development, always show sample habits data
       const sampleHabits: Habit[] = [
@@ -58,7 +61,7 @@ export default function HabitsPage() {
       setHabits(sampleHabits);
       setCompletedToday(new Set());
     } catch (error) {
-      console.error('Error loading habits:', error);
+      handleError(error, 'Loading Habits');
     } finally {
       setLoading(false);
     }
@@ -66,6 +69,7 @@ export default function HabitsPage() {
 
   const toggleHabit = async (habitId: string) => {
     try {
+      clearError();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
@@ -95,7 +99,7 @@ export default function HabitsPage() {
       // In a real app, call the API
       // await api.toggleHabit(habitId, !isCompleted, session.access_token);
     } catch (error) {
-      console.error('Error toggling habit:', error);
+      handleError(error, 'Updating Habit');
       // Revert optimistic update on error
       await loadHabits();
     }
@@ -123,6 +127,15 @@ export default function HabitsPage() {
       maxWidth="lg"
       padding="lg"
     >
+      {/* Error Display */}
+      {error && (
+        <ErrorDisplay
+          error={error}
+          onDismiss={clearError}
+          onRetry={() => loadHabits()}
+          className="mb-6"
+        />
+      )}
 
         {habits.length > 0 ? (
           <div className="space-y-4">

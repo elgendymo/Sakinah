@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 // import { api } from '@/lib/api'; // For future use
 import PageContainer from '@/components/PageContainer';
+import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
 
 interface JournalEntry {
   id: string;
@@ -29,6 +30,8 @@ export default function JournalPage() {
   const [newTags, setNewTags] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPrompts, setShowPrompts] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const { error, handleError, clearError } = useErrorHandler();
   const supabase = createClient();
 
   useEffect(() => {
@@ -37,6 +40,7 @@ export default function JournalPage() {
 
   const loadEntries = async () => {
     try {
+      clearError();
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
         // In a real app, we'd call the journal API
@@ -58,7 +62,7 @@ export default function JournalPage() {
         setEntries(mockEntries);
       }
     } catch (error) {
-      console.error('Error loading entries:', error);
+      handleError(error, 'Loading Journal Entries');
     }
   };
 
@@ -67,10 +71,15 @@ export default function JournalPage() {
     if (!newEntry.trim()) return;
 
     setLoading(true);
+    clearError();
+    setSuccessMessage('');
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      if (!session?.access_token) {
+        handleError(new Error('Please sign in to save your journal entry'), 'Authentication');
+        return;
+      }
 
       const tags = newTags
         .split(',')
@@ -93,9 +102,10 @@ export default function JournalPage() {
       // Reset form
       setNewEntry('');
       setNewTags('');
+
+      setSuccessMessage('Alhamdulillah! Your journal entry has been saved. May Allah bless your spiritual reflections.');
     } catch (error) {
-      console.error('Error saving entry:', error);
-      alert('Failed to save entry. Please try again.');
+      handleError(error, 'Saving Journal Entry');
     } finally {
       setLoading(false);
     }
@@ -123,6 +133,33 @@ export default function JournalPage() {
       maxWidth="xl"
       padding="lg"
     >
+      {/* Error Display */}
+      {error && (
+        <ErrorDisplay
+          error={error}
+          onDismiss={clearError}
+          onRetry={() => loadEntries()}
+          className="mb-6"
+        />
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="text-emerald-600 text-lg">📝</div>
+            <div>
+              <p className="text-emerald-800 leading-relaxed">{successMessage}</p>
+              <button
+                onClick={() => setSuccessMessage('')}
+                className="mt-2 text-xs text-emerald-600 hover:text-emerald-700"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* New Entry Form */}
         <div className="card-islamic rounded-xl p-6 shadow-lg mb-8">

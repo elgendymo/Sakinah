@@ -84,62 +84,76 @@ export default function HomePage() {
 
         <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
           {/* Bismillah */}
-          <div className="mb-8 animate-pulse">
-            <p className="text-3xl md:text-4xl text-emerald-700 font-arabic">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-            <p className="text-sm text-sage-600 mt-2">In the name of Allah, the Most Gracious, the Most Merciful</p>
+          {/* Bismillah with Quranic Foundation */}
+          <div className="mb-12">
+            <div className="mb-6 animate-pulse">
+              <p className="text-3xl md:text-4xl text-emerald-700 font-arabic leading-relaxed">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+              <p className="text-sm text-sage-600 mt-2">In the name of Allah, the Most Gracious, the Most Merciful</p>
+            </div>
+
+            {/* Quranic context about Sakinah */}
+            <div className="max-w-2xl mx-auto bg-emerald-50/70 backdrop-blur-sm border border-emerald-100 rounded-xl p-6 mb-4">
+              <p className="text-lg text-emerald-800 font-arabic text-center leading-relaxed mb-3">
+                هُوَ الَّذِي أَنزَلَ السَّكِينَةَ فِي قُلُوبِ الْمُؤْمِنِينَ
+              </p>
+              <p className="text-sm text-emerald-700 text-center italic">
+                "He it is Who sent down tranquility (Sakinah) into the hearts of the believers"
+              </p>
+              <p className="text-xs text-sage-600 text-center mt-2">— Surah Al-Fath 48:4</p>
+            </div>
           </div>
 
-          {/* Main Title */}
-          <h1 className="text-5xl md:text-7xl font-bold text-sage-900 mb-6">
-            Find Your <span className="text-emerald-600">Sakinah</span>
+          {/* Main Title - More Reverent */}
+          <h1 className="text-4xl md:text-6xl font-bold text-sage-900 mb-6 leading-tight">
+            Begin Your Journey to <span className="text-emerald-600">Sakinah</span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-sage-700 mb-4 max-w-3xl mx-auto">
-            Your personal companion for spiritual purification and growth through authentic Islamic teachings
+          <p className="text-xl md:text-2xl text-sage-700 mb-4 max-w-3xl mx-auto leading-relaxed">
+            A sacred companion for spiritual purification and growth through the light of Quran and authentic Sunnah
           </p>
 
-          <p className="text-lg text-sage-600 mb-12 max-w-2xl mx-auto">
-            Build daily habits, track your progress, and strengthen your connection with Allah in complete privacy
+          <p className="text-lg text-sage-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+            Embark on the path of Tazkiyah • Purify your heart • Draw closer to Allah in complete privacy and devotion
           </p>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons - Islamic Terminology */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <button
               onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
               className="px-8 py-4 bg-emerald-600 text-white font-semibold rounded-xl text-lg transition-all hover:bg-emerald-700 hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-300"
             >
-              Explore Features
+              Discover the Path
             </button>
             <button
               onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
               className="px-8 py-4 border-2 border-emerald-600 text-emerald-700 font-semibold rounded-xl text-lg transition-all hover:bg-emerald-50 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-200"
             >
-              Start Your Journey
+              Begin Your Tazkiyah
             </button>
           </div>
 
           {/* Trust Indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-emerald-200">
                 <span className="text-2xl">🔒</span>
               </div>
               <h3 className="font-semibold text-sage-800">100% Private</h3>
-              <p className="text-sm text-sage-600">Your journey stays between you and Allah</p>
+              <p className="text-sm text-sage-600">Your spiritual journey remains between you and Allah</p>
             </div>
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-gold-100 rounded-full flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-gradient-to-br from-gold-100 to-gold-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-gold-200">
                 <span className="text-2xl">📖</span>
               </div>
               <h3 className="font-semibold text-sage-800">Authentic Sources</h3>
-              <p className="text-sm text-sage-600">Based on Quran & verified Hadith</p>
+              <p className="text-sm text-sage-600">Guidance rooted in Quran and authentic Sunnah</p>
             </div>
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-emerald-200">
                 <span className="text-2xl">🌙</span>
               </div>
               <h3 className="font-semibold text-sage-800">Daily Guidance</h3>
-              <p className="text-sm text-sage-600">Personalized spiritual development</p>
+              <p className="text-sm text-sage-600">Daily wisdom for your path to spiritual purification</p>
             </div>
           </div>
         </div>
@@ -155,8 +169,8 @@ export default function HomePage() {
       >
         <div className="max-w-7xl mx-auto">
           <SectionHeader
-            title="Transform Your Spiritual Life"
-            subtitle="Comprehensive tools designed to nurture your soul and strengthen your faith"
+            title="Nurture Your Soul with Sacred Wisdom"
+            subtitle="Divinely-inspired tools to purify your heart and strengthen your connection with Allah"
             level={2}
             className="text-center mb-16 [&_h2]:text-sage-900"
           />
@@ -648,16 +662,20 @@ export default function HomePage() {
           <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-3xl p-12 text-white shadow-2xl">
             <div className="text-5xl mb-6">🕌</div>
 
-            <blockquote className="text-2xl md:text-3xl font-medium mb-6 italic">
-              "Verily, in the remembrance of Allah do hearts find rest"
-            </blockquote>
-
-            <cite className="text-lg opacity-90">— Quran 13:28</cite>
+            <div className="mb-8">
+              <p className="text-2xl md:text-3xl font-arabic text-center leading-relaxed mb-4">
+                أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ
+              </p>
+              <blockquote className="text-xl md:text-2xl font-medium mb-4 italic">
+                "Verily, in the remembrance of Allah do hearts find tranquility"
+              </blockquote>
+              <cite className="text-lg opacity-90">— Surah Ar-Ra'd 13:28</cite>
+            </div>
 
             <div className="mt-8 pt-8 border-t border-white/20">
-              <p className="text-lg mb-6">
-                Join thousands of Muslims worldwide on their journey to spiritual excellence.
-                Every day is a new opportunity to grow closer to Allah.
+              <p className="text-lg mb-6 leading-relaxed">
+                Join the global Ummah in pursuing spiritual excellence through the blessed path of Tazkiyah.
+                Every dawn brings new mercies and opportunities to draw closer to Allah.
               </p>
 
               <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
@@ -690,11 +708,11 @@ export default function HomePage() {
           <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border border-emerald-100">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-sage-900">
-                Begin Your Spiritual Journey Today
+                Embark on Your Sacred Journey Today
               </h2>
-              <p className="text-lg text-sage-600 max-w-2xl mx-auto">
-                Take the first step towards inner peace and spiritual growth.
-                Your path to Allah starts with a single intention.
+              <p className="text-lg text-sage-600 max-w-2xl mx-auto leading-relaxed">
+                Take the first step towards divine tranquility and spiritual purification.
+                Your journey to Allah begins with sincere intention (Niyyah) and steadfast commitment.
               </p>
             </div>
 
