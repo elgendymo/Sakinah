@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   SectionHeader,
   AyahQuote,
@@ -10,6 +11,7 @@ import {
 } from '@sakinah/ui';
 
 export default function HomePage() {
+    const t = useTranslations('homepage');
     useRouter();
     const [scrollY, setScrollY] = useState(0);
     const [isVisible, setIsVisible] = useState({
@@ -53,16 +55,16 @@ export default function HomePage() {
   }, []);
 
   const samplePlanItems: PlanItem[] = [
-    { id: '1', text: 'Morning dhikr after Fajr', type: 'habit', completed: true },
-    { id: '2', text: 'Read 1 page of Quran with reflection', type: 'habit', completed: false },
+    { id: '1', text: t('sampleHabits.morningDhikr'), type: 'habit', completed: true },
+    { id: '2', text: t('sampleHabits.readQuran'), type: 'habit', completed: false },
     { id: '3', text: 'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ', type: 'dua', completed: false },
-    { id: '4', text: 'Practice patience in daily interactions', type: 'habit', completed: false },
+    { id: '4', text: t('sampleHabits.practicePatience'), type: 'habit', completed: false },
   ];
 
   const sampleHabits = [
-    { id: '1', name: 'Morning Adhkar', streak: 21, completed: true },
-    { id: '2', name: 'Quran Recitation', streak: 14, completed: true },
-    { id: '3', name: 'Night Prayer (Tahajjud)', streak: 7, completed: false },
+    { id: '1', name: t('morningAdhkar'), streak: 21, completed: true },
+    { id: '2', name: t('quranRecitation'), streak: 14, completed: true },
+    { id: '3', name: t('nightPrayer'), streak: 7, completed: false },
   ];
 
   return (
@@ -87,33 +89,33 @@ export default function HomePage() {
           {/* Bismillah with Quranic Foundation */}
           <div className="mb-12">
             <div className="mb-6 animate-pulse">
-              <p className="text-3xl md:text-4xl text-emerald-700 font-arabic leading-relaxed">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-              <p className="text-sm text-sage-600 mt-2">In the name of Allah, the Most Gracious, the Most Merciful</p>
+              <p className="text-3xl md:text-4xl text-emerald-700 font-arabic leading-relaxed">{t('bismillahArabic')}</p>
+              <p className="text-sm text-sage-600 mt-2">{t('bismillah')}</p>
             </div>
 
             {/* Quranic context about Sakinah */}
             <div className="max-w-2xl mx-auto bg-emerald-50/70 backdrop-blur-sm border border-emerald-100 rounded-xl p-6 mb-4">
               <p className="text-lg text-emerald-800 font-arabic text-center leading-relaxed mb-3">
-                هُوَ الَّذِي أَنزَلَ السَّكِينَةَ فِي قُلُوبِ الْمُؤْمِنِينَ
+                {t('sakinahVerseArabic')}
               </p>
               <p className="text-sm text-emerald-700 text-center italic">
-                "He it is Who sent down tranquility (Sakinah) into the hearts of the believers"
+                "{t('sakinahVerse')}"
               </p>
-              <p className="text-xs text-sage-600 text-center mt-2">— Surah Al-Fath 48:4</p>
+              <p className="text-xs text-sage-600 text-center mt-2">— {t('sakinahSource')}</p>
             </div>
           </div>
 
           {/* Main Title - More Reverent */}
           <h1 className="text-4xl md:text-6xl font-bold text-sage-900 mb-6 leading-tight">
-            Begin Your Journey to <span className="text-emerald-600">Sakinah</span>
+            {t('mainTitle')} <span className="text-emerald-600">{t('mainTitleHighlight')}</span>
           </h1>
 
           <p className="text-xl md:text-2xl text-sage-700 mb-4 max-w-3xl mx-auto leading-relaxed">
-            A sacred companion for spiritual purification and growth through the light of Quran and authentic Sunnah
+            {t('mainSubtitle')}
           </p>
 
           <p className="text-lg text-sage-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Embark on the path of Tazkiyah • Purify your heart • Draw closer to Allah in complete privacy and devotion
+            {t('mainDescription')}
           </p>
 
           {/* CTA Buttons - Islamic Terminology */}
@@ -122,13 +124,13 @@ export default function HomePage() {
               onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
               className="px-8 py-4 bg-emerald-600 text-white font-semibold rounded-xl text-lg transition-all hover:bg-emerald-700 hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-300"
             >
-              Discover the Path
+              {t('discoverPath')}
             </button>
             <button
               onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
               className="px-8 py-4 border-2 border-emerald-600 text-emerald-700 font-semibold rounded-xl text-lg transition-all hover:bg-emerald-50 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-200"
             >
-              Begin Your Tazkiyah
+              {t('beginTazkiyah')}
             </button>
           </div>
 
@@ -138,22 +140,22 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-emerald-200">
                 <span className="text-2xl">🔒</span>
               </div>
-              <h3 className="font-semibold text-sage-800">100% Private</h3>
-              <p className="text-sm text-sage-600">Your spiritual journey remains between you and Allah</p>
+              <h3 className="font-semibold text-sage-800">{t('privateTitle')}</h3>
+              <p className="text-sm text-sage-600">{t('privateDesc')}</p>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 bg-gradient-to-br from-gold-100 to-gold-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-gold-200">
                 <span className="text-2xl">📖</span>
               </div>
-              <h3 className="font-semibold text-sage-800">Authentic Sources</h3>
-              <p className="text-sm text-sage-600">Guidance rooted in Quran and authentic Sunnah</p>
+              <h3 className="font-semibold text-sage-800">{t('authenticTitle')}</h3>
+              <p className="text-sm text-sage-600">{t('authenticDesc')}</p>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-emerald-200">
                 <span className="text-2xl">🌙</span>
               </div>
-              <h3 className="font-semibold text-sage-800">Daily Guidance</h3>
-              <p className="text-sm text-sage-600">Daily wisdom for your path to spiritual purification</p>
+              <h3 className="font-semibold text-sage-800">{t('dailyGuidanceTitle')}</h3>
+              <p className="text-sm text-sage-600">{t('dailyGuidanceDesc')}</p>
             </div>
           </div>
         </div>
@@ -169,8 +171,8 @@ export default function HomePage() {
       >
         <div className="max-w-7xl mx-auto">
           <SectionHeader
-            title="Nurture Your Soul with Sacred Wisdom"
-            subtitle="Divinely-inspired tools to purify your heart and strengthen your connection with Allah"
+            title={t('featuresTitle')}
+            subtitle={t('featuresSubtitle')}
             level={2}
             className="text-center mb-16 [&_h2]:text-sage-900"
           />
@@ -183,19 +185,19 @@ export default function HomePage() {
                 <div className="w-14 h-14 bg-emerald-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
                   <span className="text-2xl">🌱</span>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">Tazkiyah Plans</h3>
+                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('tazkiyahPlanTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
-                  Personalized spiritual purification journey with daily actionable steps
+                  {t('tazkiyahPlanDesc')}
                 </p>
                 <ul className="space-y-2 text-sm text-sage-600 group-hover:text-white/80">
                   <li className="flex items-start">
-                    <span>Remove spiritual diseases (takhliyah)</span>
+                    <span>{t('tazkiyahFeature1')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>Build beautiful virtues (tahliyah)</span>
+                    <span>{t('tazkiyahFeature2')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>AI-powered recommendations</span>
+                    <span>{t('tazkiyahFeature3')}</span>
                   </li>
                 </ul>
               </div>
@@ -208,19 +210,19 @@ export default function HomePage() {
                 <div className="w-14 h-14 bg-gold-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
                   <span className="text-2xl">✨</span>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">Habit Building</h3>
+                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('habitTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
-                  Track and maintain consistent spiritual practices with streak counting
+                  {t('habitDesc')}
                 </p>
                 <ul className="space-y-2 text-sm text-sage-600 group-hover:text-white/80">
                   <li className="flex items-start">
-                    <span>Daily prayer tracking</span>
+                    <span>{t('habitFeature1')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>Quran reading goals</span>
+                    <span>{t('habitFeature2')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>Dhikr reminders & counter</span>
+                    <span>{t('habitFeature3')}</span>
                   </li>
                 </ul>
               </div>
@@ -233,19 +235,19 @@ export default function HomePage() {
                 <div className="w-14 h-14 bg-emerald-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
                   <span className="text-2xl">🌙</span>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">Daily Muhasabah</h3>
+                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('muhasabahTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
-                  Self-accountability and reflection to improve your character daily
+                  {t('muhasabahDesc')}
                 </p>
                 <ul className="space-y-2 text-sm text-sage-600 group-hover:text-white/80">
                   <li className="flex items-start">
-                    <span>Evening self-reflection</span>
+                    <span>{t('muhasabahFeature1')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>Track spiritual progress</span>
+                    <span>{t('muhasabahFeature2')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>Identify areas to improve</span>
+                    <span>{t('muhasabahFeature3')}</span>
                   </li>
                 </ul>
               </div>
@@ -258,19 +260,19 @@ export default function HomePage() {
                 <div className="w-14 h-14 bg-gold-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
                   <span className="text-2xl">📝</span>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">Spiritual Journal</h3>
+                <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('journalTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
-                  Document your spiritual journey and moments of gratitude
+                  {t('journalDesc')}
                 </p>
                 <ul className="space-y-2 text-sm text-sage-600 group-hover:text-white/80">
                   <li className="flex items-start">
-                    <span>Private reflections</span>
+                    <span>{t('journalFeature1')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>Gratitude logging</span>
+                    <span>{t('journalFeature2')}</span>
                   </li>
                   <li className="flex items-start">
-                    <span>Spiritual insights</span>
+                    <span>{t('journalFeature3')}</span>
                   </li>
                 </ul>
               </div>
@@ -288,8 +290,8 @@ export default function HomePage() {
       >
         <div className="max-w-6xl mx-auto">
           <SectionHeader
-            title="Your Path to Inner Peace"
-            subtitle="Simple steps to begin your spiritual transformation"
+            title={t('howItWorksTitle')}
+            subtitle={t('howItWorksSubtitle')}
             level={2}
             className="text-center mb-16 [&_h2]:text-sage-900"
           />
@@ -299,9 +301,9 @@ export default function HomePage() {
               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-emerald-600">1</span>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-sage-900">Set Your Intention</h3>
+              <h3 className="text-xl font-bold mb-3 text-sage-900">{t('step1Title')}</h3>
               <p className="text-sage-600">
-                Begin with a sincere intention to improve your relationship with Allah and purify your heart
+                {t('step1Desc')}
               </p>
             </div>
 
@@ -309,9 +311,9 @@ export default function HomePage() {
               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-gold-600">2</span>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-sage-900">Choose Your Focus</h3>
+              <h3 className="text-xl font-bold mb-3 text-sage-900">{t('step2Title')}</h3>
               <p className="text-sage-600">
-                Select spiritual goals, virtues to develop, or challenges to overcome with guided support
+                {t('step2Desc')}
               </p>
             </div>
 
@@ -319,9 +321,9 @@ export default function HomePage() {
               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-emerald-600">3</span>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-sage-900">Track & Reflect</h3>
+              <h3 className="text-xl font-bold mb-3 text-sage-900">{t('step3Title')}</h3>
               <p className="text-sage-600">
-                Build daily habits, complete your spiritual tasks, and reflect on your progress each night
+                {t('step3Desc')}
               </p>
             </div>
           </div>
@@ -336,40 +338,42 @@ export default function HomePage() {
                 <div className="relative bg-white px-6 py-2 mx-auto w-fit">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <h2 className="text-2xl font-semibold text-sage-800 tracking-wide">Experience the Journey</h2>
+                    <h2 className="text-2xl font-semibold text-sage-800 tracking-wide">{t('experienceTitle')}</h2>
                     <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
                   </div>
                 </div>
               </div>
-              <p className="text-sage-600 mt-4 text-lg leading-relaxed">Preview your daily spiritual dashboard</p>
+              <p className="text-sage-600 mt-4 text-lg leading-relaxed">{t('experienceSubtitle')}</p>
             </div>
 
             <div className="grid lg:grid-cols-12 gap-8">
               {/* Primary Spiritual Content */}
               <div className="lg:col-span-8 space-y-8">
 
-                {/* Today's Ayah - Featured prominently */}
+                {/* Today's Ayah - Featured prominently with Islamic card style */}
                 <div className="relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-sage-50 to-emerald-50/30 rounded-2xl"></div>
-                  <div className="relative p-8 rounded-2xl border border-emerald-100/50 shadow-lg backdrop-blur-sm">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-lg">📖</span>
+                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-200/30 to-gold-200/30 rounded-2xl blur-sm"></div>
+                  <div className="relative card-islamic rounded-2xl card-hover border border-emerald-100/50 shadow-lg">
+                    <div className="p-8">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
+                          <span className="text-white text-lg">📖</span>
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-semibold text-sage-800">{t('todaysGuidance')}</h3>
+                          <p className="text-sm text-sage-600">{t('reflectionOfDay')}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-sage-800">Today's Guidance</h3>
-                        <p className="text-sm text-sage-600">Reflection of the day</p>
-                      </div>
-                    </div>
 
-                    <AyahQuote
-                      arabic="إِنَّ اللَّهَ لَا يُغَيِّرُ مَا بِقَوْمٍ حَتَّىٰ يُغَيِّرُوا مَا بِأَنفُسِهِمْ"
-                      translation="Indeed, Allah will not change the condition of a people until they change what is in themselves"
-                      source="Surah Ar-Ra'd 13:11"
-                      transliteration="Inna Allaha la yughayyiru ma biqawmin hatta yughayyiru ma bi'anfusihim"
-                      className="border-0 shadow-none bg-transparent p-0"
-                      showCopy={true}
-                    />
+                      <AyahQuote
+                        arabic="إِنَّ اللَّهَ لَا يُغَيِّرُ مَا بِقَوْمٍ حَتَّىٰ يُغَيِّرُوا مَا بِأَنفُسِهِمْ"
+                        translation="Indeed, Allah will not change the condition of a people until they change what is in themselves"
+                        source="Surah Ar-Ra'd 13:11"
+                        transliteration="Inna Allaha la yughayyiru ma biqawmin hatta yughayyiru ma bi'anfusihim"
+                        className="border-0 shadow-none bg-transparent p-0"
+                        showCopy={true}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -383,11 +387,11 @@ export default function HomePage() {
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">📋</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Today's Plan</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('todaysPlan')}</h3>
                       </div>
                       <div className="space-y-4">
                         <p className="text-sm text-sage-600 leading-relaxed">
-                          Your spiritual roadmap for today
+                          {t('spiritualRoadmap')}
                         </p>
 
                         {/* Plan Items with exact dashboard styling */}
@@ -415,8 +419,8 @@ export default function HomePage() {
                                       item.type === 'dua' ? 'bg-gold-100 text-gold-700' :
                                       'bg-sage-100 text-sage-700'}
                                   `}>
-                                    {item.type === 'habit' ? 'Habit' :
-                                     item.type === 'dua' ? "Du'a" : 'Ayah'}
+                                    {item.type === 'habit' ? t('habit') :
+                                     item.type === 'dua' ? t('dua') : t('ayah')}
                                   </span>
                                 </div>
 
@@ -442,9 +446,9 @@ export default function HomePage() {
                         {/* Progress summary */}
                         <div className="mt-4 pt-3 border-t border-sage-100">
                           <div className="flex items-center justify-between text-xs text-sage-600 mb-2">
-                            <span>Progress</span>
+                            <span>{t('progress')}</span>
                             <span className="font-medium">
-                              {samplePlanItems.filter(p => p.completed).length}/{samplePlanItems.length} completed
+                              {samplePlanItems.filter(p => p.completed).length}/{samplePlanItems.length} {t('completed')}
                             </span>
                           </div>
                           <div className="h-1.5 bg-sage-100 rounded-full overflow-hidden">
@@ -458,7 +462,7 @@ export default function HomePage() {
                         </div>
 
                         <button className="w-full mt-4 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2">
-                          View Details
+                          {t('viewDetails')}
                           <span className="text-xs">→</span>
                         </button>
                       </div>
@@ -472,7 +476,7 @@ export default function HomePage() {
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">✓</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Daily Habits</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('dailyHabitsTitle')}</h3>
                       </div>
                       <div className="space-y-3">
                         {sampleHabits.map((habit) => (
@@ -506,7 +510,7 @@ export default function HomePage() {
 
                             {habit.completed && (
                               <div className="flex-shrink-0 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                                Done
+                                {t('done')}
                               </div>
                             )}
                           </div>
@@ -515,9 +519,9 @@ export default function HomePage() {
                         {/* Progress summary */}
                         <div className="mt-4 pt-3 border-t border-sage-100">
                           <div className="flex items-center justify-between text-xs text-sage-600">
-                            <span>Progress</span>
+                            <span>{t('progress')}</span>
                             <span className="font-medium">
-                              {sampleHabits.filter(h => h.completed).length}/{sampleHabits.length} completed
+                              {sampleHabits.filter(h => h.completed).length}/{sampleHabits.length} {t('completed')}
                             </span>
                           </div>
                           <div className="mt-2 h-1.5 bg-sage-100 rounded-full overflow-hidden">
@@ -542,29 +546,28 @@ export default function HomePage() {
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-r from-emerald-200/30 to-gold-200/30 rounded-2xl blur-sm"></div>
                   <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-emerald-100/50 shadow-lg overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-gold-400 to-emerald-400"></div>
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">💚</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Daily Intention</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('dailyIntentionTitle')}</h3>
                       </div>
                       <div className="space-y-4">
                         <div className="p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
                           <p className="text-sm text-emerald-700 leading-relaxed italic text-center">
-                            "Today, I intend to worship Allah with sincerity and mindfulness."
+                            {t('sampleIntention')}
                           </p>
                         </div>
 
                         <button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2">
-                          Set Today's Intention
+                          {t('setTodaysIntention')}
                           <span className="text-xs">💚</span>
                         </button>
 
                         <div className="pt-3 border-t border-emerald-100">
                           <p className="text-xs text-sage-600 text-center">
-                            💡 Set your daily intention after Fajr prayer
+                            {t('dailyIntentionTip')}
                           </p>
                         </div>
                       </div>
@@ -576,18 +579,17 @@ export default function HomePage() {
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-r from-gold-200/30 to-emerald-200/30 rounded-2xl blur-sm"></div>
                   <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-gold-100/50 shadow-lg overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gold-400 via-emerald-400 to-gold-400"></div>
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm">📿</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-sage-800">Dhikr Counter</h3>
+                        <h3 className="text-lg font-semibold text-sage-800">{t('dhikrCounterTitle')}</h3>
                       </div>
                       <div className="space-y-4">
                         {/* Dhikr Title */}
                         <div className="text-center">
-                          <h4 className="text-lg font-semibold text-sage-800 mb-1">SubhanAllah</h4>
+                          <h4 className="text-lg font-semibold text-sage-800 mb-1">{t('subhanallahTitle')}</h4>
                           <p className="text-xs text-sage-600">سُبْحَانَ اللَّهِ</p>
                         </div>
 
@@ -623,7 +625,7 @@ export default function HomePage() {
                             {/* Count display */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                               <span className="text-2xl font-bold text-sage-800">15</span>
-                              <span className="text-xs text-sage-600">of 33</span>
+                              <span className="text-xs text-sage-600">{t('of33')}</span>
                             </div>
                           </div>
 
@@ -638,7 +640,7 @@ export default function HomePage() {
                         {/* Progress Info */}
                         <div className="text-center pt-3 border-t border-gold-100">
                           <p className="text-xs text-sage-600">
-                            Tap to count your dhikr
+                            {t('tapToCountDhikr')}
                           </p>
                         </div>
                       </div>
@@ -664,32 +666,31 @@ export default function HomePage() {
 
             <div className="mb-8">
               <p className="text-2xl md:text-3xl font-arabic text-center leading-relaxed mb-4">
-                أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ
+                {t('remembranceVerseArabic')}
               </p>
               <blockquote className="text-xl md:text-2xl font-medium mb-4 italic">
-                "Verily, in the remembrance of Allah do hearts find tranquility"
+                "{t('remembranceVerseTranslation')}"
               </blockquote>
-              <cite className="text-lg opacity-90">— Surah Ar-Ra'd 13:28</cite>
+              <cite className="text-lg opacity-90">{t('remembranceVerseSource')}</cite>
             </div>
 
             <div className="mt-8 pt-8 border-t border-white/20">
               <p className="text-lg mb-6 leading-relaxed">
-                Join the global Ummah in pursuing spiritual excellence through the blessed path of Tazkiyah.
-                Every dawn brings new mercies and opportunities to draw closer to Allah.
+                {t('globalUmmahMessage')}
               </p>
 
               <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
                 <div>
                   <div className="text-3xl font-bold mb-2">100%</div>
-                  <div className="text-sm opacity-90">Private & Secure</div>
+                  <div className="text-sm opacity-90">{t('privateSecureLabel')}</div>
                 </div>
                 <div>
                   <div className="text-3xl font-bold mb-2">365</div>
-                  <div className="text-sm opacity-90">Days of Growth</div>
+                  <div className="text-sm opacity-90">{t('daysOfGrowthLabel')}</div>
                 </div>
                 <div>
                   <div className="text-3xl font-bold mb-2">5x</div>
-                  <div className="text-sm opacity-90">Daily Reminders</div>
+                  <div className="text-sm opacity-90">{t('dailyRemindersLabel')}</div>
                 </div>
               </div>
             </div>
@@ -708,11 +709,10 @@ export default function HomePage() {
           <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border border-emerald-100">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-sage-900">
-                Embark on Your Sacred Journey Today
+                {t('embarkTitle')}
               </h2>
               <p className="text-lg text-sage-600 max-w-2xl mx-auto leading-relaxed">
-                Take the first step towards divine tranquility and spiritual purification.
-                Your journey to Allah begins with sincere intention (Niyyah) and steadfast commitment.
+                {t('embarkDesc')}
               </p>
             </div>
 
@@ -722,20 +722,20 @@ export default function HomePage() {
                   href="/login"
                   className="block w-full px-6 py-4 bg-emerald-600 text-white font-semibold rounded-xl text-center text-lg transition-all hover:bg-emerald-700 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-emerald-300"
                 >
-                  Sign In to Continue
+                  {t('signInContinue')}
                 </Link>
 
                 <Link
                   href="/signup"
                   className="block w-full px-6 py-4 border-2 border-emerald-600 text-emerald-700 font-semibold rounded-xl text-center text-lg transition-all hover:bg-emerald-50 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-200"
                 >
-                  Create New Account
+                  {t('createAccount')}
                 </Link>
               </div>
 
               <div className="text-center">
                 <p className="text-sm text-sage-600 mb-4">
-                  Or continue with
+                  {t('orContinueWith')}
                 </p>
 
                 <div className="flex justify-center gap-4">
@@ -744,7 +744,7 @@ export default function HomePage() {
                     className="flex items-center gap-2 px-6 py-3 border border-sage-300 rounded-lg hover:bg-sage-50 transition-colors"
                   >
                     <span className="text-lg">🔍</span>
-                    <span className="text-sage-700">Google</span>
+                    <span className="text-sage-700">{t('google')}</span>
                   </Link>
 
                   <Link
@@ -752,7 +752,7 @@ export default function HomePage() {
                     className="flex items-center gap-2 px-6 py-3 border border-sage-300 rounded-lg hover:bg-sage-50 transition-colors"
                   >
                     <span className="text-lg">👁️</span>
-                    <span className="text-sage-700">View Demo</span>
+                    <span className="text-sage-700">{t('viewDemo')}</span>
                   </Link>
                 </div>
               </div>
@@ -761,15 +761,15 @@ export default function HomePage() {
                 <div className="flex items-center justify-center gap-6 text-sm text-sage-600">
                   <span className="flex items-center gap-2">
                     <span>🔒</span>
-                    <span>Fully Private</span>
+                    <span>{t('fullyPrivate')}</span>
                   </span>
                   <span className="flex items-center gap-2">
                     <span>📖</span>
-                    <span>Shariah Compliant</span>
+                    <span>{t('shariahCompliant')}</span>
                   </span>
                   <span className="flex items-center gap-2">
                     <span>❤️</span>
-                    <span>Free Forever</span>
+                    <span>{t('freeForever')}</span>
                   </span>
                 </div>
               </div>
@@ -778,53 +778,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6 bg-sage-900 text-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="font-bold text-lg mb-4">Sakinah</h3>
-              <p className="text-sage-300 text-sm">
-                Your companion for spiritual growth through authentic Islamic teachings
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Features</h4>
-              <ul className="space-y-2 text-sm text-sage-300">
-                <li><Link href="/tazkiyah" className="hover:text-white transition-colors">Tazkiyah Plans</Link></li>
-                <li><Link href="/habits" className="hover:text-white transition-colors">Habit Tracking</Link></li>
-                <li><Link href="/checkin" className="hover:text-white transition-colors">Daily Muhasabah</Link></li>
-                <li><Link href="/journal" className="hover:text-white transition-colors">Spiritual Journal</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Resources</h4>
-              <ul className="space-y-2 text-sm text-sage-300">
-                <li><Link href="/content" className="hover:text-white transition-colors">Content Library</Link></li>
-                <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Connect</h4>
-              <ul className="space-y-2 text-sm text-sage-300">
-                <li><a href="#" className="hover:text-white transition-colors">Contact Support</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Feature Requests</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Community</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-sage-700 text-center text-sm text-sage-400">
-            <p>© 2024 Sakinah. Made with ❤️ for the Ummah</p>
-            <p className="mt-2">Privacy-first | Shariah-compliant | Ad-free</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

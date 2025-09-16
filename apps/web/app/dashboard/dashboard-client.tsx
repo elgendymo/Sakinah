@@ -43,11 +43,11 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
   const [dhikrCount, setDhikrCount] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTime[]>([
-    { name: tPrayers('fajr'), time: '5:30', passed: true },
-    { name: tPrayers('dhuhr'), time: '12:45', passed: true },
-    { name: tPrayers('asr'), time: '4:15', passed: false },
-    { name: tPrayers('maghrib'), time: '7:20', passed: false },
-    { name: tPrayers('isha'), time: '8:45', passed: false },
+    { name: 'Fajr' as const, time: '5:30', passed: true },
+    { name: 'Dhuhr' as const, time: '12:45', passed: true },
+    { name: 'Asr' as const, time: '4:15', passed: false },
+    { name: 'Maghrib' as const, time: '7:20', passed: false },
+    { name: 'Isha' as const, time: '8:45', passed: false },
   ]);
   const supabase = createClient();
 
@@ -237,7 +237,6 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
             <div className="relative overflow-hidden max-w-5xl mx-auto">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/80 via-sage-50/60 to-gold-50/40 rounded-2xl"></div>
               <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-emerald-100/50 shadow-lg overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-sage-400 to-gold-400"></div>
 
                 {/* Header */}
                 <div className="p-6 pb-4">
@@ -332,7 +331,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                 : 'text-sage-700'
                             }
                           `}>
-                            {prayer.name}
+                            {tPrayers(prayer.name.toLowerCase() as keyof typeof tPrayers)}
                           </div>
 
                           {/* Prayer time */}
@@ -473,28 +472,30 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
               {/* Primary Spiritual Content - Takes more space */}
               <div className="lg:col-span-8 space-y-8">
 
-                {/* Today's Ayah - Featured prominently */}
+                {/* Today's Ayah - Featured prominently with Islamic card style */}
                 <div className="relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-sage-50 to-emerald-50/30 rounded-2xl"></div>
-                  <div className="relative p-8 rounded-2xl border border-emerald-100/50 shadow-lg backdrop-blur-sm">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-lg">📖</span>
+                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-200/30 to-gold-200/30 rounded-2xl blur-sm"></div>
+                  <div className="relative card-islamic rounded-2xl card-hover border border-emerald-100/50 shadow-lg">
+                    <div className="p-8">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
+                          <span className="text-white text-lg">📖</span>
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-semibold text-sage-800">{t('todaysGuidance')}</h3>
+                          <p className="text-sm text-sage-600">{t('reflectionOfDay')}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-sage-800">{t('todaysGuidance')}</h3>
-                        <p className="text-sm text-sage-600">{t('reflectionOfDay')}</p>
-                      </div>
-                    </div>
 
-                    <AyahQuote
-                      arabic="وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا"
-                      translation="And whoever fears Allah - He will make for him a way out."
-                      source="At-Talaq 65:2"
-                      transliteration="Wa man yattaqi Allaha yaj'al lahu makhrajan"
-                      className="border-0 shadow-none bg-transparent p-0"
-                      showCopy={true}
-                    />
+                      <AyahQuote
+                        arabic="وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا"
+                        translation="And whoever fears Allah - He will make for him a way out."
+                        source="At-Talaq 65:2"
+                        transliteration="Wa man yattaqi Allaha yaj'al lahu makhrajan"
+                        className="border-0 shadow-none bg-transparent p-0"
+                        showCopy={true}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -721,7 +722,6 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-r from-emerald-200/30 to-gold-200/30 rounded-2xl blur-sm"></div>
                   <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-emerald-100/50 shadow-lg overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-gold-400 to-emerald-400"></div>
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
@@ -819,7 +819,6 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-r from-gold-200/30 to-emerald-200/30 rounded-2xl blur-sm"></div>
                   <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-gold-100/50 shadow-lg overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gold-400 via-emerald-400 to-gold-400"></div>
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">

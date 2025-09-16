@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import PageContainer from '@/components/PageContainer';
 
 interface ContentSnippet {
@@ -15,19 +16,10 @@ interface ContentSnippet {
   createdAt: string;
 }
 
-const CONTENT_TYPES = {
-  ayah: { label: 'Quranic Verses', icon: '📖', color: 'text-green-600' },
-  hadith: { label: 'Hadith', icon: '💬', color: 'text-blue-600' },
-  dua: { label: 'Duas', icon: '🤲', color: 'text-purple-600' },
-  note: { label: 'Spiritual Notes', icon: '📝', color: 'text-orange-600' },
-};
-
-const POPULAR_TAGS = [
-  'patience', 'gratitude', 'tawakkul', 'dhikr', 'prayer',
-  'forgiveness', 'charity', 'knowledge', 'taqwa', 'hope'
-];
 
 export default function ContentLibraryPage() {
+  const t = useTranslations('content');
+
   const [content, setContent] = useState<ContentSnippet[]>([]);
   const [filteredContent, setFilteredContent] = useState<ContentSnippet[]>([]);
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -35,6 +27,18 @@ export default function ContentLibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
+
+  const CONTENT_TYPES = {
+    ayah: { label: t('types.ayah'), icon: '📖', color: 'text-green-600' },
+    hadith: { label: t('types.hadith'), icon: '💬', color: 'text-blue-600' },
+    dua: { label: t('types.dua'), icon: '🤲', color: 'text-purple-600' },
+    note: { label: t('types.note'), icon: '📝', color: 'text-orange-600' },
+  };
+
+  const POPULAR_TAGS = [
+    'patience', 'gratitude', 'tawakkul', 'dhikr', 'prayer',
+    'forgiveness', 'charity', 'knowledge', 'taqwa', 'hope'
+  ];
 
   useEffect(() => {
     loadContent();
@@ -200,15 +204,15 @@ export default function ContentLibraryPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-accent">Loading content...</div>
+        <div className="text-accent">{t('loadingContent')}</div>
       </div>
     );
   }
 
   return (
     <PageContainer
-      title="Content Library"
-      subtitle="Browse Quranic verses, Hadith, duas, and spiritual guidance"
+      title={t('title')}
+      subtitle={t('subtitle')}
       maxWidth="6xl"
       padding="lg"
     >
@@ -221,14 +225,14 @@ export default function ContentLibraryPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search content, translations, or sources..."
+              placeholder={t('searchPlaceholder')}
               className="w-full px-4 py-3 border border-sage-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
             />
           </div>
 
           {/* Content Type Filter */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-sage-700 mb-3">Content Type</h3>
+            <h3 className="text-sm font-medium text-sage-700 mb-3">{t('contentType')}</h3>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSelectedType('all')}
@@ -238,7 +242,7 @@ export default function ContentLibraryPage() {
                     : 'bg-sage-100 text-sage-700 hover:bg-emerald-50 hover:text-emerald-700'
                 }`}
               >
-                All ({content.length})
+                {t('all')} ({content.length})
               </button>
               {Object.entries(CONTENT_TYPES).map(([type, info]) => (
                 <button
@@ -262,7 +266,7 @@ export default function ContentLibraryPage() {
 
           {/* Tags Filter */}
           <div>
-            <h3 className="text-sm font-medium text-sage-700 mb-3">Popular Topics</h3>
+            <h3 className="text-sm font-medium text-sage-700 mb-3">{t('popularTopics')}</h3>
             <div className="flex flex-wrap gap-2">
               {POPULAR_TAGS.map(tag => (
                 <button
@@ -274,7 +278,7 @@ export default function ContentLibraryPage() {
                       : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200/50'
                   }`}
                 >
-                  #{tag}
+                  #{t(`tags.${tag}`)}
                 </button>
               ))}
             </div>
@@ -283,7 +287,7 @@ export default function ContentLibraryPage() {
                 onClick={() => setSelectedTags([])}
                 className="mt-3 text-sm text-sage-500 hover:text-sage-700 transition-colors"
               >
-                Clear tags
+                {t('clearTags')}
               </button>
             )}
           </div>
@@ -292,12 +296,12 @@ export default function ContentLibraryPage() {
         {/* Results */}
         <div className="mb-6 flex justify-between items-center">
           <div className="text-fg-muted">
-            {filteredContent.length} items found
+            {filteredContent.length} {t('itemsFound')}
           </div>
 
           {bookmarked.size > 0 && (
             <div className="text-sm text-fg-muted">
-              ⭐ {bookmarked.size} bookmarked
+              ⭐ {bookmarked.size} {t('bookmarked')}
             </div>
           )}
         </div>
@@ -312,7 +316,7 @@ export default function ContentLibraryPage() {
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
-            <p className="text-sage-600 mb-4">No content found matching your filters</p>
+            <p className="text-sage-600 mb-4">{t('noContentFound')}</p>
             <button
               onClick={() => {
                 setSelectedType('all');
@@ -321,14 +325,14 @@ export default function ContentLibraryPage() {
               }}
               className="text-emerald-600 hover:underline transition-colors"
             >
-              Clear all filters
+              {t('clearAllFilters')}
             </button>
           </div>
         )}
 
         {/* Footer note */}
         <div className="text-center text-sm text-fg-muted mt-12 pt-8 border-t border-border-muted">
-          <p>Content is curated from authentic Islamic sources | Always verify with scholars for important matters</p>
+          <p>{t('footerNote')}</p>
         </div>
     </PageContainer>
   );

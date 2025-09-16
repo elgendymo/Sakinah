@@ -4,6 +4,13 @@
 
 A comprehensive Arabic localization system has been implemented for the Sakinah Islamic spiritual growth platform, providing state-of-the-art bilingual support (Arabic/English) with full RTL (Right-to-Left) layout support, authentic Islamic typography, and cultural considerations.
 
+## 🔄 Important Updates
+
+### Terminology Changes
+- **Dashboard** → **Mindful** (English) / **اليقظة** (Arabic)
+  - Reflects a more conscious and mindful approach to spiritual awareness
+  - Better aligns with Islamic concepts of spiritual consciousness (taqwa)
+
 ## ✅ Implementation Summary
 
 ### 1. **Core Internationalization Framework**

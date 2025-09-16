@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { useTranslations } from 'next-intl';
 // import { api } from '@/lib/api'; // For future use
 import PageContainer from '@/components/PageContainer';
 import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
@@ -13,18 +14,9 @@ interface JournalEntry {
   createdAt: string;
 }
 
-const JOURNAL_PROMPTS = [
-  'What duas touched my heart today?',
-  'How did I see Allah\'s mercy in my life today?',
-  'What spiritual lesson did I learn?',
-  'How can I apply this ayah to my life?',
-  'What made me feel closest to Allah?',
-  'What sins do I need to repent from?',
-  'How did I help someone today?',
-  'What blessing did I take for granted?',
-];
-
 export default function JournalPage() {
+  const t = useTranslations('journal');
+
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [newEntry, setNewEntry] = useState('');
   const [newTags, setNewTags] = useState('');
@@ -33,6 +25,17 @@ export default function JournalPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const { error, handleError, clearError } = useErrorHandler();
   const supabase = createClient();
+
+  const JOURNAL_PROMPTS = [
+    t('prompts.1'),
+    t('prompts.2'),
+    t('prompts.3'),
+    t('prompts.4'),
+    t('prompts.5'),
+    t('prompts.6'),
+    t('prompts.7'),
+    t('prompts.8'),
+  ];
 
   useEffect(() => {
     loadEntries();
@@ -103,7 +106,7 @@ export default function JournalPage() {
       setNewEntry('');
       setNewTags('');
 
-      setSuccessMessage('Alhamdulillah! Your journal entry has been saved. May Allah bless your spiritual reflections.');
+      setSuccessMessage(t('successMessage'));
     } catch (error) {
       handleError(error, 'Saving Journal Entry');
     } finally {
@@ -128,8 +131,8 @@ export default function JournalPage() {
 
   return (
     <PageContainer
-      title="Spiritual Journal"
-      subtitle="A private space for your thoughts and reflections"
+      title={t('title')}
+      subtitle={t('subtitle')}
       maxWidth="xl"
       padding="lg"
     >
@@ -154,7 +157,7 @@ export default function JournalPage() {
                 onClick={() => setSuccessMessage('')}
                 className="mt-2 text-xs text-emerald-600 hover:text-emerald-700"
               >
-                Dismiss
+                {t('dismiss')}
               </button>
             </div>
           </div>
@@ -167,20 +170,20 @@ export default function JournalPage() {
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-sage-700">
-                  What's on your heart today?
+                  {t('whatsOnYourHeart')}
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowPrompts(!showPrompts)}
                   className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
                 >
-                  {showPrompts ? 'Hide' : 'Show'} prompts
+                  {showPrompts ? t('hidePrompts') : t('showPrompts')}
                 </button>
               </div>
 
               {showPrompts && (
                 <div className="mb-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200/50">
-                  <div className="text-sm text-sage-600 mb-2">Click to use a prompt:</div>
+                  <div className="text-sm text-sage-600 mb-2">{t('clickToUsePrompt')}</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {JOURNAL_PROMPTS.map((prompt, index) => (
                       <button
@@ -199,7 +202,7 @@ export default function JournalPage() {
               <textarea
                 value={newEntry}
                 onChange={(e) => setNewEntry(e.target.value)}
-                placeholder="Write your thoughts, reflections, duas, or spiritual insights..."
+                placeholder={t('writePlaceholder')}
                 className="w-full px-4 py-3 border border-sage-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-colors"
                 rows={6}
               />
@@ -207,13 +210,13 @@ export default function JournalPage() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-sage-700 mb-2">
-                Tags (optional)
+                {t('tagsLabel')}
               </label>
               <input
                 type="text"
                 value={newTags}
                 onChange={(e) => setNewTags(e.target.value)}
-                placeholder="dua, gratitude, struggle, lesson (separate with commas)"
+                placeholder={t('tagsPlaceholder')}
                 className="w-full px-4 py-2 border border-sage-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -223,7 +226,7 @@ export default function JournalPage() {
               disabled={loading || !newEntry.trim()}
               className="btn-primary disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Entry'}
+              {loading ? t('saving') : t('saveEntry')}
             </button>
           </form>
         </div>
@@ -262,9 +265,9 @@ export default function JournalPage() {
           ) : (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">📝</div>
-              <p className="text-sage-600 mb-4">No journal entries yet</p>
+              <p className="text-sage-600 mb-4">{t('noEntriesYet')}</p>
               <p className="text-sm text-sage-500">
-                Start writing to capture your spiritual journey
+                {t('startWriting')}
               </p>
             </div>
           )}
@@ -274,10 +277,10 @@ export default function JournalPage() {
         <div className="mt-12 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl p-6 shadow-lg islamic-pattern">
           <div className="text-center">
             <div className="arabic-text mb-2">
-              وَذَكِّرْ فَإِنَّ الذِّكْرَىٰ تَنفَعُ الْمُؤْمِنِينَ
+              {t('reminderVerse')}
             </div>
             <p className="text-white/90 text-sm">
-              "And remind, for indeed, the reminder benefits the believers" (Quran 51:55)
+              "{t('reminderTranslation')}" ({t('reminderSource')})
             </p>
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase-browser';
 import PageContainer from '@/components/PageContainer';
 import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
@@ -17,6 +18,8 @@ interface Habit {
 }
 
 export default function HabitsPage() {
+  const t = useTranslations('habits');
+
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completedToday, setCompletedToday] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -38,24 +41,24 @@ export default function HabitsPage() {
       const sampleHabits: Habit[] = [
         {
           id: '1',
-          title: 'Morning Dhikr',
+          title: t('sampleHabits.morningDhikr'),
           streakCount: 7,
           lastCompletedOn: undefined,
-          plan: { target: 'Patience (Sabr)', kind: 'tahliyah' }
+          plan: { target: t('sampleHabits.patience'), kind: 'tahliyah' }
         },
         {
           id: '2',
-          title: 'Read 1 page Quran',
+          title: t('sampleHabits.readQuran'),
           streakCount: 3,
           lastCompletedOn: undefined,
-          plan: { target: 'Knowledge (Ilm)', kind: 'tahliyah' }
+          plan: { target: t('sampleHabits.knowledge'), kind: 'tahliyah' }
         },
         {
           id: '3',
-          title: 'Evening Du\'a',
+          title: t('sampleHabits.eveningDua'),
           streakCount: 12,
           lastCompletedOn: undefined,
-          plan: { target: 'Gratitude (Shukr)', kind: 'tahliyah' }
+          plan: { target: t('sampleHabits.gratitude'), kind: 'tahliyah' }
         },
       ];
       setHabits(sampleHabits);
@@ -108,7 +111,7 @@ export default function HabitsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-emerald-600">Loading habits...</div>
+        <div className="text-emerald-600">{t('loadingHabits')}</div>
       </div>
     );
   }
@@ -122,7 +125,7 @@ export default function HabitsPage() {
 
   return (
     <PageContainer
-      title="Today's Habits"
+      title={t('title')}
       subtitle={today}
       maxWidth="lg"
       padding="lg"
@@ -157,7 +160,7 @@ export default function HabitsPage() {
                         {habit.plan.kind === 'takhliyah' ? '🌿' : '🌸'} {habit.plan.target}
                       </span>
                       <span className="flex items-center">
-                        🔥 {habit.streakCount} day streak
+                        🔥 {habit.streakCount} {t('dayStreak')}
                       </span>
                     </div>
                   </div>
@@ -176,7 +179,7 @@ export default function HabitsPage() {
 
                 {completedToday.has(habit.id) && (
                   <div className="mt-4 text-sm text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200/50">
-                    ✨ Barakallahu feeki! May Allah reward you for your consistency.
+                    {t('completionMessage')}
                   </div>
                 )}
               </div>
@@ -184,9 +187,9 @@ export default function HabitsPage() {
 
             {/* Progress Summary */}
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl p-6 mt-8 shadow-lg" data-testid="progress-summary">
-              <h2 className="text-xl font-semibold mb-2">Today's Progress</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('todaysProgress')}</h2>
               <div className="text-white/80">
-                {completedToday.size} of {habits.length} habits completed
+                {completedToday.size} {t('of')} {habits.length} {t('habitsCompleted')}
               </div>
               <div className="w-full bg-white/20 rounded-full h-3 mt-3">
                 <div
@@ -199,9 +202,9 @@ export default function HabitsPage() {
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🌱</div>
-            <p className="text-sage-600 mb-4">No habits yet</p>
+            <p className="text-sage-600 mb-4">{t('noHabitsYet')}</p>
             <a href="/tazkiyah" className="btn-primary">
-              Create Your First Plan
+              {t('createFirstPlan')}
             </a>
           </div>
         )}

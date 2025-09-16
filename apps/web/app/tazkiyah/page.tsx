@@ -2,35 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase-browser';
 import { api } from '@/lib/api';
 import PageContainer from '@/components/PageContainer';
 import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
 
-const COMMON_STRUGGLES = {
-  takhliyah: [
-    'Envy (Hasad)',
-    'Anger',
-    'Pride (Kibr)',
-    'Lust (Shahwah)',
-    'Greed',
-    'Laziness',
-    'Attachment to Dunya',
-    'Backbiting',
-  ],
-  tahliyah: [
-    'Patience (Sabr)',
-    'Gratitude (Shukr)',
-    'Trust in Allah (Tawakkul)',
-    'Sincerity (Ikhlas)',
-    'Humility (Tawadu)',
-    'Forgiveness',
-    'Generosity',
-    'Courage',
-  ],
-};
 
 export default function TazkiyahPage() {
+  const t = useTranslations('tazkiyah');
+
   const [mode, setMode] = useState<'takhliyah' | 'tahliyah'>('takhliyah');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,6 +19,29 @@ export default function TazkiyahPage() {
   const router = useRouter();
   const supabase = createClient();
   const { error, handleError, clearError } = useErrorHandler();
+
+  const COMMON_STRUGGLES = {
+    takhliyah: [
+      t('commonStruggles.envy'),
+      t('commonStruggles.anger'),
+      t('commonStruggles.pride'),
+      t('commonStruggles.lust'),
+      t('commonStruggles.greed'),
+      t('commonStruggles.laziness'),
+      t('commonStruggles.attachment'),
+      t('commonStruggles.backbiting'),
+    ],
+    tahliyah: [
+      t('commonVirtues.patience'),
+      t('commonVirtues.gratitude'),
+      t('commonVirtues.tawakkul'),
+      t('commonVirtues.sincerity'),
+      t('commonVirtues.humility'),
+      t('commonVirtues.forgiveness'),
+      t('commonVirtues.generosity'),
+      t('commonVirtues.courage'),
+    ],
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,8 +72,8 @@ export default function TazkiyahPage() {
 
   return (
     <PageContainer
-      title="Begin Your Tazkiyah Journey"
-      subtitle="Choose your path of spiritual purification"
+      title={t('title')}
+      subtitle={t('subtitle')}
       maxWidth="lg"
       padding="lg"
     >
@@ -87,7 +91,7 @@ export default function TazkiyahPage() {
             {/* Mode Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Choose Your Path
+                {t('chooseYourPath')}
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -98,8 +102,8 @@ export default function TazkiyahPage() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="font-semibold text-sage-900">Takhliyah</div>
-                  <div className="text-sm text-gray-600 mt-1">Remove spiritual diseases</div>
+                  <div className="font-semibold text-sage-900">{t('takhliyah')}</div>
+                  <div className="text-sm text-gray-600 mt-1">{t('takhliyahDescription')}</div>
                 </button>
                 <button
                   onClick={() => setMode('tahliyah')}
@@ -109,8 +113,8 @@ export default function TazkiyahPage() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="font-semibold text-sage-900">Taḥliyah</div>
-                  <div className="text-sm text-gray-600 mt-1">Build beautiful virtues</div>
+                  <div className="font-semibold text-sage-900">{t('tahliyah')}</div>
+                  <div className="text-sm text-gray-600 mt-1">{t('tahliyahDescription')}</div>
                 </button>
               </div>
             </div>
@@ -120,14 +124,14 @@ export default function TazkiyahPage() {
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   {mode === 'takhliyah'
-                    ? 'What struggle would you like to overcome?'
-                    : 'What virtue would you like to develop?'}
+                    ? t('whatStruggle')
+                    : t('whatVirtue')}
                 </label>
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={mode === 'takhliyah' ? 'e.g., anger, envy, pride...' : 'e.g., patience, gratitude, tawakkul...'}
+                  placeholder={mode === 'takhliyah' ? t('takhliyahPlaceholder') : t('tahliyahPlaceholder')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   required
                 />
@@ -135,7 +139,7 @@ export default function TazkiyahPage() {
 
               {/* Quick Select */}
               <div className="mb-6">
-                <div className="text-sm text-gray-600 mb-2">Or choose from common {mode === 'takhliyah' ? 'struggles' : 'virtues'}:</div>
+                <div className="text-sm text-gray-600 mb-2">{t('orChooseFrom')} {mode === 'takhliyah' ? t('struggles') : t('virtues')}:</div>
                 <div className="flex flex-wrap gap-2">
                   {COMMON_STRUGGLES[mode].map((item) => (
                     <button
@@ -155,25 +159,25 @@ export default function TazkiyahPage() {
                 disabled={loading || !input}
                 className="w-full btn-primary py-3 disabled:opacity-50"
               >
-                {loading ? 'Creating Plan...' : 'Get Personalized Plan'}
+                {loading ? t('creatingPlan') : t('getPersonalizedPlan')}
               </button>
             </form>
           </div>
         ) : (
           <div className="card-islamic rounded-xl p-8 shadow-lg">
             <h2 className="text-2xl font-semibold text-sage-900 mb-6">
-              Your Personalized Plan
+              {t('yourPersonalizedPlan')}
             </h2>
 
             <div className="mb-6">
               <div className="text-sm text-primary-600 mb-2">
-                {suggestedPlan.kind === 'takhliyah' ? 'Purifying from:' : 'Building:'}
+                {suggestedPlan.kind === 'takhliyah' ? t('purifyingFrom') : t('building')}
               </div>
               <div className="text-lg font-medium">{suggestedPlan.target}</div>
             </div>
 
             <div className="mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3">Daily Micro-Habits:</h3>
+              <h3 className="font-semibold text-gray-800 mb-3">{t('dailyMicroHabits')}</h3>
               <div className="space-y-3">
                 {suggestedPlan.microHabits?.map((habit: any, index: number) => (
                   <div key={index} className="flex items-start">
@@ -181,7 +185,7 @@ export default function TazkiyahPage() {
                     <div>
                       <div className="font-medium">{habit.title}</div>
                       <div className="text-sm text-gray-600">
-                        {habit.schedule} - Target: {habit.target} time(s)
+                        {habit.schedule} - {t('target')} {habit.target} {t('times')}
                       </div>
                     </div>
                   </div>
@@ -194,13 +198,13 @@ export default function TazkiyahPage() {
                 onClick={acceptPlan}
                 className="flex-1 btn-primary py-3"
               >
-                Accept & Start Journey
+                {t('acceptAndStart')}
               </button>
               <button
                 onClick={() => setSuggestedPlan(null)}
                 className="flex-1 btn-secondary py-3"
               >
-                Try Different Input
+                {t('tryDifferentInput')}
               </button>
             </div>
           </div>

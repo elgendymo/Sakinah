@@ -16,7 +16,7 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
   const t = useTranslations('navigation');
 
   const navItems = [
-    { href: '/dashboard', label: t('dashboard'), icon: '🏠' },
+    { href: '/dashboard', label: t('dashboard'), icon: '🪞' },
     { href: '/habits', label: t('habits'), icon: '🌱' },
     { href: '/journal', label: t('journal'), icon: '📝' },
     { href: '/content', label: t('library'), icon: '📚' },
@@ -35,7 +35,6 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
               <LogoCSS size="small" animated={true} />
               <div className="flex flex-col">
                 <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">Sakinah</span>
-                <span className="text-xs text-gold-600 -mt-1">{t('subtitle') || 'Your sanctuary'}</span>
               </div>
             </Link>
 
@@ -78,7 +77,6 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
             <LogoCSS size="small" animated={true} />
             <div className="flex flex-col">
               <span className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">Sakinah</span>
-              <span className="text-xs text-gold-600 -mt-0.5">{t('subtitle') || 'Your sanctuary'}</span>
             </div>
           </Link>
 

@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/PageContainer';
 
 export default function ProfilePage() {
+  const t = useTranslations('profile');
+
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -23,7 +26,6 @@ export default function ProfilePage() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
 
   const router = useRouter();
   const supabase = createClient();
@@ -36,7 +38,6 @@ export default function ProfilePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUser(user);
         setProfile(prev => ({
           ...prev,
           email: user.email || '',
@@ -61,10 +62,10 @@ export default function ProfilePage() {
         });
       }
 
-      alert('Profile saved successfully!');
+      alert(t('profileSaved'));
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to save profile');
+      alert(t('saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -77,8 +78,8 @@ export default function ProfilePage() {
 
   return (
     <PageContainer
-      title="Profile & Settings"
-      subtitle="Manage your spiritual journey preferences"
+      title={t('title')}
+      subtitle={t('subtitle')}
       maxWidth="4xl"
       padding="lg"
       center={false}
@@ -108,13 +109,13 @@ export default function ProfilePage() {
                 {/* User Info */}
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-sage-800 mb-1">
-                    {profile.name || 'Spiritual Seeker'}
+                    {profile.name || t('spiritualSeeker')}
                   </h2>
                   <p className="text-sage-600 mb-2">{profile.email}</p>
                   <div className="flex items-center gap-4 text-sm text-sage-500">
                     <span className="flex items-center gap-1">
                       <span>🕌</span>
-                      Member since {new Date().getFullYear()}
+                      {t('memberSince')} {new Date().getFullYear()}
                     </span>
                     <span className="flex items-center gap-1">
                       <span>🌍</span>
@@ -127,11 +128,11 @@ export default function ProfilePage() {
                 <div className="hidden md:flex gap-6 text-center">
                   <div className="px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
                     <div className="text-lg font-semibold text-emerald-700">7</div>
-                    <div className="text-xs text-emerald-600">Days Active</div>
+                    <div className="text-xs text-emerald-600">{t('daysActive')}</div>
                   </div>
                   <div className="px-4 py-2 bg-gold-50 rounded-lg border border-gold-100">
                     <div className="text-lg font-semibold text-gold-700">3</div>
-                    <div className="text-xs text-gold-600">Habits</div>
+                    <div className="text-xs text-gold-600">{t('habits')}</div>
                   </div>
                 </div>
               </div>
@@ -152,28 +153,28 @@ export default function ProfilePage() {
                     <span className="text-white text-lg">👤</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-sage-800">Basic Information</h3>
-                    <p className="text-sm text-sage-600">Your personal details</p>
+                    <h3 className="text-xl font-semibold text-sage-800">{t('basicInformation')}</h3>
+                    <p className="text-sm text-sage-600">{t('personalDetails')}</p>
                   </div>
                 </div>
 
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-sage-700 mb-2">
-                      Display Name
+                      {t('displayName')}
                     </label>
                     <input
                       type="text"
                       value={profile.name}
                       onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="How would you like to be addressed?"
+                      placeholder={t('displayNamePlaceholder')}
                       className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800 placeholder-sage-400"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-sage-700 mb-2">
-                      Email Address
+                      {t('emailAddress')}
                     </label>
                     <div className="relative">
                       <input
@@ -187,13 +188,13 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <p className="text-xs text-sage-500 mt-1">
-                      Email cannot be changed. Contact support if needed.
+                      {t('emailNote')}
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-sage-700 mb-2">
-                      Timezone
+                      {t('timezone')}
                     </label>
                     <select
                       value={profile.timezone}
@@ -201,22 +202,22 @@ export default function ProfilePage() {
                       className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800"
                     >
                       <option value={Intl.DateTimeFormat().resolvedOptions().timeZone}>
-                        {Intl.DateTimeFormat().resolvedOptions().timeZone} (Auto-detected)
+                        {Intl.DateTimeFormat().resolvedOptions().timeZone} ({t('autoDetected')})
                       </option>
-                      <option value="America/New_York">Eastern Time (US)</option>
-                      <option value="America/Chicago">Central Time (US)</option>
-                      <option value="America/Denver">Mountain Time (US)</option>
-                      <option value="America/Los_Angeles">Pacific Time (US)</option>
-                      <option value="Europe/London">London</option>
-                      <option value="Asia/Dubai">Dubai</option>
-                      <option value="Asia/Riyadh">Riyadh</option>
-                      <option value="Asia/Karachi">Karachi</option>
+                      <option value="America/New_York">{t('timezones.eastern')}</option>
+                      <option value="America/Chicago">{t('timezones.central')}</option>
+                      <option value="America/Denver">{t('timezones.mountain')}</option>
+                      <option value="America/Los_Angeles">{t('timezones.pacific')}</option>
+                      <option value="Europe/London">{t('timezones.london')}</option>
+                      <option value="Asia/Dubai">{t('timezones.dubai')}</option>
+                      <option value="Asia/Riyadh">{t('timezones.riyadh')}</option>
+                      <option value="Asia/Karachi">{t('timezones.karachi')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-sage-700 mb-2">
-                      Language
+                      {t('language')}
                     </label>
                     <select
                       value={profile.language}
@@ -245,8 +246,8 @@ export default function ProfilePage() {
                     <span className="text-white text-lg">🔔</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-sage-800">Notifications</h3>
-                    <p className="text-sm text-sage-600">Spiritual reminders</p>
+                    <h3 className="text-xl font-semibold text-sage-800">{t('notifications')}</h3>
+                    <p className="text-sm text-sage-600">{t('spiritualReminders')}</p>
                   </div>
                 </div>
 
@@ -254,20 +255,20 @@ export default function ProfilePage() {
                   {[
                     {
                       key: 'fajr',
-                      title: 'Fajr Prayer Reminder',
-                      description: 'Get notified for Fajr prayer time',
+                      title: t('fajrReminder'),
+                      description: t('fajrDescription'),
                       icon: '🌅'
                     },
                     {
                       key: 'daily_reminder',
-                      title: 'Daily Spiritual Reminder',
-                      description: 'Daily encouragement and Quranic verses',
+                      title: t('dailyReminder'),
+                      description: t('dailyDescription'),
                       icon: '📖'
                     },
                     {
                       key: 'habit_streak',
-                      title: 'Habit Streak Reminders',
-                      description: 'Gentle reminders to maintain habits',
+                      title: t('habitStreak'),
+                      description: t('habitDescription'),
                       icon: '🔥'
                     }
                   ].map((item) => (
@@ -310,11 +311,11 @@ export default function ProfilePage() {
             {loading ? (
               <>
                 <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                <span>Saving...</span>
+                <span>{t('saving')}</span>
               </>
             ) : (
               <>
-                <span>Save Changes</span>
+                <span>{t('saveChanges')}</span>
                 <span className="text-sm">💾</span>
               </>
             )}
@@ -324,7 +325,7 @@ export default function ProfilePage() {
             onClick={signOut}
             className="px-6 py-3 bg-white border border-sage-200 rounded-xl font-medium text-sage-700 hover:bg-sage-50 hover:border-sage-300 transition-all duration-200 flex items-center justify-center gap-2"
           >
-            <span>Sign Out</span>
+            <span>{t('signOut')}</span>
             <span className="text-sm">🚪</span>
           </button>
         </div>
@@ -338,12 +339,12 @@ export default function ProfilePage() {
                 <span className="text-red-600 text-lg">⚠️</span>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-red-800 mb-2">Account Deletion</h3>
+                <h3 className="text-lg font-semibold text-red-800 mb-2">{t('accountDeletion')}</h3>
                 <p className="text-red-700 text-sm mb-4 leading-relaxed">
-                  Need to delete your account? All your spiritual data will be permanently removed and cannot be recovered.
+                  {t('deletionWarning')}
                 </p>
                 <button className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-lg font-medium text-sm transition-all duration-200">
-                  <span>Request Account Deletion</span>
+                  <span>{t('requestDeletion')}</span>
                   <span className="text-xs">🗑️</span>
                 </button>
               </div>
