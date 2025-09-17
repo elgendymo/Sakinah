@@ -8,7 +8,8 @@ const journalRepo = new JournalRepository();
 router.get('/', authMiddleware, async (req: AuthRequest, res, next) => {
   try {
     const userId = req.userId!;
-    const entries = await journalRepo.getUserEntries(userId);
+    const { search } = req.query;
+    const entries = await journalRepo.getUserEntries(userId, search as string);
     res.json({ entries });
   } catch (error) {
     next(error);
@@ -27,6 +28,18 @@ router.post('/', authMiddleware, async (req: AuthRequest, res, next) => {
     });
 
     res.json({ entry });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+
+    await journalRepo.deleteEntry(id, userId);
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }

@@ -176,7 +176,7 @@ export interface IDatabaseClient {
     content: string;
     tags?: string[];
   }): Promise<DatabaseResult<JournalEntry>>;
-  getJournalsByUserId(userId: string): Promise<DatabaseResult<JournalEntry[]>>;
+  getJournalsByUserId(userId: string, search?: string): Promise<DatabaseResult<JournalEntry[]>>;
   getJournalById(id: string): Promise<DatabaseResult<JournalEntry | null>>;
   updateJournal(
     id: string,

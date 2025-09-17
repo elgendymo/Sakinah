@@ -18,8 +18,8 @@ export class JournalRepository {
     return result.data!;
   }
 
-  async getUserEntries(userId: string, limit = 50): Promise<JournalEntry[]> {
-    const result = await this.db.getJournalsByUserId(userId);
+  async getUserEntries(userId: string, search?: string, limit = 50): Promise<JournalEntry[]> {
+    const result = await this.db.getJournalsByUserId(userId, search);
 
     if (result.error) {
       throw new Error(result.error.message);

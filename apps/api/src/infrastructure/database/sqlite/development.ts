@@ -481,9 +481,20 @@ export class DevelopmentDatabaseClient extends BaseDatabaseClient {
     }
   }
 
-  async getJournalsByUserId(userId: string): Promise<DatabaseResult<JournalEntry[]>> {
+  async getJournalsByUserId(userId: string, search?: string): Promise<DatabaseResult<JournalEntry[]>> {
     try {
-      const rows = this.db.prepare('SELECT * FROM journals WHERE user_id = ? ORDER BY created_at DESC').all(userId) as any[];
+      let query = 'SELECT * FROM journals WHERE user_id = ?';
+      const params: any[] = [userId];
+
+      if (search && search.trim()) {
+        query += ' AND (content LIKE ? OR tags LIKE ?)';
+        const searchPattern = `%${search.trim()}%`;
+        params.push(searchPattern, searchPattern);
+      }
+
+      query += ' ORDER BY created_at DESC';
+
+      const rows = this.db.prepare(query).all(...params) as any[];
       const results = rows.map(row => {
         row.tags = JSON.parse(row.tags || '[]');
         return this.mapJournalRow(row)!;

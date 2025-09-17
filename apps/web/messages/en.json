@@ -393,7 +393,13 @@
     },
     "reminderVerse": "وَذَكِّرْ فَإِنَّ الذِّكْرَىٰ تَنفَعُ الْمُؤْمِنِينَ",
     "reminderTranslation": "And remind, for indeed, the reminder benefits the believers",
-    "reminderSource": "Quran 51:55"
+    "reminderSource": "Quran 51:55",
+    "searchPlaceholder": "Search your journal entries...",
+    "loading": "Loading...",
+    "deleteEntry": "Delete Entry",
+    "confirmDelete": "Are you sure you want to delete this journal entry? This action cannot be undone.",
+    "noEntriesFound": "No entries found matching your search",
+    "tryDifferentSearch": "Try a different search term or clear your filters"
   },
   "content": {
     "title": "Content Library",

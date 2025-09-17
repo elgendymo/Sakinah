@@ -64,4 +64,23 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     return apiCall(`/content${query ? `?${query}` : ''}`);
   },
+
+  // Journal
+  getJournalEntries: (token: string, search?: string) => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return apiCall(`/journals${query}`, { token });
+  },
+
+  createJournalEntry: (data: { content: string; tags?: string[] }, token: string) =>
+    apiCall('/journals', {
+      method: 'POST',
+      body: data,
+      token,
+    }),
+
+  deleteJournalEntry: (id: string, token: string) =>
+    apiCall(`/journals/${id}`, {
+      method: 'DELETE',
+      token,
+    }),
 };

@@ -506,13 +506,19 @@ export class ProductionDatabaseClient extends BaseDatabaseClient {
     }
   }
 
-  async getJournalsByUserId(userId: string): Promise<DatabaseResult<JournalEntry[]>> {
+  async getJournalsByUserId(userId: string, search?: string): Promise<DatabaseResult<JournalEntry[]>> {
     try {
-      const { data, error } = await this.supabaseClient
+      let query = this.supabaseClient
         .from('journals')
         .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .eq('user_id', userId);
+
+      if (search && search.trim()) {
+        // Supabase uses .textSearch for full-text search or .ilike for case-insensitive LIKE
+        query = query.or(`content.ilike.%${search.trim()}%,tags.cs.{${search.trim()}}`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) return this.formatErrorResult(error.message);
       const results = data?.map(row => this.mapJournalRow(row)!).filter(Boolean) || [];

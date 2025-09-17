@@ -87,4 +87,5 @@ CREATE INDEX IF NOT EXISTS idx_habits_user ON habits(user_id);
 CREATE INDEX IF NOT EXISTS idx_habit_completions_habit ON habit_completions(habit_id);
 CREATE INDEX IF NOT EXISTS idx_checkins_user_date ON checkins(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_journals_user ON journals(user_id);
+CREATE INDEX IF NOT EXISTS idx_journals_user_created ON journals(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_content_snippets_type ON content_snippets(type);
