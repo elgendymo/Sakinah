@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { Request, Response, NextFunction, Router } from 'express';
-import { VersionRouter, createVersionHandler, VersionHandler } from '../../../src/infrastructure/middleware/version-router';
-import { VersionedRequest } from '../../../src/infrastructure/middleware/versioning';
+import { VersionRouter, createVersionHandler, VersionHandler } from '@/infrastructure/middleware/version-router';
+import { VersionedRequest } from '@/infrastructure/middleware/versioning';
 
 // Mock logger
 vi.mock('../../../src/shared/logger', () => ({
@@ -108,7 +108,7 @@ describe('VersionRouter', () => {
     });
 
     it('should return error for unsupported route', () => {
-      req.path = '/unknown-route';
+      (req as any).path = '/unknown-route';
 
       const middleware = versionRouter.middleware();
       middleware(req as Request, res as Response, next);

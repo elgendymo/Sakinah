@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
-import { ApiVersioning, versioningMiddleware, VersionedRequest } from '../../../src/infrastructure/middleware/versioning';
+import { ApiVersioning, versioningMiddleware, VersionedRequest } from '@/infrastructure/middleware/versioning';
 
 // Mock logger
 vi.mock('../../../src/shared/logger', () => ({
@@ -20,7 +20,7 @@ describe('ApiVersioning', () => {
         },
         path: '/api/habits',
         query: {}
-      } as Request;
+      } as unknown as Request;
 
       const version = ApiVersioning.extractVersion(req);
       expect(version).toEqual({ major: 2, minor: 0 });
@@ -33,7 +33,7 @@ describe('ApiVersioning', () => {
         },
         path: '/api/habits',
         query: {}
-      } as Request;
+      } as unknown as Request;
 
       const version = ApiVersioning.extractVersion(req);
       expect(version).toEqual({ major: 2, minor: 1 });
@@ -46,7 +46,7 @@ describe('ApiVersioning', () => {
         },
         path: '/api/habits',
         query: {}
-      } as Request;
+      } as unknown as Request;
 
       const version = ApiVersioning.extractVersion(req);
       expect(version).toEqual({ major: 1, minor: 1 });
@@ -79,7 +79,7 @@ describe('ApiVersioning', () => {
         headers: {},
         path: '/api/habits',
         query: { version: '2.0' }
-      } as Request;
+      } as unknown as Request;
 
       const version = ApiVersioning.extractVersion(req);
       expect(version).toEqual({ major: 2, minor: 0 });
@@ -104,7 +104,7 @@ describe('ApiVersioning', () => {
         },
         path: '/api/v1/habits',
         query: { version: '1.1' }
-      } as Request;
+      } as unknown as Request;
 
       const version = ApiVersioning.extractVersion(req);
       expect(version).toEqual({ major: 2, minor: 0 });
@@ -232,7 +232,7 @@ describe('versioningMiddleware', () => {
   });
 
   it('should handle version from URL path', () => {
-    req.path = '/api/v2/habits';
+    (req as any).path = '/api/v2/habits';
 
     versioningMiddleware(req as Request, res as Response, next);
 
