@@ -1,6 +1,7 @@
 import { injectable } from 'tsyringe';
 import { IEventBus, IEventHandler } from '@/domain/events/IEventBus';
 import { DomainEvent } from '@/domain/events/base/DomainEvent';
+import { logger } from '@/shared/logger';
 
 @injectable()
 export class EventBusImpl implements IEventBus {
@@ -9,7 +10,7 @@ export class EventBusImpl implements IEventBus {
   async publish<T extends DomainEvent>(event: T): Promise<void> {
     const eventHandlers = this.handlers.get((event as any).type) || [];
 
-    console.log(`Publishing event: ${(event as any).type}`, {
+    logger.info(`Publishing event: ${(event as any).type}`, {
       aggregateId: (event as any).aggregateId,
       eventId: (event as any).eventId,
       timestamp: (event as any).timestamp
@@ -20,7 +21,7 @@ export class EventBusImpl implements IEventBus {
       try {
         await handler.handle(event);
       } catch (error) {
-        console.error(`Error handling event ${(event as any).type} with handler ${handler.constructor.name}:`, error);
+        logger.error(`Error handling event ${(event as any).type} with handler ${handler.constructor.name}:`, error);
         // Don't rethrow - we want other handlers to continue
       }
     });

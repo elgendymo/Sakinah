@@ -47,8 +47,7 @@ import {
   GetDhikrStatsUseCase,
   GetDhikrTypesUseCase
 } from '@/application/usecases/dhikr';
-import { ICacheService } from '@/domain/services/ICacheService';
-import { CacheFactory } from '../cache/factory';
+// Cache service imports removed - not used in this file
 import { CqrsModule } from '@/infrastructure/cqrs/CqrsModule';
 import { IEventStore, IEventProjectionStore } from '@/domain/events/EventStore';
 import { IEventBus } from '@/domain/events/IEventBus';

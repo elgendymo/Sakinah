@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe';
 import { Command, CommandBus, CommandHandler } from '@/application/cqrs/commands/base/Command';
+import { logger } from '@/shared/logger';
 
 @injectable()
 export class CommandBusImpl implements CommandBus {
@@ -25,7 +26,7 @@ export class CommandBusImpl implements CommandBus {
 
     try {
       // Log command execution for audit trail
-      console.log(`Executing command: ${command.type}`, {
+      logger.info(`Executing command: ${command.type}`, {
         commandType: command.type,
         userId: command.userId,
         aggregateId: command.aggregateId,
@@ -36,14 +37,14 @@ export class CommandBusImpl implements CommandBus {
       const result = await handler.handle(command);
 
       // Log successful execution
-      console.log(`Command executed successfully: ${command.type}`, {
+      logger.info(`Command executed successfully: ${command.type}`, {
         correlationId: command.correlationId
       });
 
       return result;
     } catch (error) {
       // Log failed execution
-      console.error(`Command execution failed: ${command.type}`, {
+      logger.error(`Command execution failed: ${command.type}`, {
         correlationId: command.correlationId,
         error: error instanceof Error ? error.message : String(error)
       });

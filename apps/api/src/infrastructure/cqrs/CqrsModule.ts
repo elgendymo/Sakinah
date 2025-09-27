@@ -7,6 +7,7 @@ import { IEventBus } from '@/domain/events/IEventBus';
 import { EventBusImpl } from '../events/EventBusImpl';
 import { ICacheService } from '@/domain/services/ICacheService';
 import { CacheFactory } from '../cache/factory';
+import { logger } from '@/shared/logger';
 
 // Command Handlers
 import {
@@ -81,7 +82,7 @@ export class CqrsModule {
     // Start cache cleanup
     cacheCleanupService.start();
 
-    console.log('CQRS Module registered successfully with Redis caching');
+    logger.info('CQRS Module registered successfully with Redis caching');
   }
 
   static getRegisteredCommands(): string[] {
