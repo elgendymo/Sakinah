@@ -66,7 +66,7 @@ export class JournalRepositoryAdapter implements IJournalRepository {
 
   async findByUserId(userId: UserId, search?: string): Promise<Result<JournalEntry[]>> {
     try {
-      const result = await this.db.getJournalsByUserId(userId.toString(), search);
+      const result = await this.db.getJournalsByUserId(userId.toString(), { search });
 
       if (result.error) {
         return Result.error(new Error(result.error.message));

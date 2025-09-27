@@ -22,7 +22,7 @@ export class DatabaseFactory {
     // 1) Explicit override takes precedence
     if (forced === 'sqlite') {
       logger.info('Using SQLite (forced by DB_BACKEND)');
-      return new DevelopmentDatabaseClient();
+      return new DevelopmentDatabaseClient() as unknown as IDatabaseClient;
     }
 
     if (forced === 'supabase') {
@@ -30,7 +30,7 @@ export class DatabaseFactory {
         throw new Error('Supabase forced by DB_BACKEND but not configured properly');
       }
       logger.info('Using Supabase (forced by DB_BACKEND)');
-      return new ProductionDatabaseClient();
+      return new ProductionDatabaseClient() as unknown as IDatabaseClient;
     }
 
     // 2) Production: enforce Supabase
@@ -41,18 +41,18 @@ export class DatabaseFactory {
     // 3) Test: always use SQLite for consistency
     if (env === 'test') {
       logger.info('Using SQLite (test environment)');
-      return new DevelopmentDatabaseClient();
+      return new DevelopmentDatabaseClient() as unknown as IDatabaseClient;
     }
 
     // 4) Development: prefer SQLite for easier local development
     // Only use Supabase if explicitly enabled via USE_SUPABASE=true
     if (process.env.USE_SUPABASE === 'true' && isSupabaseReady()) {
       logger.info('Using Supabase (explicitly enabled in development)');
-      return new ProductionDatabaseClient();
+      return new ProductionDatabaseClient() as unknown as IDatabaseClient;
     }
 
     logger.info('Using SQLite (default for development - no setup required)');
-    return new DevelopmentDatabaseClient();
+    return new DevelopmentDatabaseClient() as unknown as IDatabaseClient;
   }
 
   /**
@@ -93,7 +93,7 @@ function detectBackend(): 'sqlite' | 'supabase' | null {
   return null;
 }
 
-function makeProdClient(): ProductionDatabaseClient {
+function makeProdClient(): IDatabaseClient {
   if (!isSupabaseReady()) {
     const missing: string[] = [];
     if (!process.env.SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -109,7 +109,7 @@ function makeProdClient(): ProductionDatabaseClient {
   }
 
   logger.info('Using Supabase (production environment)');
-  return new ProductionDatabaseClient();
+  return new ProductionDatabaseClient() as unknown as IDatabaseClient;
 }
 
 // Singleton instance for convenience

@@ -19,9 +19,145 @@ import {
   HabitCompletionRow,
   CheckinRow,
   JournalRow,
+  DhikrSessionData,
+  DhikrStatsData,
+  DhikrTypeData,
+  IntentionData,
+  OnboardingData,
+  PrayerTimesData,
+  UserPreferencesData,
 } from './types';
 
 export abstract class BaseDatabaseClient implements IDatabaseClient {
+  createIntention(data: { userId: string; text: string; description?: string | null; priority?: "low" | "medium" | "high"; status?: "active" | "completed" | "archived"; targetDate?: string | null; completedAt?: string | null; reminderEnabled?: boolean; reminderTime?: string | null; reminderDaysOfWeek?: number[] | null; tags?: string[]; }): Promise<DatabaseResult<IntentionData>> {
+      throw new Error("Method not implemented.");
+  }
+  getIntentionsByUserId(userId: string, filters?: { status?: "active" | "completed" | "archived"; priority?: "low" | "medium" | "high"; tags?: string[]; search?: string; targetDateFrom?: string; targetDateTo?: string; overdueOnly?: boolean; limit?: number; offset?: number; sortBy?: string; sortOrder?: "ASC" | "DESC"; }): Promise<DatabaseResult<IntentionData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  getIntentionById(id: string): Promise<DatabaseResult<IntentionData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  updateIntention(id: string, userId: string, updates: { text?: string; description?: string | null; priority?: "low" | "medium" | "high"; status?: "active" | "completed" | "archived"; targetDate?: string | null; completedAt?: string | null; reminderEnabled?: boolean; reminderTime?: string | null; reminderDaysOfWeek?: number[] | null; tags?: string[]; }): Promise<DatabaseResult<IntentionData>> {
+      throw new Error("Method not implemented.");
+  }
+  deleteIntention(id: string, userId: string): Promise<DatabaseResult<void>> {
+      throw new Error("Method not implemented.");
+  }
+  countIntentionsByUser(userId: string, filters?: { status?: "active" | "completed" | "archived"; priority?: "low" | "medium" | "high"; tags?: string[]; targetDateFrom?: string; targetDateTo?: string; overdueOnly?: boolean; }): Promise<DatabaseResult<number>> {
+      throw new Error("Method not implemented.");
+  }
+  getIntentionsByTags(userId: string, tags: string[]): Promise<DatabaseResult<IntentionData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  getOverdueIntentions(userId: string): Promise<DatabaseResult<IntentionData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  getIntentionsDueSoon(userId: string, daysAhead?: number): Promise<DatabaseResult<IntentionData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  createPrayerTimes(data: { userId: string; latitude: number; longitude: number; city?: string; country?: string; timezone?: string; calculationMethod: string; date: string; fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string; qiyam?: string; hijriDate?: string; validUntil: string; }): Promise<DatabaseResult<PrayerTimesData>> {
+      throw new Error("Method not implemented.");
+  }
+  getPrayerTimesById(id: string): Promise<DatabaseResult<PrayerTimesData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  getPrayerTimesByUserAndDate(userId: string, date: string): Promise<DatabaseResult<PrayerTimesData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  getPrayerTimesByLocationAndDate(latitude: number, longitude: number, calculationMethod: string, date: string): Promise<DatabaseResult<PrayerTimesData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  getPrayerTimesByUserAndDateRange(userId: string, startDate: string, endDate: string): Promise<DatabaseResult<PrayerTimesData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  deletePrayerTimes(id: string): Promise<DatabaseResult<void>> {
+      throw new Error("Method not implemented.");
+  }
+  deleteExpiredPrayerTimes(): Promise<DatabaseResult<number>> {
+      throw new Error("Method not implemented.");
+  }
+  createDhikrSession(data: { userId: string; dhikrType: string; dhikrText: string; count?: number; targetCount?: number; date: string; sessionStart?: string; sessionEnd?: string; notes?: string; tags?: string[]; }): Promise<DatabaseResult<DhikrSessionData>> {
+      throw new Error("Method not implemented.");
+  }
+  getDhikrSessionById(id: string): Promise<DatabaseResult<DhikrSessionData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  getDhikrSessionsByUser(userId: string, filters?: { dhikrType?: string; date?: string; dateFrom?: string; dateTo?: string; tags?: string[]; limit?: number; offset?: number; sortBy?: string; sortOrder?: "ASC" | "DESC"; }): Promise<DatabaseResult<DhikrSessionData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  updateDhikrSession(id: string, userId: string, updates: { count?: number; targetCount?: number; sessionEnd?: string; notes?: string; tags?: string[]; }): Promise<DatabaseResult<DhikrSessionData>> {
+      throw new Error("Method not implemented.");
+  }
+  incrementDhikrCount(id: string, userId: string, increment?: number): Promise<DatabaseResult<DhikrSessionData>> {
+      throw new Error("Method not implemented.");
+  }
+  deleteDhikrSession(id: string, userId: string): Promise<DatabaseResult<void>> {
+      throw new Error("Method not implemented.");
+  }
+  getDhikrSessionsByDate(userId: string, date: string): Promise<DatabaseResult<DhikrSessionData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  countDhikrSessionsByUser(userId: string, filters?: { dhikrType?: string; dateFrom?: string; dateTo?: string; }): Promise<DatabaseResult<number>> {
+      throw new Error("Method not implemented.");
+  }
+  createDhikrType(data: { name: string; displayName: string; arabicText?: string; transliteration?: string; translation?: string; description?: string; recommendedCount?: number; tags?: string[]; isActive?: boolean; }): Promise<DatabaseResult<DhikrTypeData>> {
+      throw new Error("Method not implemented.");
+  }
+  getDhikrTypes(filters?: { isActive?: boolean; tags?: string[]; search?: string; }): Promise<DatabaseResult<DhikrTypeData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  getDhikrTypeById(id: string): Promise<DatabaseResult<DhikrTypeData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  getDhikrTypeByName(name: string): Promise<DatabaseResult<DhikrTypeData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  updateDhikrType(id: string, updates: { displayName?: string; arabicText?: string; transliteration?: string; translation?: string; description?: string; recommendedCount?: number; tags?: string[]; isActive?: boolean; }): Promise<DatabaseResult<DhikrTypeData>> {
+      throw new Error("Method not implemented.");
+  }
+  deleteDhikrType(id: string): Promise<DatabaseResult<void>> {
+      throw new Error("Method not implemented.");
+  }
+  createOrUpdateDhikrStats(data: { userId: string; dhikrType: string; periodType: "daily" | "weekly" | "monthly"; periodStart: string; periodEnd: string; totalCount: number; sessionCount: number; averageSessionDuration?: number; }): Promise<DatabaseResult<DhikrStatsData>> {
+      throw new Error("Method not implemented.");
+  }
+  getDhikrStatsByUser(userId: string, filters?: { dhikrType?: string; periodType?: "daily" | "weekly" | "monthly"; periodStart?: string; periodEnd?: string; }): Promise<DatabaseResult<DhikrStatsData[]>> {
+      throw new Error("Method not implemented.");
+  }
+  aggregateDhikrStats(userId: string, periodType: "daily" | "weekly" | "monthly", periodStart: string, periodEnd: string): Promise<DatabaseResult<void>> {
+      throw new Error("Method not implemented.");
+  }
+  getUserPreferences(userId: string): Promise<DatabaseResult<UserPreferencesData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  createUserPreferences(data: UserPreferencesData): Promise<DatabaseResult<UserPreferencesData>> {
+      throw new Error("Method not implemented.");
+  }
+  updateUserPreferences(userId: string, updates: Partial<UserPreferencesData>): Promise<DatabaseResult<UserPreferencesData>> {
+      throw new Error("Method not implemented.");
+  }
+  upsertUserPreferences(data: UserPreferencesData): Promise<DatabaseResult<UserPreferencesData>> {
+      throw new Error("Method not implemented.");
+  }
+  deleteUserPreferences(userId: string): Promise<DatabaseResult<void>> {
+      throw new Error("Method not implemented.");
+  }
+  createOnboarding(data: { userId: string; currentStep?: string; completedSteps?: string[]; profileCompletionPercentage?: number; dataCollected?: Record<string, any>; languageSelected?: string | null; locationSet?: boolean; prayerCalculationMethodSet?: boolean; notificationsConfigured?: boolean; privacyPreferencesSet?: boolean; displayPreferencesSet?: boolean; isCompleted?: boolean; skippedSteps?: string[]; }): Promise<DatabaseResult<OnboardingData>> {
+      throw new Error("Method not implemented.");
+  }
+  getOnboardingByUserId(userId: string): Promise<DatabaseResult<OnboardingData | null>> {
+      throw new Error("Method not implemented.");
+  }
+  updateOnboarding(userId: string, updates: { currentStep?: string; completedSteps?: string[]; profileCompletionPercentage?: number; dataCollected?: Record<string, any>; languageSelected?: string | null; locationSet?: boolean; prayerCalculationMethodSet?: boolean; notificationsConfigured?: boolean; privacyPreferencesSet?: boolean; displayPreferencesSet?: boolean; isCompleted?: boolean; skippedSteps?: string[]; completionDate?: string | null; }): Promise<DatabaseResult<OnboardingData>> {
+      throw new Error("Method not implemented.");
+  }
+  upsertOnboarding(data: OnboardingData): Promise<DatabaseResult<OnboardingData>> {
+      throw new Error("Method not implemented.");
+  }
+  deleteOnboarding(userId: string): Promise<DatabaseResult<void>> {
+      throw new Error("Method not implemented.");
+  }
   // Common result formatters
   protected formatResult<T>(data: T | null, error?: Error): DatabaseResult<T> {
     if (error) {
@@ -218,13 +354,41 @@ export abstract class BaseDatabaseClient implements IDatabaseClient {
       reflection?: string;
     }
   ): Promise<DatabaseResult<Checkin>>;
+  abstract getCheckinsByUser(
+    userId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      limit?: number;
+      offset?: number;
+      orderBy?: string;
+      orderDirection?: 'ASC' | 'DESC';
+    }
+  ): Promise<DatabaseResult<Checkin[]>>;
+  abstract countCheckinsByUser(
+    userId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+    }
+  ): Promise<DatabaseResult<number>>;
 
   abstract createJournalEntry(data: {
     userId: string;
     content: string;
     tags?: string[];
   }): Promise<DatabaseResult<JournalEntry>>;
-  abstract getJournalsByUserId(userId: string): Promise<DatabaseResult<JournalEntry[]>>;
+  abstract getJournalsByUserId(
+    userId: string,
+    filters?: {
+      search?: string;
+      tags?: string[];
+      page?: number;
+      limit?: number;
+      sortBy?: 'createdAt' | 'content';
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<DatabaseResult<{ entries: JournalEntry[]; pagination: any }>>;
   abstract getJournalById(id: string): Promise<DatabaseResult<JournalEntry | null>>;
   abstract updateJournal(
     id: string,

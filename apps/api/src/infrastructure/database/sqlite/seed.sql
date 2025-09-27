@@ -4,6 +4,14 @@
 -- Clear existing data
 DELETE FROM content_snippets;
 
+-- Create mock user for development (if not exists)
+INSERT OR IGNORE INTO users (id, handle, created_at) VALUES
+  ('12345678-1234-4123-8123-123456789012', 'dev-user', datetime('now'));
+
+-- Create profile for mock user (if not exists)
+INSERT OR IGNORE INTO profiles (user_id, display_name, timezone, created_at) VALUES
+  ('12345678-1234-4123-8123-123456789012', 'Development User', 'UTC', datetime('now'));
+
 -- Ayat for Envy
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
   ('ayah', 'And do not wish for that by which Allah has made some of you exceed others. For men is a share of what they have earned, and for women is a share of what they have earned. And ask Allah of His bounty.', 'Surah An-Nisa 4:32', '["envy", "contentment", "gratitude"]'),
@@ -80,3 +88,25 @@ INSERT INTO content_snippets (type, text, ref, tags) VALUES
   ('dua', 'Alhamdulillah (All praise is due to Allah)', 'General Dhikr', '["dhikr", "praise", "gratitude"]'),
   ('dua', 'Allahu Akbar (Allah is Greatest)', 'General Dhikr', '["dhikr", "greatness", "tasbih"]'),
   ('dua', 'La hawla wa la quwwata illa billah (There is no might and no power except with Allah)', 'General Dhikr', '["dhikr", "power", "might"]');
+
+-- Clear existing dhikr types
+DELETE FROM dhikr_types;
+
+-- Popular Dhikr Types with Arabic text, transliteration and translation
+INSERT INTO dhikr_types (name, display_name, arabic_text, transliteration, translation, description, recommended_count, tags) VALUES
+  ('tasbih', 'Tasbih', 'سُبْحَانَ اللَّهِ', 'SubhanAllah', 'Glory be to Allah', 'Glorifying Allah by declaring His perfection and freedom from all imperfections', 33, '["praise", "glory", "morning", "evening"]'),
+  ('tahmid', 'Tahmid', 'الْحَمْدُ لِلَّهِ', 'Alhamdulillah', 'All praise is due to Allah', 'Praising Allah and acknowledging His countless blessings', 33, '["praise", "gratitude", "morning", "evening"]'),
+  ('takbir', 'Takbir', 'اللَّهُ أَكْبَرُ', 'Allahu Akbar', 'Allah is Greatest', 'Declaring the supreme greatness of Allah above all things', 34, '["greatness", "majesty", "morning", "evening"]'),
+  ('tahlil', 'Tahlil', 'لَا إِلَٰهَ إِلَّا اللَّهُ', 'La ilaha illa Allah', 'There is no god but Allah', 'The declaration of monotheism, affirming Allah as the only deity worthy of worship', 100, '["monotheism", "faith", "remembrance"]'),
+  ('istighfar', 'Istighfar', 'أَسْتَغْفِرُ اللَّهَ', 'Astaghfirullah', 'I seek forgiveness from Allah', 'Seeking Allah''s forgiveness for sins and shortcomings', 100, '["forgiveness", "repentance", "purification"]'),
+  ('hawqala', 'Hawqala', 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ', 'La hawla wa la quwwata illa billah', 'There is no might and no power except with Allah', 'Acknowledging that all strength and ability come from Allah alone', 10, '["power", "strength", "reliance", "difficulty"]'),
+  ('salawat', 'Salawat on Prophet', 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ', 'Allahumma salli ala Muhammad', 'O Allah, send blessings upon Muhammad', 'Sending blessings upon Prophet Muhammad (peace be upon him)', 10, '["prophet", "blessings", "love"]'),
+  ('dua_protection', 'Seeking Protection', 'أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ', 'A''udhu billahi min ash-shaytani''r-rajim', 'I seek refuge in Allah from Satan, the accursed', 'Seeking Allah''s protection from evil and harm', 3, '["protection", "refuge", "evil", "safety"]'),
+  ('morning_dhikr', 'Morning Remembrance', 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ', 'Asbahna wa asbahal-mulku lillah', 'We have reached the morning and the dominion belongs to Allah', 'Morning dhikr acknowledging Allah''s sovereignty', 1, '["morning", "sovereignty", "gratitude"]'),
+  ('evening_dhikr', 'Evening Remembrance', 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ', 'Amsayna wa amsal-mulku lillah', 'We have reached the evening and the dominion belongs to Allah', 'Evening dhikr acknowledging Allah''s sovereignty', 1, '["evening", "sovereignty", "gratitude"]');
+
+-- Add some general dhikr types without specific Arabic text
+INSERT INTO dhikr_types (name, display_name, description, recommended_count, tags) VALUES
+  ('general', 'General Dhikr', 'Any form of remembrance of Allah including personal duas and supplications', NULL, '["general", "remembrance", "dua"]'),
+  ('quran_recitation', 'Quran Recitation', 'Reciting verses from the Holy Quran as a form of dhikr', NULL, '["quran", "recitation", "verses"]'),
+  ('durood', 'Durood Sharif', 'Various forms of sending blessings upon the Prophet Muhammad (PBUH)', 11, '["prophet", "blessings", "durood"]');

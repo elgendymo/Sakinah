@@ -87,27 +87,42 @@ app.get('/api/health/circuit-breakers', (req, res) => {
   res.json(metrics);
 });
 
-// Example 5: Using decorators for resilience
+// Example 5: Using manual resilience patterns (decorators not implemented yet)
 class ExampleService {
-  @ResilienceFactory.databaseResilient()
+  // @ResilienceFactory.databaseResilient() // TODO: implement decorator
   async getUserById(id: string) {
-    // Database operation that will be automatically protected with:
+    // Database operation that could be protected with:
     // - Retry logic for connection errors
     // - Circuit breaker for repeated failures
     // - Timeout protection
-    return { id, name: 'User' + id };
+    const operation = ResilienceFactory.createResilientOperation(
+      'getUserById',
+      async () => ({ id, name: 'User' + id }),
+      { retry: { maxAttempts: 3 }, timeout: 5000 }
+    );
+    return await operation();
   }
 
-  @ResilienceFactory.externalApiResilient('payment-service')
+  // @ResilienceFactory.externalApiResilient('payment-service') // TODO: implement decorator
   async processPayment(amount: number) {
-    // External API call that will be automatically protected
-    return { transactionId: 'txn_' + Date.now(), amount };
+    // External API call that could be automatically protected
+    const operation = ResilienceFactory.createResilientOperation(
+      'processPayment',
+      async () => ({ transactionId: 'txn_' + Date.now(), amount }),
+      { retry: { maxAttempts: 2 }, timeout: 10000 }
+    );
+    return await operation();
   }
 
-  @ResilienceFactory.aiResilient('content-generation')
+  // @ResilienceFactory.aiResilient('content-generation') // TODO: implement decorator
   async generateContent(prompt: string) {
     // AI service call with specialized resilience patterns
-    return 'Generated content for: ' + prompt;
+    const operation = ResilienceFactory.createResilientOperation(
+      'generateContent',
+      async () => 'Generated content for: ' + prompt,
+      { timeout: 30000 }
+    );
+    return await operation();
   }
 }
 

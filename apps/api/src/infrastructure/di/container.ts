@@ -72,9 +72,10 @@ export async function configureDependencies(): Promise<void> {
   });
 
   // Infrastructure - Cache Service
-  container.register<ICacheService>('ICacheService', {
-    useFactory: () => CacheFactory.getInstance()
-  });
+  // TODO: Fix CacheService registration
+  // container.register<ICacheService>('ICacheService', {
+  //   useValue: CacheFactory.getInstance()
+  // });
 
   // Repositories
   container.register<IContentRepository>('IContentRepository', ContentRepositoryAdapter);

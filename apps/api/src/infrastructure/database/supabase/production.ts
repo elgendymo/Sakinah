@@ -482,6 +482,80 @@ export class ProductionDatabaseClient extends BaseDatabaseClient {
     }
   }
 
+  async getCheckinsByUser(
+    userId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      limit?: number;
+      offset?: number;
+      orderBy?: string;
+      orderDirection?: 'ASC' | 'DESC';
+    }
+  ): Promise<DatabaseResult<Checkin[]>> {
+    try {
+      let query = this.supabaseClient
+        .from('checkins')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (filters?.from) {
+        query = query.gte('date', filters.from);
+      }
+      if (filters?.to) {
+        query = query.lte('date', filters.to);
+      }
+
+      const orderBy = filters?.orderBy || 'date';
+      const orderDirection = filters?.orderDirection || 'DESC';
+      query = query.order(orderBy, { ascending: orderDirection === 'ASC' });
+
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+        if (filters?.offset) {
+          query = query.range(filters.offset, filters.offset + filters.limit - 1);
+        }
+      }
+
+      const { data, error } = await query;
+
+      if (error) return this.formatErrorResult(error.message);
+      const checkins = (data || []).map(row => this.mapCheckinRow(row)).filter(Boolean) as Checkin[];
+      return this.formatSuccessResult(checkins);
+    } catch (e) {
+      return this.formatErrorResult(String(e));
+    }
+  }
+
+  async countCheckinsByUser(
+    userId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+    }
+  ): Promise<DatabaseResult<number>> {
+    try {
+      let query = this.supabaseClient
+        .from('checkins')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      if (filters?.from) {
+        query = query.gte('date', filters.from);
+      }
+      if (filters?.to) {
+        query = query.lte('date', filters.to);
+      }
+
+      const { count, error } = await query;
+
+      if (error) return this.formatErrorResult(error.message);
+      return this.formatSuccessResult(count || 0);
+    } catch (e) {
+      return this.formatErrorResult(String(e));
+    }
+  }
+
   // Journal operations
   async createJournalEntry(journalData: {
     userId: string;
@@ -506,23 +580,58 @@ export class ProductionDatabaseClient extends BaseDatabaseClient {
     }
   }
 
-  async getJournalsByUserId(userId: string, search?: string): Promise<DatabaseResult<JournalEntry[]>> {
+  async getJournalsByUserId(
+    userId: string,
+    filters?: {
+      search?: string;
+      tags?: string[];
+      page?: number;
+      limit?: number;
+      sortBy?: 'createdAt' | 'content';
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<DatabaseResult<{ entries: JournalEntry[]; pagination: any }>> {
     try {
+      const { search, tags, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = filters || {};
+
       let query = this.supabaseClient
         .from('journals')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('user_id', userId);
 
       if (search && search.trim()) {
-        // Supabase uses .textSearch for full-text search or .ilike for case-insensitive LIKE
         query = query.or(`content.ilike.%${search.trim()}%,tags.cs.{${search.trim()}}`);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      if (tags && tags.length > 0) {
+        query = query.overlaps('tags', tags);
+      }
+
+      const offset = (page - 1) * limit;
+      query = query
+        .order(sortBy === 'createdAt' ? 'created_at' : 'content', { ascending: sortOrder === 'asc' })
+        .range(offset, offset + limit - 1);
+
+      const { data, error, count } = await query;
 
       if (error) return this.formatErrorResult(error.message);
-      const results = data?.map(row => this.mapJournalRow(row)!).filter(Boolean) || [];
-      return this.formatSuccessResult(results);
+
+      const entries = data?.map(row => this.mapJournalRow(row)!).filter(Boolean) || [];
+      const totalPages = Math.ceil((count || 0) / limit);
+
+      const result = {
+        entries,
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      };
+
+      return this.formatSuccessResult(result);
     } catch (e) {
       return this.formatErrorResult(String(e));
     }

@@ -1,15 +1,15 @@
-import { AiProvider } from './types';
-import { RulesAiProvider } from './RulesAiProvider';
-import { LlmAiProvider } from './LlmAiProvider';
+import { IAiProvider } from '@/domain/providers/IAiProvider';
+import { RulesAiProviderAdapter } from './RulesAiProviderAdapter';
+import { LlmAiProviderAdapter } from './LlmAiProviderAdapter';
 
-export function getAIProvider(): AiProvider {
+export function getAIProvider(): IAiProvider {
   const provider = process.env.AI_PROVIDER || 'rules';
 
   switch (provider) {
     case 'llm':
-      return new LlmAiProvider();
+      return new LlmAiProviderAdapter();
     case 'rules':
     default:
-      return new RulesAiProvider();
+      return new RulesAiProviderAdapter();
   }
 }

@@ -17,7 +17,8 @@ export async function authMiddleware(
     const useSupabase = process.env.USE_SUPABASE === 'true' || process.env.DB_BACKEND?.toLowerCase() === 'supabase';
 
     if (isLocalDev && !useSupabase) {
-      req.userId = 'test-user-123';
+      // Use the existing test user UUID for local development testing
+      req.userId = '12345678-1234-4567-8901-123456789012';
       return next();
     }
 

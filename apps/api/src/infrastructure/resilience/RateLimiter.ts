@@ -145,12 +145,13 @@ export class RateLimiter {
             userAgent: req.get('User-Agent')
           });
 
-          return res.status(429).json({
+          res.status(429).json({
             error: this.config.message || 'Too Many Requests',
             retryAfter,
             limit: result.limit,
             resetTime: result.resetTime,
           });
+          return;
         }
 
         // Track the request for potential skip on response
