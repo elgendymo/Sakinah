@@ -3,6 +3,7 @@ import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
 import { CreateCheckinInputSchema } from '@sakinah/types';
 import { ValidationError } from '@/shared/errors';
 import { logCheckin } from '@/application/logCheckin';
+import { Result } from '@/shared/result';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res, next) => {
       ...parseResult.data,
     });
 
-    if (!result.ok) {
+    if (Result.isError(result)) {
       throw (result as any).error;
     }
 

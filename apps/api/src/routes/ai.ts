@@ -16,7 +16,7 @@ router.post('/explain', authMiddleware, async (req: AuthRequest, res, next) => {
 
     const { struggle } = parseResult.data;
     const ai = getAIProvider();
-    const response = await ai.explain({ struggle });
+    const response = await ai.explain(struggle);
 
     res.json(response);
   } catch (error) {

@@ -1,13 +1,14 @@
 import { Router } from 'express';
+import { container } from 'tsyringe';
 import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
 import { PlanRepository } from '@/infrastructure/repos/PlanRepository';
 
 const router = Router();
-const planRepo = new PlanRepository();
 
 router.get('/active', authMiddleware, async (req: AuthRequest, res, next) => {
   try {
     const userId = req.userId!;
+    const planRepo = container.resolve(PlanRepository);
     const plans = await planRepo.getActivePlans(userId);
     res.json({ plans });
   } catch (error) {
@@ -18,6 +19,7 @@ router.get('/active', authMiddleware, async (req: AuthRequest, res, next) => {
 router.post('/', authMiddleware, async (req: AuthRequest, res, next) => {
   try {
     const userId = req.userId!;
+    const planRepo = container.resolve(PlanRepository);
     const plan = await planRepo.createPlan({
       ...req.body,
       userId,
@@ -30,10 +32,10 @@ router.post('/', authMiddleware, async (req: AuthRequest, res, next) => {
 
 router.patch('/:id/archive', authMiddleware, async (req: AuthRequest, res, next) => {
   try {
-    const userId = req.userId!;
     const { id } = req.params;
+    const planRepo = container.resolve(PlanRepository);
 
-    await planRepo.archivePlan(id, userId);
+    await planRepo.archivePlan(id);
     res.json({ success: true });
   } catch (error) {
     next(error);

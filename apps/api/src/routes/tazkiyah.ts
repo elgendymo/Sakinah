@@ -3,6 +3,7 @@ import { CreatePlanInputSchema } from '@sakinah/types';
 import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
 import { ValidationError } from '@/shared/errors';
 import { suggestPlan } from '@/application/suggestPlan';
+import { Result } from '@/shared/result';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.post('/suggest', authMiddleware, async (req: AuthRequest, res, next) => {
       input,
     });
 
-    if (!result.ok) {
+    if (Result.isError(result)) {
       throw (result as any).error;
     }
 

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { Express } from 'express';
-import { createApp } from '../../src/server';
-import { SuggestPlanUseCase } from '../../src/application/usecases/SuggestPlanUseCase';
-import { Plan } from '../../src/domain/entities/Plan';
-import { MicroHabit } from '../../src/domain/entities/MicroHabit';
-import { Result } from '../../src/shared/result';
+import { createApp } from '@/server';
+import { SuggestPlanUseCase } from '@/application/usecases/SuggestPlanUseCase';
+import { Plan } from '@/domain/entities/Plan';
+import { MicroHabit } from '@/domain/entities/MicroHabit';
+import { Result } from '@/shared/result';
 import { container } from 'tsyringe';
 
 // Mock the SuggestPlanUseCase
@@ -95,8 +95,8 @@ describe('AI V1 API Integration Tests', () => {
         kind: 'takhliyah',
         target: 'Overcome anger and develop patience',
         microHabits: [
-          MicroHabit.create('Deep breathing when angry', 'when needed', 'Control immediate anger'),
-          MicroHabit.create('Recite Astaghfirullah 10 times', 'daily', 'Seek forgiveness and calm')
+          MicroHabit.create('Deep breathing when angry', 'when needed', 3),
+          MicroHabit.create('Recite Astaghfirullah 10 times', 'daily', 2)
         ],
         duaIds: ['dua-anger-control'],
         contentIds: ['verse-patience', 'hadith-anger'],
@@ -164,8 +164,8 @@ describe('AI V1 API Integration Tests', () => {
         kind: 'tahliyah',
         target: 'Increase gratitude and improve prayer habits',
         microHabits: [
-          MicroHabit.create('Say Alhamdulillah before meals', 'before each meal', 'Express gratitude'),
-          MicroHabit.create('Arrive 5 minutes early for Salah', 'daily', 'Improve prayer punctuality')
+          MicroHabit.create('Say Alhamdulillah before meals', 'before each meal', 2),
+          MicroHabit.create('Arrive 5 minutes early for Salah', 'daily', 1)
         ],
         duaIds: ['dua-gratitude'],
         contentIds: ['verse-gratitude', 'hadith-prayer'],
@@ -242,7 +242,7 @@ describe('AI V1 API Integration Tests', () => {
         kind: 'takhliyah',
         target: 'General spiritual development',
         microHabits: [
-          MicroHabit.create('Morning dhikr', 'daily', 'Start day with remembrance')
+          MicroHabit.create('Morning dhikr', 'daily', 1)
         ],
         status: 'active'
       });
