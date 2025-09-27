@@ -1,4 +1,5 @@
 import { injectable, inject } from 'tsyringe';
+import { logger } from '@/shared/logger';
 import { CommandHandler } from '../base/Command';
 import {
   CreateHabitCommand,
@@ -210,7 +211,7 @@ export class BulkCompleteHabitsCommandHandler implements CommandHandler<BulkComp
           }
         } catch (error) {
           // Continue with next habit if this one fails
-          console.warn(`Failed to complete habit ${habitId}:`, error);
+          logger.warn(`Failed to complete habit ${habitId}:`, error);
         }
       }
 

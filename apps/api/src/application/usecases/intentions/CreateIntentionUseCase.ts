@@ -2,7 +2,6 @@ import { injectable, inject } from 'tsyringe';
 import { Result } from '@/shared/result';
 import { IIntentionRepository } from '@/domain/repositories';
 import { Intention, IntentionPriority } from '@/domain/entities/Intention';
-import { UserId } from '@/domain/value-objects/UserId';
 
 export interface CreateIntentionRequest {
   userId: string;

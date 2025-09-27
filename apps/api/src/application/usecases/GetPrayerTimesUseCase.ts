@@ -7,6 +7,7 @@ import { Location } from '@/domain/value-objects/Location';
 import { CalculationMethod, CalculationMethodType } from '@/domain/value-objects/CalculationMethod';
 import { UserId } from '@/domain/value-objects/UserId';
 import { ICacheService } from '@/domain/services/ICacheService';
+import { logger } from '@/shared/logger';
 
 interface GetPrayerTimesInput {
   userId: string;
@@ -83,11 +84,12 @@ export class GetPrayerTimesUseCase {
           validUntil: cached.validUntil
         });
 
-        const qibla = new Qibla(new Coordinates(latitude, longitude));
+        const coordinates = new Coordinates(latitude, longitude);
+        const qiblaDirection = Qibla(coordinates);
 
         return Result.ok({
           prayerTimes: updatedPrayerTimes,
-          qiblaDirection: qibla.direction
+          qiblaDirection
         });
       }
 
@@ -95,11 +97,12 @@ export class GetPrayerTimesUseCase {
       const existing = await this.prayerTimesRepo.findByUserAndDate(userIdVO, normalizedDate);
 
       if (existing && existing.isValid()) {
-        const qibla = new Qibla(new Coordinates(latitude, longitude));
+        const coordinates = new Coordinates(latitude, longitude);
+        const qiblaDirection = Qibla(coordinates);
 
         return Result.ok({
           prayerTimes: existing,
-          qiblaDirection: qibla.direction
+          qiblaDirection
         });
       }
 
@@ -128,11 +131,12 @@ export class GetPrayerTimesUseCase {
       await this.cachePrayerTimes(cacheKey, prayerTimes);
 
       // Calculate Qibla direction
-      const qibla = new Qibla(new Coordinates(latitude, longitude));
+      const coordinates = new Coordinates(latitude, longitude);
+      const qiblaDirection = Qibla(coordinates);
 
       return Result.ok({
         prayerTimes,
-        qiblaDirection: qibla.direction
+        qiblaDirection
       });
 
     } catch (error) {
@@ -244,7 +248,7 @@ export class GetPrayerTimesUseCase {
       await this.cacheService.set(cacheKey, cacheData, 6 * 60 * 60 * 1000);
     } catch (error) {
       // Cache failure shouldn't break the flow
-      console.warn('Failed to cache prayer times:', error);
+      logger.warn('Failed to cache prayer times:', error);
     }
   }
 

@@ -4,6 +4,7 @@ import { PrayerTimes } from '@/domain/entities/PrayerTimes';
 import { IPrayerTimesRepository } from '@/domain/repositories/IPrayerTimesRepository';
 import { GetPrayerTimesUseCase } from './GetPrayerTimesUseCase';
 import { CalculationMethodType } from '@/domain/value-objects/CalculationMethod';
+import { logger } from '@/shared/logger';
 
 interface GetPrayerTimesRangeInput {
   userId: string;
@@ -69,7 +70,7 @@ export class GetPrayerTimesRangeUseCase {
 
         if (Result.isError(result)) {
           // Log the error but continue with other days
-          console.warn(`Failed to get prayer times for ${currentDate.toISOString()}:`, result.error);
+          logger.warn(`Failed to get prayer times for ${currentDate.toISOString()}:`, result.error);
         } else {
           prayerTimesList.push(result.value.prayerTimes);
           if (qiblaDirection === 0) {

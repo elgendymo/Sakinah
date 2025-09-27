@@ -2,7 +2,6 @@ import { injectable, inject } from 'tsyringe';
 import { Result } from '@/shared/result';
 import { IIntentionRepository } from '@/domain/repositories';
 import { UserId } from '@/domain/value-objects/UserId';
-import { IntentionStatus } from '@/domain/entities/Intention';
 
 export interface IntentionStats {
   totalIntentions: number;
