@@ -14,6 +14,9 @@ import aiRoutes from './v2/ai';
 import plansRoutes from './v2/plans';
 import journalRoutes from './journal';
 
+// Auth routes
+import authRoutes from './auth';
+
 // System routes
 import healthRoutes from './health';
 import cacheRoutes from './cache';
@@ -24,6 +27,9 @@ const router = Router();
 // Apply core middleware
 router.use(correlationIdMiddleware);
 router.use(requestLoggingMiddleware);
+
+// Auth routes (no authentication required)
+router.use('/auth', authRoutes);
 
 // Application routes - using latest functionality without versioning
 router.use('/habits', habitsRoutes);

@@ -3,17 +3,17 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import Link from 'next/link';
 import {
-  AccountBalance,
   Email,
   AutoAwesome,
   Build,
   Warning,
-  CheckCircle
+  CheckCircle,
+  PersonAdd
 } from '@mui/icons-material';
+import Link from 'next/link';
 
-function LoginForm() {
+function SignupForm() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -23,17 +23,14 @@ function LoginForm() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Check if we're in development mode
     const isDev = process.env.NODE_ENV === 'development' &&
                   process.env.NEXT_PUBLIC_USE_SUPABASE !== 'true';
     setIsDevelopment(isDev);
 
-    // Pre-fill email for development
     if (isDev) {
       setEmail('dev@sakinah.app');
     }
 
-    // Check for error messages from auth callback
     const error = searchParams.get('error');
     if (error) {
       const errorMessages = {
@@ -45,35 +42,32 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
     try {
       if (isDevelopment) {
-        // Development mode - simulate login and redirect
-        setMessage('Development mode: Logging you in...');
-
-        // Simulate a brief loading period
+        setMessage('Development mode: Creating account...');
         await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Redirect to dashboard
-        router.push('/dashboard');
+        router.push('/onboarding');
         return;
       }
 
-      // Production mode - use Supabase
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            isNewUser: true
+          }
         },
       });
 
       if (error) throw error;
 
-      setMessage('Check your email for the login link!');
+      setMessage('Check your email for the signup link! Click it to complete your registration.');
     } catch (error: any) {
       setMessage(error.message || 'An error occurred');
     } finally {
@@ -83,7 +77,6 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center islamic-gradient islamic-pattern">
-      {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-emerald-200/20 rounded-full blur-2xl"></div>
         <div className="absolute bottom-1/3 right-1/4 w-40 h-40 bg-gold-200/20 rounded-full blur-2xl"></div>
@@ -91,33 +84,27 @@ function LoginForm() {
       </div>
 
       <div className="relative w-full max-w-md mx-auto px-4">
-        {/* Login Card */}
         <div className="relative overflow-hidden">
-          {/* Card glow effect */}
           <div className="absolute -inset-1 bg-gradient-to-r from-emerald-200/50 via-gold-200/50 to-emerald-200/50 rounded-2xl blur-sm"></div>
 
           <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl border border-emerald-100/50 shadow-2xl overflow-hidden">
-            {/* Top accent bar */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-gold-400 to-emerald-400"></div>
 
             <div className="p-8">
-              {/* Header */}
               <div className="text-center mb-8">
-                {/* Logo placeholder */}
                 <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <AccountBalance sx={{ color: 'white', fontSize: 32 }} />
+                  <PersonAdd sx={{ color: 'white', fontSize: 32 }} />
                 </div>
 
                 <h1 className="text-2xl font-bold text-sage-800 mb-2">
-                  Welcome to Sakinah
+                  Join Sakinah
                 </h1>
                 <p className="text-sage-600 text-sm leading-relaxed">
-                  Your sanctuary for spiritual growth
+                  Begin your spiritual journey today
                 </p>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleSignup} className="space-y-6">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-sage-700 mb-2">
                     Email Address
@@ -146,18 +133,17 @@ function LoginForm() {
                   {loading ? (
                     <>
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      <span>{isDevelopment ? 'Logging in...' : 'Sending...'}</span>
+                      <span>{isDevelopment ? 'Creating account...' : 'Sending...'}</span>
                     </>
                   ) : (
                     <>
-                      <span>{isDevelopment ? 'Enter App (Dev Mode)' : 'Send Magic Link'}</span>
+                      <span>{isDevelopment ? 'Create Account (Dev Mode)' : 'Create Account'}</span>
                       <AutoAwesome sx={{ fontSize: 18 }} />
                     </>
                   )}
                 </button>
               </form>
 
-              {/* Development Mode Notice */}
               {isDevelopment && (
                 <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50">
                   <div className="flex items-center justify-center gap-2 mb-2">
@@ -165,12 +151,11 @@ function LoginForm() {
                     <span className="font-medium text-blue-800">Development Mode</span>
                   </div>
                   <p className="text-sm text-blue-700 text-center leading-relaxed">
-                    Click the button above to enter with mock authentication
+                    Click the button above to create account with mock authentication
                   </p>
                 </div>
               )}
 
-              {/* Message Display */}
               {message && (
                 <div className={`mt-6 p-4 rounded-xl text-center ${
                   message.includes('error') || message.includes('failed') || message.includes('Invalid')
@@ -189,21 +174,20 @@ function LoginForm() {
                 </div>
               )}
 
-              {/* Footer Information */}
               <div className="mt-8 pt-6 border-t border-sage-100 text-center">
                 <p className="text-sm text-sage-600 mb-3">
-                  Don't have an account?{' '}
+                  Already have an account?{' '}
                   <Link
-                    href="/signup"
+                    href="/login"
                     className="text-emerald-600 hover:text-emerald-700 font-medium underline decoration-emerald-300 underline-offset-2"
                   >
-                    Sign up
+                    Sign in
                   </Link>
                 </p>
                 {!isDevelopment ? (
                   <div className="space-y-2">
                     <p className="text-xs text-sage-500">
-                      No password needed | Secure authentication
+                      No password needed | Secure passwordless authentication
                     </p>
                   </div>
                 ) : (
@@ -213,13 +197,11 @@ function LoginForm() {
                 )}
               </div>
 
-              {/* Decorative bottom element */}
               <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-300/30 to-transparent"></div>
             </div>
           </div>
         </div>
 
-        {/* Bottom tagline */}
         <div className="text-center mt-6">
           <p className="text-sm text-sage-600/80 italic">
             "And it is in the remembrance of Allah that hearts find rest."
@@ -231,7 +213,7 @@ function LoginForm() {
   );
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center islamic-gradient islamic-pattern">
@@ -243,7 +225,7 @@ export default function LoginPage() {
               <div className="p-8">
                 <div className="text-center mb-8">
                   <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <AccountBalance sx={{ color: 'white', fontSize: 32 }} />
+                    <PersonAdd sx={{ color: 'white', fontSize: 32 }} />
                   </div>
                   <h1 className="text-2xl font-bold text-sage-800 mb-2">Loading...</h1>
                 </div>
@@ -257,7 +239,7 @@ export default function LoginPage() {
         </div>
       </div>
     }>
-      <LoginForm />
+      <SignupForm />
     </Suspense>
   );
 }
