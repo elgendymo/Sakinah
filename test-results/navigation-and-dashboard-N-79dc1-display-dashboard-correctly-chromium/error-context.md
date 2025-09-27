@@ -1,0 +1,272 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e5]:
+        - link "Sakinah Logo Sakinah" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "Sakinah Logo" [ref=e8] [cursor=pointer]
+          - generic [ref=e10] [cursor=pointer]: Sakinah
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - link "🪞 Mindful" [ref=e13] [cursor=pointer]:
+              - /url: /dashboard
+              - generic [ref=e14] [cursor=pointer]: 🪞
+              - generic [ref=e15] [cursor=pointer]: Mindful
+            - link "🌱 Habits" [ref=e16] [cursor=pointer]:
+              - /url: /habits
+              - generic [ref=e17] [cursor=pointer]: 🌱
+              - generic [ref=e18] [cursor=pointer]: Habits
+            - link "📝 Journal" [ref=e19] [cursor=pointer]:
+              - /url: /journal
+              - generic [ref=e20] [cursor=pointer]: 📝
+              - generic [ref=e21] [cursor=pointer]: Journal
+            - link "📚 Library" [ref=e22] [cursor=pointer]:
+              - /url: /content
+              - generic [ref=e23] [cursor=pointer]: 📚
+              - generic [ref=e24] [cursor=pointer]: Library
+            - link "✨ Tazkiyah" [ref=e25] [cursor=pointer]:
+              - /url: /tazkiyah
+              - generic [ref=e26] [cursor=pointer]: ✨
+              - generic [ref=e27] [cursor=pointer]: Tazkiyah
+            - link "👤 Profile" [ref=e28] [cursor=pointer]:
+              - /url: /profile
+              - generic [ref=e29] [cursor=pointer]: 👤
+              - generic [ref=e30] [cursor=pointer]: Profile
+          - button "🇺🇸 English" [ref=e32] [cursor=pointer]:
+            - generic [ref=e33] [cursor=pointer]: 🇺🇸
+            - generic [ref=e34] [cursor=pointer]: English
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Assalamu Alaikum" [level=1] [ref=e38]
+        - paragraph [ref=e39]: May Allah bless your spiritual journey
+      - generic [ref=e40]:
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e48]: 🕌
+            - generic [ref=e49]:
+              - heading "Today's Prayers" [level=2] [ref=e50]
+              - paragraph [ref=e51]: Your spiritual anchors throughout the day
+            - button "London, UK" [ref=e53] [cursor=pointer]:
+              - img [ref=e54] [cursor=pointer]
+              - generic [ref=e57] [cursor=pointer]: London, UK
+            - generic [ref=e58]:
+              - generic [ref=e59]: Next Prayer
+              - generic [ref=e60]:
+                - text: Maghrib
+                - generic [ref=e61]: at 20:08
+          - generic [ref=e62]:
+            - button "✓ 🌅 Fajr 05:45" [ref=e63] [cursor=pointer]:
+              - generic [ref=e65] [cursor=pointer]: ✓
+              - generic [ref=e66] [cursor=pointer]:
+                - generic [ref=e67] [cursor=pointer]: 🌅
+                - generic [ref=e68] [cursor=pointer]: Fajr
+                - generic [ref=e69] [cursor=pointer]: 05:45
+            - button "✓ ☀️ Dhuhr 13:56" [ref=e70] [cursor=pointer]:
+              - generic [ref=e72] [cursor=pointer]: ✓
+              - generic [ref=e73] [cursor=pointer]:
+                - generic [ref=e74] [cursor=pointer]: ☀️
+                - generic [ref=e75] [cursor=pointer]: Dhuhr
+                - generic [ref=e76] [cursor=pointer]: 13:56
+            - button "✓ 🌇 Asr 17:16" [ref=e77] [cursor=pointer]:
+              - generic [ref=e79] [cursor=pointer]: ✓
+              - generic [ref=e80] [cursor=pointer]:
+                - generic [ref=e81] [cursor=pointer]: 🌇
+                - generic [ref=e82] [cursor=pointer]: Asr
+                - generic [ref=e83] [cursor=pointer]: 17:16
+            - button "+ 🌆 Maghrib 20:08" [ref=e84] [cursor=pointer]:
+              - generic [ref=e87] [cursor=pointer]: +
+              - generic [ref=e88] [cursor=pointer]:
+                - generic [ref=e89] [cursor=pointer]: 🌆
+                - generic [ref=e90] [cursor=pointer]: Maghrib
+                - generic [ref=e91] [cursor=pointer]: 20:08
+            - button "+ 🌙 Isha 21:55" [ref=e92] [cursor=pointer]:
+              - generic [ref=e94] [cursor=pointer]: +
+              - generic [ref=e95] [cursor=pointer]:
+                - generic [ref=e96] [cursor=pointer]: 🌙
+                - generic [ref=e97] [cursor=pointer]: Isha
+                - generic [ref=e98] [cursor=pointer]: 21:55
+          - generic [ref=e100]:
+            - generic [ref=e101]: Today's Progress
+            - generic [ref=e102]: 3/5 completed
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]:
+                - generic [ref=e110]: 🌅
+                - generic [ref=e111]:
+                  - heading "Morning Check-in" [level=3] [ref=e112]
+                  - paragraph [ref=e113]: Set your spiritual intention
+              - generic [ref=e114]: 18 Thu
+            - link "Set Today's Intention" [ref=e115] [cursor=pointer]:
+              - /url: /checkin
+          - generic [ref=e116]:
+            - generic [ref=e118]:
+              - generic [ref=e120]: 🌙
+              - generic [ref=e121]:
+                - heading "Evening Reflection" [level=3] [ref=e122]
+                - paragraph [ref=e123]: Muhasabah & gratitude
+            - link "Complete Evening Reflection" [ref=e125] [cursor=pointer]:
+              - /url: /checkin
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - heading "Today's Spiritual Focus" [level=2] [ref=e133]
+            - paragraph [ref=e134]: Your daily spiritual nourishment
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e140]:
+                - generic [ref=e141]:
+                  - generic [ref=e143]: 📖
+                  - generic [ref=e144]:
+                    - heading "Today's Guidance" [level=3] [ref=e145]
+                    - paragraph [ref=e146]: Reflection of the day
+                - generic [ref=e147]:
+                  - button "Copy ayah" [ref=e148] [cursor=pointer]:
+                    - img [ref=e149] [cursor=pointer]
+                  - generic [ref=e152]: وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا
+                  - generic [ref=e153]: Wa man yattaqi Allaha yaj'al lahu makhrajan
+                  - generic [ref=e154]: And whoever fears Allah - He will make for him a way out.
+                  - generic [ref=e155]: — At-Talaq 65:2
+              - generic [ref=e156]:
+                - generic [ref=e159]:
+                  - generic [ref=e160]:
+                    - generic [ref=e162]: 📋
+                    - heading "Today's Plan" [level=3] [ref=e163]
+                  - generic [ref=e164]:
+                    - paragraph [ref=e165]: Your spiritual roadmap for today
+                    - generic [ref=e166]:
+                      - generic [ref=e167]:
+                        - button "✓" [ref=e168] [cursor=pointer]:
+                          - generic [ref=e170] [cursor=pointer]: ✓
+                        - generic [ref=e171]:
+                          - generic [ref=e173]: Habit
+                          - paragraph [ref=e174]: Maintain Fajr consistency
+                      - generic [ref=e175]:
+                        - button [ref=e176] [cursor=pointer]
+                        - generic [ref=e178]:
+                          - generic [ref=e180]: Habit
+                          - paragraph [ref=e181]: Practice gratitude journaling
+                      - generic [ref=e182]:
+                        - button [ref=e183] [cursor=pointer]
+                        - generic [ref=e185]:
+                          - generic [ref=e187]: Du'a
+                          - paragraph [ref=e188]: رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً
+                      - generic [ref=e189]:
+                        - button "✓" [ref=e190] [cursor=pointer]:
+                          - generic [ref=e192] [cursor=pointer]: ✓
+                        - generic [ref=e193]:
+                          - generic [ref=e195]: Ayah
+                          - paragraph [ref=e196]: وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا
+                    - generic [ref=e198]:
+                      - generic [ref=e199]: Progress
+                      - generic [ref=e200]: 2/4 completed
+                    - button "View Details →" [ref=e203] [cursor=pointer]:
+                      - text: View Details
+                      - generic [ref=e204] [cursor=pointer]: →
+                - generic [ref=e206]:
+                  - generic [ref=e207]:
+                    - generic [ref=e209]: ✓
+                    - heading "Daily Habits" [level=3] [ref=e210]
+                  - generic [ref=e211]:
+                    - generic [ref=e212]:
+                      - button "Mark Morning Adhkar as incomplete" [ref=e213] [cursor=pointer]:
+                        - generic [ref=e215] [cursor=pointer]: ✓
+                      - generic [ref=e216]:
+                        - generic [ref=e217]:
+                          - heading "Morning Adhkar" [level=4] [ref=e218]
+                          - generic [ref=e219]:
+                            - generic [ref=e220]: 🔥
+                            - generic [ref=e221]: "7"
+                        - paragraph [ref=e222]: Recite morning remembrance of Allah
+                      - generic [ref=e223]: Done
+                    - generic [ref=e224]:
+                      - button "Mark Quran Reading as complete" [ref=e225] [cursor=pointer]
+                      - generic [ref=e227]:
+                        - generic [ref=e228]:
+                          - heading "Quran Reading" [level=4] [ref=e229]
+                          - generic [ref=e230]:
+                            - generic [ref=e231]: 🔥
+                            - generic [ref=e232]: "3"
+                        - paragraph [ref=e233]: Read at least one page of the Quran
+                    - generic [ref=e234]:
+                      - button "Mark Evening Du'a as incomplete" [ref=e235] [cursor=pointer]:
+                        - generic [ref=e237] [cursor=pointer]: ✓
+                      - generic [ref=e238]:
+                        - generic [ref=e239]:
+                          - heading "Evening Du'a" [level=4] [ref=e240]
+                          - generic [ref=e241]:
+                            - generic [ref=e242]: 🔥
+                            - generic [ref=e243]: "12"
+                        - paragraph [ref=e244]: Make du'a before Maghrib prayer
+                      - generic [ref=e245]: Done
+                    - generic [ref=e246]:
+                      - button "Mark Istighfar as complete" [ref=e247] [cursor=pointer]
+                      - generic [ref=e249]:
+                        - generic [ref=e250]:
+                          - heading "Istighfar" [level=4] [ref=e251]
+                          - generic [ref=e252]:
+                            - generic [ref=e253]: 🔥
+                            - generic [ref=e254]: "1"
+                        - paragraph [ref=e255]: Seek Allah's forgiveness 100 times
+                    - generic [ref=e257]:
+                      - generic [ref=e258]: Progress
+                      - generic [ref=e259]: 2/4 completed
+              - generic [ref=e264]:
+                - generic [ref=e265]:
+                  - generic [ref=e267]: 🤲
+                  - generic [ref=e268]:
+                    - heading "Morning Du'a" [level=3] [ref=e269]
+                    - paragraph [ref=e270]: Start your day with remembrance
+                - generic [ref=e271]:
+                  - generic [ref=e272]: اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ
+                  - generic [ref=e273]:
+                    - generic [ref=e274]: "Pronunciation:"
+                    - text: Allahumma a'inni 'ala dhikrika wa shukrika wa husni 'ibadatik
+                  - generic [ref=e275]:
+                    - generic [ref=e276]: "Translation:"
+                    - text: O Allah, help me to remember You, thank You, and worship You in the best manner.
+                  - generic [ref=e278]:
+                    - button "Decrease count" [disabled] [ref=e279]:
+                      - img [ref=e280]
+                    - generic [ref=e281]: "0"
+                    - button "Increase count" [ref=e282] [cursor=pointer]:
+                      - img [ref=e283] [cursor=pointer]
+            - generic [ref=e284]:
+              - generic [ref=e288]:
+                - generic [ref=e289]:
+                  - generic [ref=e291]: 💚
+                  - heading "Daily Intention" [level=3] [ref=e292]
+                - generic [ref=e293]:
+                  - generic [ref=e294]:
+                    - paragraph [ref=e296]: "\"Today, I intend to worship Allah with sincerity and mindfulness.\""
+                    - button "Set Today's Intention 💚" [ref=e297] [cursor=pointer]:
+                      - text: Set Today's Intention
+                      - generic [ref=e298] [cursor=pointer]: 💚
+                  - paragraph [ref=e300]: 💡 Set your daily intention after Fajr prayer
+              - generic [ref=e304]:
+                - generic [ref=e305]:
+                  - generic [ref=e307]: 📿
+                  - heading "Dhikr Counter" [level=3] [ref=e308]
+                - generic [ref=e309]:
+                  - generic [ref=e310]:
+                    - heading "Astaghfirullah" [level=4] [ref=e311]
+                    - paragraph [ref=e312]: أستغفر الله
+                  - generic [ref=e313]:
+                    - generic [ref=e314]:
+                      - img [ref=e315]
+                      - generic [ref=e318]:
+                        - generic [ref=e319]: "0"
+                        - generic [ref=e320]: of 100
+                    - button "+1" [ref=e321] [cursor=pointer]
+                  - paragraph [ref=e323]: Tap to count your dhikr
+              - generic [ref=e327]:
+                - generic [ref=e329]: 🌸
+                - heading "Moment of Reflection" [level=3] [ref=e330]
+                - paragraph [ref=e331]: "\"In the remembrance of Allah do hearts find rest\""
+                - paragraph [ref=e332]: — Quran 13:28
+  - button "Open Next.js Dev Tools" [ref=e339] [cursor=pointer]:
+    - img [ref=e340] [cursor=pointer]
+  - alert [ref=e343]
+```
