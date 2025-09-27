@@ -197,12 +197,12 @@ export class ConflictResolver {
     return 'merge_automatic';
   }
 
-  private selectCheckinStrategy(conflict: ConflictData): ConflictResolutionStrategy {
+  private selectCheckinStrategy(_conflict: ConflictData): ConflictResolutionStrategy {
     // Check-ins are time-sensitive, use semantic merge
     return 'semantic_merge';
   }
 
-  private selectPlanStrategy(conflict: ConflictData): ConflictResolutionStrategy {
+  private selectPlanStrategy(_conflict: ConflictData): ConflictResolutionStrategy {
     // Plans are complex, require manual resolution
     return 'merge_manual';
   }
@@ -316,7 +316,7 @@ export class ConflictResolver {
   }
 
   private async semanticMergeStrategy(conflict: ConflictData): Promise<ResolutionResult> {
-    const merged = { ...conflict.serverData };
+    let merged = { ...conflict.serverData };
     const appliedRules: string[] = [];
 
     // Apply semantic understanding based on entity type

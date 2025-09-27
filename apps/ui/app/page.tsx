@@ -2,17 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   SectionHeader,
   AyahQuote,
   type PlanItem
 } from '@sakinah/ui';
+import {
+  Lock,
+  MenuBook,
+  NightlightRound,
+  SelfImprovement,
+  AutoAwesome,
+  Create,
+  CheckCircle,
+  LocalFireDepartment,
+  Favorite,
+  AccountBalance,
+  Search,
+  Visibility
+} from '@mui/icons-material';
 
 export default function HomePage() {
     const t = useTranslations('homepage');
-    useRouter();
     const [scrollY, setScrollY] = useState(0);
     const [isVisible, setIsVisible] = useState({
     hero: false,
@@ -138,21 +150,21 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-emerald-200">
-                <span className="text-2xl">🔒</span>
+                <Lock sx={{ fontSize: 32, color: '#059669' }} />
               </div>
               <h3 className="font-semibold text-sage-800">{t('privateTitle')}</h3>
               <p className="text-sm text-sage-600">{t('privateDesc')}</p>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 bg-gradient-to-br from-gold-100 to-gold-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-gold-200">
-                <span className="text-2xl">📖</span>
+                <MenuBook sx={{ fontSize: 32, color: '#d97706' }} />
               </div>
               <h3 className="font-semibold text-sage-800">{t('authenticTitle')}</h3>
               <p className="text-sm text-sage-600">{t('authenticDesc')}</p>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center mb-3 shadow-lg border border-emerald-200">
-                <span className="text-2xl">🌙</span>
+                <NightlightRound sx={{ fontSize: 32, color: '#059669' }} />
               </div>
               <h3 className="font-semibold text-sage-800">{t('dailyGuidanceTitle')}</h3>
               <p className="text-sm text-sage-600">{t('dailyGuidanceDesc')}</p>
@@ -183,7 +195,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10 group-hover:text-white transition-colors duration-300">
                 <div className="w-14 h-14 bg-emerald-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
-                  <span className="text-2xl">🌱</span>
+                  <SelfImprovement sx={{ fontSize: 32, color: '#059669' }} className="group-hover:!text-white" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('tazkiyahPlanTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
@@ -208,7 +220,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10 group-hover:text-white transition-colors duration-300">
                 <div className="w-14 h-14 bg-gold-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
-                  <span className="text-2xl">✨</span>
+                  <AutoAwesome sx={{ fontSize: 32, color: '#d97706' }} className="group-hover:!text-white" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('habitTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
@@ -233,7 +245,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10 group-hover:text-white transition-colors duration-300">
                 <div className="w-14 h-14 bg-emerald-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
-                  <span className="text-2xl">🌙</span>
+                  <NightlightRound sx={{ fontSize: 32, color: '#059669' }} className="group-hover:!text-white" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('muhasabahTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
@@ -258,7 +270,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10 group-hover:text-white transition-colors duration-300">
                 <div className="w-14 h-14 bg-gold-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300">
-                  <span className="text-2xl">📝</span>
+                  <Create sx={{ fontSize: 32, color: '#d97706' }} className="group-hover:!text-white" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-sage-900 group-hover:text-white">{t('journalTitle')}</h3>
                 <p className="text-sage-600 group-hover:text-white/90 mb-4">
@@ -357,7 +369,7 @@ export default function HomePage() {
                     <div className="p-8">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
-                          <span className="text-white text-lg">📖</span>
+                          <MenuBook sx={{ color: 'white', fontSize: 24 }} />
                         </div>
                         <div>
                           <h3 className="text-xl font-semibold text-sage-800">{t('todaysGuidance')}</h3>
@@ -385,7 +397,7 @@ export default function HomePage() {
                     <div className="relative bg-white p-6 rounded-2xl border border-gold-100/50 shadow-md">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">📋</span>
+                          <MenuBook sx={{ color: 'white', fontSize: 20 }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('todaysPlan')}</h3>
                       </div>
@@ -404,7 +416,7 @@ export default function HomePage() {
                               <button className="flex-shrink-0 mt-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-300/50 rounded-full">
                                 {item.completed ? (
                                   <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                                    <span className="text-white text-xs">✓</span>
+                                    <CheckCircle sx={{ color: 'white', fontSize: 16 }} />
                                   </div>
                                 ) : (
                                   <div className="w-4 h-4 border-2 border-sage-300 rounded-full hover:border-emerald-400 transition-colors"></div>
@@ -474,7 +486,7 @@ export default function HomePage() {
                     <div className="relative bg-white p-6 rounded-2xl border border-emerald-100/50 shadow-md">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">✓</span>
+                          <CheckCircle sx={{ color: 'white', fontSize: 20 }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('dailyHabitsTitle')}</h3>
                       </div>
@@ -487,7 +499,7 @@ export default function HomePage() {
                             <button className="flex-shrink-0 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-300/50 rounded-full">
                               {habit.completed ? (
                                 <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-xs">✓</span>
+                                  <CheckCircle sx={{ color: 'white', fontSize: 16 }} />
                                 </div>
                               ) : (
                                 <div className="w-5 h-5 border-2 border-sage-300 rounded-full hover:border-emerald-400 transition-colors"></div>
@@ -501,7 +513,7 @@ export default function HomePage() {
                                 </h4>
                                 {habit.streak > 0 && (
                                   <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                                    <span className="text-orange-500">🔥</span>
+                                    <LocalFireDepartment sx={{ color: '#f97316', fontSize: 16 }} />
                                     <span>{habit.streak}</span>
                                   </div>
                                 )}
@@ -549,7 +561,7 @@ export default function HomePage() {
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">💚</span>
+                          <Favorite sx={{ color: 'white', fontSize: 20 }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('dailyIntentionTitle')}</h3>
                       </div>
@@ -562,7 +574,7 @@ export default function HomePage() {
 
                         <button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2">
                           {t('setTodaysIntention')}
-                          <span className="text-xs">💚</span>
+                          <Favorite sx={{ fontSize: 16 }} />
                         </button>
 
                         <div className="pt-3 border-t border-emerald-100">
@@ -582,7 +594,7 @@ export default function HomePage() {
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">📿</span>
+                          <SelfImprovement sx={{ color: 'white', fontSize: 20 }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('dhikrCounterTitle')}</h3>
                       </div>
@@ -662,7 +674,9 @@ export default function HomePage() {
       >
         <div className="max-w-4xl mx-auto text-center">
           <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-3xl p-12 text-white shadow-2xl">
-            <div className="text-5xl mb-6">🕌</div>
+            <div className="mb-6">
+              <AccountBalance sx={{ fontSize: 80, color: 'white' }} />
+            </div>
 
             <div className="mb-8">
               <p className="text-2xl md:text-3xl font-arabic text-center leading-relaxed mb-4">
@@ -743,7 +757,7 @@ export default function HomePage() {
                     href="/login?provider=google"
                     className="flex items-center gap-2 px-6 py-3 border border-sage-300 rounded-lg hover:bg-sage-50 transition-colors"
                   >
-                    <span className="text-lg">🔍</span>
+                    <Search sx={{ fontSize: 24 }} />
                     <span className="text-sage-700">{t('google')}</span>
                   </Link>
 
@@ -751,7 +765,7 @@ export default function HomePage() {
                     href="/demo"
                     className="flex items-center gap-2 px-6 py-3 border border-sage-300 rounded-lg hover:bg-sage-50 transition-colors"
                   >
-                    <span className="text-lg">👁️</span>
+                    <Visibility sx={{ fontSize: 24 }} />
                     <span className="text-sage-700">{t('viewDemo')}</span>
                   </Link>
                 </div>
@@ -760,15 +774,15 @@ export default function HomePage() {
               <div className="mt-8 pt-8 border-t border-sage-200">
                 <div className="flex items-center justify-center gap-6 text-sm text-sage-600">
                   <span className="flex items-center gap-2">
-                    <span>🔒</span>
+                    <Lock sx={{ fontSize: 20 }} />
                     <span>{t('fullyPrivate')}</span>
                   </span>
                   <span className="flex items-center gap-2">
-                    <span>📖</span>
+                    <MenuBook sx={{ fontSize: 20 }} />
                     <span>{t('shariahCompliant')}</span>
                   </span>
                   <span className="flex items-center gap-2">
-                    <span>❤️</span>
+                    <Favorite sx={{ fontSize: 20, color: '#ef4444' }} />
                     <span>{t('freeForever')}</span>
                   </span>
                 </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@/lib/supabase-browser';
+import { AuthUtils } from '@/lib/auth-utils';
 import PageContainer from '@/components/PageContainer';
 import { LocationSelector } from '@/components/LocationSelector';
 import {
@@ -13,11 +13,30 @@ import {
   Madhab
 } from 'adhan';
 import {
+  Mosque as MosqueIcon,
+  WbSunny as SunIcon,
+  Brightness6 as SunriseIcon,
+  Brightness4 as SunsetIcon,
+  Brightness5 as AfternoonIcon,
+  NightlightRound as NightIcon,
+  CheckCircle as CheckIcon,
+  Warning as WarningIcon,
+  Favorite as HeartIcon,
+  Create as WriteIcon,
+  MenuBook as BookIcon,
+  Assignment as PlanIcon,
+  LocalFireDepartment as FireIcon,
+  SelfImprovement as DhikrIcon,
+  AutoAwesome as SparkleIcon
+} from '@mui/icons-material';
+import {
   AyahQuote,
   DuaCard,
   type PlanItem,
   type PrayerTime
 } from '@sakinah/ui';
+import { apiService } from '@/lib/services/api';
+import { ApiError } from '@/lib/services/api/ApiService';
 
 interface DashboardClientProps {
   userId: string;
@@ -31,16 +50,48 @@ interface Location {
   timezone: string;
 }
 
-export default function DashboardClient({ userId }: DashboardClientProps) {
+interface DhikrSession {
+  id: string;
+  dhikrType: string;
+  dhikrText: string;
+  currentCount: number;
+  targetCount: number;
+  status: 'active' | 'completed';
+  date: string;
+}
+
+interface Intention {
+  id: string;
+  text: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'active' | 'completed' | 'archived';
+  createdAt: string;
+  targetDate?: string;
+}
+
+interface PlanData {
+  id: string;
+  title: string;
+  description: string;
+  status: 'active' | 'completed' | 'paused';
+  items: PlanItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function DashboardClient({ }: DashboardClientProps) {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const tPrayers = useTranslations('prayers');
   const tHabits = useTranslations('habits');
   const [loading, setLoading] = useState(true);
-  const [todayIntention, setTodayIntention] = useState('');
+  const [todayIntention, setTodayIntention] = useState<Intention | null>(null);
   const [isEditingIntention, setIsEditingIntention] = useState(false);
   const [tempIntention, setTempIntention] = useState('');
-  const [dhikrCount, setDhikrCount] = useState(0);
+  const [dhikrSession, setDhikrSession] = useState<DhikrSession | null>(null);
+  const [activePlans, setActivePlans] = useState<PlanData[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTime[]>([
     { name: 'Fajr' as const, time: '5:30', passed: true },
@@ -49,16 +100,15 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
     { name: 'Maghrib' as const, time: '7:20', passed: false },
     { name: 'Isha' as const, time: '8:45', passed: false },
   ]);
-  const supabase = createClient();
 
-  const todaysHabits = [
+  const [todaysHabits, setTodaysHabits] = useState([
     { id: '1', name: tHabits('morningAdhkar'), description: tHabits('reciteMorningRemembrance'), streak: 7, completed: true },
     { id: '2', name: tHabits('quranReading'), description: tHabits('readAtLeastOnePage'), streak: 3, completed: false },
     { id: '3', name: tHabits('eveningDua'), description: tHabits('makeDuaBeforeMaghrib'), streak: 12, completed: true },
     { id: '4', name: tHabits('istighfar'), description: tHabits('seekForgiveness100Times'), streak: 1, completed: false },
-  ];
+  ]);
 
-  const currentPlan: PlanItem[] = [
+  const currentPlan: PlanItem[] = activePlans.length > 0 ? activePlans[0].items : [
     { id: '1', text: 'Maintain Fajr consistency', type: 'habit', completed: true },
     { id: '2', text: 'Practice gratitude journaling', type: 'habit', completed: false },
     { id: '3', text: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً', type: 'dua', completed: false },
@@ -66,34 +116,127 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
   ];
 
   useEffect(() => {
-    loadPlans();
-
-    // Load saved location from localStorage
-    const savedLocation = localStorage.getItem('selectedLocation');
-    if (savedLocation) {
-      setSelectedLocation(JSON.parse(savedLocation));
-    } else {
-      // Default to London if no location is set
-      const defaultLocation: Location = {
-        city: 'London',
-        country: 'UK',
-        latitude: 51.5074,
-        longitude: -0.1278,
-        timezone: 'Europe/London'
-      };
-      setSelectedLocation(defaultLocation);
-      localStorage.setItem('selectedLocation', JSON.stringify(defaultLocation));
-    }
+    initializeDashboard();
   }, []);
 
   // Calculate prayer times whenever location changes
   useEffect(() => {
     if (selectedLocation) {
-      calculatePrayerTimes();
+      loadPrayerTimes();
     }
   }, [selectedLocation]);
 
-  const calculatePrayerTimes = () => {
+  const initializeDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load saved location from localStorage
+      const savedLocation = localStorage.getItem('selectedLocation');
+      if (savedLocation) {
+        setSelectedLocation(JSON.parse(savedLocation));
+      } else {
+        // Default to London if no location is set
+        const defaultLocation: Location = {
+          city: 'London',
+          country: 'UK',
+          latitude: 51.5074,
+          longitude: -0.1278,
+          timezone: 'Europe/London'
+        };
+        setSelectedLocation(defaultLocation);
+        localStorage.setItem('selectedLocation', JSON.stringify(defaultLocation));
+      }
+
+      // Load dashboard data in parallel
+      const token = await AuthUtils.getAuthTokenWithFallback();
+      await Promise.allSettled([
+        loadActivePlans(token),
+        loadTodayIntention(token),
+        loadDhikrSession(token)
+      ]);
+    } catch (error) {
+      console.error('Error initializing dashboard:', error);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPrayerTimes = async () => {
+    if (!selectedLocation) return;
+
+    try {
+      const token = await AuthUtils.getAuthTokenWithFallback();
+      const response = await apiService.get('v2/prayer-times', {
+        params: {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          timezone: selectedLocation.timezone,
+          calculationMethod: 'MuslimWorldLeague'
+        },
+        authToken: token
+      });
+
+        const prayerData = response.data as any;
+        if (prayerData?.data?.prayerTimes) {
+          const now = new Date();
+          const prayers: PrayerTime[] = [
+            {
+              name: 'Fajr',
+              time: new Date(prayerData.data.prayerTimes.prayerTimes.fajr.time).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }),
+              passed: now > new Date(prayerData.data.prayerTimes.prayerTimes.fajr.time)
+            },
+            {
+              name: 'Dhuhr',
+              time: new Date(prayerData.data.prayerTimes.prayerTimes.dhuhr.time).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }),
+              passed: now > new Date(prayerData.data.prayerTimes.prayerTimes.dhuhr.time)
+            },
+            {
+              name: 'Asr',
+              time: new Date(prayerData.data.prayerTimes.prayerTimes.asr.time).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }),
+              passed: now > new Date(prayerData.data.prayerTimes.prayerTimes.asr.time)
+            },
+            {
+              name: 'Maghrib',
+              time: new Date(prayerData.data.prayerTimes.prayerTimes.maghrib.time).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }),
+              passed: now > new Date(prayerData.data.prayerTimes.prayerTimes.maghrib.time)
+            },
+            {
+              name: 'Isha',
+              time: new Date(prayerData.data.prayerTimes.prayerTimes.isha.time).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }),
+              passed: now > new Date(prayerData.data.prayerTimes.prayerTimes.isha.time)
+            },
+          ];
+          setPrayerTimes(prayers);
+        }
+    } catch (error) {
+      console.error('Error loading prayer times from API, falling back to client-side:', error);
+      calculatePrayerTimesClientSide();
+    }
+  };
+
+  const calculatePrayerTimesClientSide = () => {
     if (!selectedLocation) return;
 
     const date = new Date();
@@ -150,25 +293,140 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
     localStorage.setItem('selectedLocation', JSON.stringify(location));
   };
 
-  const loadPlans = async () => {
+  const loadActivePlans = async (token: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        // For development, skip API call that returns HTML error
-        console.log('User plans loaded for:', userId);
-        // Plans data would be used here in a real implementation
+      const response = await apiService.get('v2/plans/active', {
+        authToken: token,
+        cacheTTL: 300000 // 5 minutes cache
+      });
+      const responseData = response.data as any;
+
+      if (responseData?.data?.plans) {
+        setActivePlans(responseData.data.plans);
       }
     } catch (error) {
-      console.error('Error loading plans:', error);
-    } finally {
-      // Set a shorter timeout for better UX
-      setTimeout(() => setLoading(false), 800);
+      console.error('Error loading active plans:', error);
+      if (error instanceof ApiError) {
+        // Handle specific API errors
+        if (error.statusCode === 404) {
+          setActivePlans([]); // No active plans
+        }
+      }
     }
   };
 
-  const handleHabitToggle = (habitId: string, completed: boolean) => {
-    // Update habit completion status
-    console.log(`Habit ${habitId} toggled to ${completed}`);
+  const loadTodayIntention = async (token: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiService.get('v2/intentions', {
+        params: {
+          status: 'active',
+          targetDateFrom: today,
+          targetDateTo: today,
+          limit: 1,
+          sortBy: 'createdAt',
+          sortOrder: 'desc'
+        },
+        authToken: token,
+        cacheTTL: 60000 // 1 minute cache for intentions
+      });
+      const responseData = response.data as any;
+
+      if (responseData?.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+        setTodayIntention(responseData.data[0]);
+      }
+    } catch (error) {
+      console.error('Error loading today\'s intention:', error);
+    }
+  };
+
+  const loadDhikrSession = async (token: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiService.get('v2/dhikr/sessions', {
+        params: {
+          date: today,
+          dhikrType: 'astaghfirullah',
+          limit: 1,
+          sortBy: 'createdAt',
+          sortOrder: 'desc'
+        },
+        authToken: token,
+        cacheTTL: 30000 // 30 seconds cache for active session
+      });
+      const responseData = response.data as any;
+
+      if (responseData?.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+        const session = responseData.data[0];
+        if (session.status === 'active') {
+          setDhikrSession(session);
+        }
+      }
+
+      // If no active session, create one
+      if (!dhikrSession) {
+        await createDhikrSession(token);
+      }
+    } catch (error) {
+      console.error('Error loading dhikr session:', error);
+      // Try to create a new session on error
+      await createDhikrSession(token);
+    }
+  };
+
+  const createDhikrSession = async (token: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiService.post('v2/dhikr/sessions', {
+        dhikrType: 'astaghfirullah',
+        dhikrText: 'أستغفر الله',
+        targetCount: 100,
+        date: today,
+        tags: ['daily', 'istighfar']
+      }, {
+        authToken: token
+      });
+
+      const responseData = response.data as any;
+      if (responseData?.data) {
+        setDhikrSession(responseData.data);
+      }
+    } catch (error) {
+      console.error('Error creating dhikr session:', error);
+    }
+  };
+
+  // Removed unused loadPlans function
+
+  const handleHabitToggle = async (habitId: string, completed: boolean) => {
+    try {
+      // Optimistic update
+      setTodaysHabits(prev => prev.map(habit =>
+        habit.id === habitId ? { ...habit, completed } : habit
+      ));
+
+      const token = await AuthUtils.getAuthTokenWithFallback();
+
+      const endpoint = completed ? `v2/habits/${habitId}/complete` : `v2/habits/${habitId}/incomplete`;
+      const response = await apiService.post(endpoint, {}, {
+        authToken: token
+      });
+
+      if (!response.data) {
+        // Revert optimistic update on error
+        setTodaysHabits(prev => prev.map(habit =>
+          habit.id === habitId ? { ...habit, completed: !completed } : habit
+        ));
+        setError('Failed to update habit. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error toggling habit:', error);
+      // Revert optimistic update
+      setTodaysHabits(prev => prev.map(habit =>
+        habit.id === habitId ? { ...habit, completed: !completed } : habit
+      ));
+      setError('Failed to update habit. Please try again.');
+    }
   };
 
 
@@ -184,19 +442,58 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
     console.log(`Prayer ${prayerName} toggled`);
   };
 
-  const handleSetIntention = (intention: string) => {
-    setTodayIntention(intention);
-    setIsEditingIntention(false);
+  const handleSetIntention = async (intentionText: string) => {
+    try {
+      const token = await AuthUtils.getAuthTokenWithFallback();
+
+      const response = await apiService.post('v2/intentions', {
+        text: intentionText,
+        priority: 'medium',
+        targetDate: new Date().toISOString(),
+        tags: ['daily', 'intention']
+      }, {
+        authToken: token
+      });
+
+      const responseData = response.data as any;
+      if (responseData?.data) {
+        setTodayIntention(responseData.data);
+        setIsEditingIntention(false);
+        setTempIntention('');
+      }
+    } catch (error) {
+      console.error('Error setting intention:', error);
+      setError('Failed to set intention. Please try again.');
+    }
   };
 
   const handleEditIntention = () => {
-    setTempIntention(todayIntention);
+    setTempIntention(todayIntention?.text || '');
     setIsEditingIntention(true);
   };
 
-  const handleSaveIntention = () => {
-    setTodayIntention(tempIntention);
-    setIsEditingIntention(false);
+  const handleSaveIntention = async () => {
+    if (!todayIntention || !tempIntention.trim()) return;
+
+    try {
+      const token = await AuthUtils.getAuthTokenWithFallback();
+
+      const response = await apiService.put(`v2/intentions/${todayIntention.id}`, {
+        text: tempIntention.trim()
+      }, {
+        authToken: token
+      });
+
+      const responseData = response.data as any;
+      if (responseData?.data) {
+        setTodayIntention(responseData.data);
+        setIsEditingIntention(false);
+        setTempIntention('');
+      }
+    } catch (error) {
+      console.error('Error updating intention:', error);
+      setError('Failed to update intention. Please try again.');
+    }
   };
 
   const handleCancelEdit = () => {
@@ -204,12 +501,60 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
     setIsEditingIntention(false);
   };
 
-  const handleDhikrIncrement = () => {
-    setDhikrCount(prev => prev < 100 ? prev + 1 : prev);
+  const handleDhikrIncrement = async () => {
+    if (!dhikrSession) return;
+
+    try {
+      const token = await AuthUtils.getAuthTokenWithFallback();
+
+      const response = await apiService.post(`v2/dhikr/sessions/${dhikrSession.id}/increment`, {
+        increment: 1
+      }, {
+        authToken: token
+      });
+
+      const responseData = response.data as any;
+      if (responseData?.data) {
+        setDhikrSession(responseData.data);
+
+        // Auto-complete session if target reached
+        if (responseData.data.currentCount >= responseData.data.targetCount && responseData.data.status === 'active') {
+          await completeDhikrSession(token, responseData.data.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error incrementing dhikr:', error);
+      setError('Failed to update dhikr count. Please try again.');
+    }
   };
 
-  const handleDhikrReset = () => {
-    setDhikrCount(0);
+  const completeDhikrSession = async (token: string, sessionId: string) => {
+    try {
+      const response = await apiService.post(`v2/dhikr/sessions/${sessionId}/complete`, {
+        notes: 'Completed daily Istighfar session'
+      }, {
+        authToken: token
+      });
+
+      const responseData = response.data as any;
+      if (responseData?.data) {
+        setDhikrSession(responseData.data);
+      }
+    } catch (error) {
+      console.error('Error completing dhikr session:', error);
+    }
+  };
+
+  const handleDhikrReset = async () => {
+    try {
+      const token = await AuthUtils.getAuthTokenWithFallback();
+
+      // Create a new session for today
+      await createDhikrSession(token);
+    } catch (error) {
+      console.error('Error resetting dhikr:', error);
+      setError('Failed to reset dhikr counter. Please try again.');
+    }
   };
 
   if (loading) {
@@ -218,6 +563,26 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-sage-600">{tCommon('loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-4"><WarningIcon sx={{ fontSize: 24 }} /></div>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              initializeDashboard();
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg"
+          >
+            {tCommon('retry')}
+          </button>
         </div>
       </div>
     );
@@ -242,7 +607,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                 <div className="p-6 pb-4">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xl">🕌</span>
+                      <MosqueIcon sx={{ fontSize: 20, color: 'white' }} />
                     </div>
                     <div className="flex-1">
                       <h2 className="text-xl font-semibold text-sage-800">{t('todaysPrayers')}</h2>
@@ -287,7 +652,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                         {/* Prayer completion indicator */}
                         {prayer.passed && (
                           <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
-                            <span className="text-white text-xs">✓</span>
+                            <CheckIcon sx={{ fontSize: 14, color: 'white' }} />
                           </div>
                         )}
 
@@ -315,10 +680,10 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                 : 'bg-sage-100 text-sage-600'
                             }
                           `}>
-                            {index === 0 ? '🌅' :
-                             index === 1 ? '☀️' :
-                             index === 2 ? '🌇' :
-                             index === 3 ? '🌆' : '🌙'}
+                            {index === 0 ? <SunriseIcon sx={{ fontSize: 16 }} /> :
+                             index === 1 ? <SunIcon sx={{ fontSize: 16 }} /> :
+                             index === 2 ? <AfternoonIcon sx={{ fontSize: 16 }} /> :
+                             index === 3 ? <SunsetIcon sx={{ fontSize: 16 }} /> : <NightIcon sx={{ fontSize: 16 }} />}
                           </div>
 
                           {/* Prayer name */}
@@ -380,7 +745,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-gold-100 rounded-full flex items-center justify-center">
-                    <div className="text-2xl">🌅</div>
+                    <SunriseIcon sx={{ fontSize: 24, color: '#f59e0b' }} />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-sage-900">{t('morningCheckin')}</h3>
@@ -402,11 +767,11 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
               ) : (
                 <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200/50">
                   <div className="flex items-center space-x-2 mb-3">
-                    <span className="text-emerald-600 text-lg">✓</span>
+                    <CheckIcon sx={{ fontSize: 18, color: '#059669' }} />
                     <span className="font-medium text-emerald-800">{t('intentionSet')}</span>
                   </div>
                   <p className="text-sm text-emerald-700 leading-relaxed">
-                    {todayIntention}
+                    {todayIntention.text || ''}
                   </p>
                 </div>
               )}
@@ -417,7 +782,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <div className="text-2xl">🌙</div>
+                    <NightIcon sx={{ fontSize: 24, color: '#059669' }} />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-sage-900">{t('eveningReflection')}</h3>
@@ -479,7 +844,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     <div className="p-8">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
-                          <span className="text-white text-lg">📖</span>
+                          <BookIcon sx={{ fontSize: 18, color: 'white' }} />
                         </div>
                         <div>
                           <h3 className="text-xl font-semibold text-sage-800">{t('todaysGuidance')}</h3>
@@ -507,7 +872,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     <div className="relative bg-white p-6 rounded-2xl border border-gold-100/50 shadow-md">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">📋</span>
+                          <PlanIcon sx={{ fontSize: 16, color: 'white' }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('todaysPlan')}</h3>
                       </div>
@@ -534,7 +899,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                               >
                                 {item.completed ? (
                                   <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                                    <span className="text-white text-xs">✓</span>
+                                    <CheckIcon sx={{ fontSize: 12, color: 'white' }} />
                                   </div>
                                 ) : (
                                   <div className="w-4 h-4 border-2 border-sage-300 rounded-full hover:border-emerald-400 transition-colors"></div>
@@ -611,7 +976,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     <div className="relative bg-white p-6 rounded-2xl border border-emerald-100/50 shadow-md">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">✓</span>
+                          <CheckIcon sx={{ fontSize: 16, color: 'white' }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('dailyHabits')}</h3>
                       </div>
@@ -645,7 +1010,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                 {/* Streak indicator */}
                                 {habit.streak > 0 && (
                                   <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                                    <span className="text-orange-500">🔥</span>
+                                    <FireIcon sx={{ fontSize: 14, color: '#f97316' }} />
                                     <span>{habit.streak}</span>
                                   </div>
                                 )}
@@ -694,7 +1059,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                   <div className="relative p-8 rounded-2xl border border-sage-100/50 shadow-lg backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-10 h-10 bg-gradient-to-br from-sage-500 to-sage-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-lg">🤲</span>
+                        <HeartIcon sx={{ fontSize: 18, color: 'white' }} />
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold text-sage-800">{t('morningDua')}</h3>
@@ -725,7 +1090,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">💚</span>
+                          <HeartIcon sx={{ fontSize: 16, color: 'white' }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('dailyIntention')}</h3>
                       </div>
@@ -772,12 +1137,12 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                 <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                                   <div className="flex items-center gap-2 mb-2">
                                     <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                                      <span className="text-white text-xs">✓</span>
+                                      <CheckIcon sx={{ fontSize: 12, color: 'white' }} />
                                     </div>
                                     <span className="text-sm font-medium text-emerald-800">{t('intentionSet')}</span>
                                   </div>
                                   <p className="text-sm text-emerald-700 leading-relaxed">
-                                    {todayIntention}
+                                    {todayIntention.text || ''}
                                   </p>
                                 </div>
                               )}
@@ -789,7 +1154,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                   className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2"
                                 >
                                   {t('setTodaysIntention')}
-                                  <span className="text-xs">💚</span>
+                                  <HeartIcon sx={{ fontSize: 12 }} />
                                 </button>
                               ) : (
                                 <button
@@ -797,7 +1162,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                   className="w-full bg-sage-100 hover:bg-sage-200 text-sage-700 py-2 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2"
                                 >
                                   {t('editIntention')}
-                                  <span className="text-xs">✏️</span>
+                                  <WriteIcon sx={{ fontSize: 12 }} />
                                 </button>
                               )}
                             </>
@@ -822,7 +1187,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-sm">📿</span>
+                          <DhikrIcon sx={{ fontSize: 16, color: 'white' }} />
                         </div>
                         <h3 className="text-lg font-semibold text-sage-800">{t('dhikrCounter')}</h3>
                       </div>
@@ -857,14 +1222,14 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                                 strokeWidth="6"
                                 strokeLinecap="round"
                                 strokeDasharray={`${2 * Math.PI * 40}`}
-                                strokeDashoffset={2 * Math.PI * 40 - (dhikrCount / 100) * 2 * Math.PI * 40}
+                                strokeDashoffset={2 * Math.PI * 40 - ((dhikrSession?.currentCount || 0) / 100) * 2 * Math.PI * 40}
                                 className="transition-all duration-500"
                               />
                             </svg>
 
                             {/* Count display */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-2xl font-bold text-sage-800">{dhikrCount}</span>
+                              <span className="text-2xl font-bold text-sage-800">{dhikrSession?.currentCount || 0}</span>
                               <span className="text-xs text-sage-600">{t('of100')}</span>
                             </div>
                           </div>
@@ -872,16 +1237,16 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                           {/* Increment Button */}
                           <button
                             onClick={handleDhikrIncrement}
-                            disabled={dhikrCount >= 100}
+                            disabled={(dhikrSession?.currentCount || 0) >= 100}
                             className="w-12 h-12 bg-gradient-to-br from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full flex items-center justify-center font-semibold text-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 disabled:hover:scale-100"
                           >
-                            {dhikrCount >= 100 ? '✓' : '+1'}
+                            {(dhikrSession?.currentCount || 0) >= 100 ? <CheckIcon sx={{ fontSize: 14 }} /> : '+1'}
                           </button>
                         </div>
 
                         {/* Completion message or Progress Info */}
                         <div className="text-center pt-3 border-t border-gold-100">
-                          {dhikrCount >= 100 ? (
+                          {(dhikrSession?.currentCount || 0) >= 100 ? (
                             <div className="space-y-2">
                               <p className="text-sm font-medium text-gold-700">
                                 {t('alhamdulillahTargetReached')}
@@ -910,7 +1275,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                   <div className="relative p-6 rounded-2xl border border-sage-200/50 shadow-md">
                     <div className="text-center">
                       <div className="w-12 h-12 bg-gradient-to-br from-sage-400 to-sage-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white text-xl">🌸</span>
+                        <SparkleIcon sx={{ fontSize: 20, color: 'white' }} />
                       </div>
                       <h3 className="text-lg font-semibold text-sage-800 mb-2">{t('momentOfReflection')}</h3>
                       <p className="text-sm text-sage-600 leading-relaxed italic">

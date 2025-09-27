@@ -28,8 +28,8 @@ function createApiService(): ApiService {
 
     // Client-side: get from Supabase
     try {
-      const { createBrowserClient } = await import('../../supabase-browser');
-      const supabase = createBrowserClient();
+      const { createClient } = await import('../../supabase-browser');
+      const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       return session?.access_token || null;
     } catch {

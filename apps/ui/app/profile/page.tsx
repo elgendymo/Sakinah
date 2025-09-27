@@ -5,6 +5,24 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/PageContainer';
+import { UserPreferencesService, Language, PrayerCalculationMethod, Location } from '@/lib/services/user-preferences-service';
+import { LocationSelector } from '@/components/LocationSelector';
+import {
+  Person,
+  CheckCircle,
+  AccountBalance,
+  Public,
+  Lock,
+  Notifications,
+  WbSunny,
+  MenuBook,
+  LocalFireDepartment,
+  Warning,
+  Close,
+  Save,
+  ExitToApp,
+  Delete
+} from '@mui/icons-material';
 
 export default function ProfilePage() {
   const t = useTranslations('profile');
@@ -13,7 +31,9 @@ export default function ProfilePage() {
     name: '',
     email: '',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    language: 'en',
+    language: 'en' as Language,
+    location: null as Location | null,
+    prayerCalculationMethod: 'ISNA' as PrayerCalculationMethod,
     notifications: {
       fajr: true,
       daily_reminder: true,
@@ -23,9 +43,17 @@ export default function ProfilePage() {
       data_sharing: false,
       analytics: false,
     },
+    display: {
+      theme: 'light' as 'light' | 'dark' | 'auto',
+      fontSize: 'medium' as 'small' | 'medium' | 'large',
+      showArabicWithTranslation: true,
+    },
   });
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [preferencesService] = useState(() => new UserPreferencesService());
 
   const router = useRouter();
   const supabase = createClient();
@@ -43,6 +71,32 @@ export default function ProfilePage() {
           email: user.email || '',
           name: user.user_metadata?.name || '',
         }));
+
+        // Load preferences from backend
+        const result = await preferencesService.getPreferences();
+        if (result.success && result.data) {
+          const prefs = result.data;
+          setProfile(prev => ({
+            ...prev,
+            language: prefs.language,
+            location: prefs.location || null,
+            prayerCalculationMethod: prefs.prayerCalculationMethod,
+            notifications: {
+              fajr: prefs.notificationSettings.fajrReminder ?? true,
+              daily_reminder: prefs.notificationSettings.dailyReminder ?? true,
+              habit_streak: prefs.notificationSettings.habitStreak ?? false,
+            },
+            privacy: {
+              data_sharing: prefs.privacySettings.dataSharing ?? false,
+              analytics: prefs.privacySettings.analytics ?? false,
+            },
+            display: {
+              theme: prefs.displaySettings.theme || 'light',
+              fontSize: prefs.displaySettings.fontSize || 'medium',
+              showArabicWithTranslation: prefs.displaySettings.showArabicWithTranslation ?? true,
+            },
+          }));
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -51,21 +105,61 @@ export default function ProfilePage() {
 
   const saveProfile = async () => {
     setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
-      // In a real app, save to API/database
-      console.log('Saving profile:', profile);
+      // Validate required fields
+      if (!profile.name?.trim()) {
+        setError(t('nameRequired'));
+        setLoading(false);
+        return;
+      }
 
       // Update user metadata
       if (profile.name) {
-        await supabase.auth.updateUser({
+        const { error: authError } = await supabase.auth.updateUser({
           data: { name: profile.name }
         });
+
+        if (authError) {
+          throw new Error(`Failed to update profile: ${authError.message}`);
+        }
       }
 
-      alert(t('profileSaved'));
+      // Save preferences to backend
+      const result = await preferencesService.updatePreferences({
+        language: profile.language,
+        location: profile.location || undefined,
+        prayerCalculationMethod: profile.prayerCalculationMethod,
+        notificationSettings: {
+          fajrReminder: profile.notifications.fajr,
+          dailyReminder: profile.notifications.daily_reminder,
+          habitStreak: profile.notifications.habit_streak,
+          prayerTimes: true,
+        },
+        privacySettings: {
+          dataSharing: profile.privacy.data_sharing,
+          analytics: profile.privacy.analytics,
+          publicProfile: false,
+        },
+        displaySettings: {
+          theme: profile.display.theme,
+          fontSize: profile.display.fontSize,
+          showArabicWithTranslation: profile.display.showArabicWithTranslation,
+        },
+      });
+
+      if (result.success) {
+        setSuccess(t('profileSaved'));
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error?.message || t('saveFailed'));
+      }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert(t('saveFailed'));
+      setError(error instanceof Error ? error.message : t('saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -97,12 +191,16 @@ export default function ProfilePage() {
                 {/* Avatar */}
                 <div className="relative">
                   <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl">
-                      {profile.name ? profile.name.charAt(0).toUpperCase() : '👤'}
-                    </span>
+                    {profile.name ? (
+                      <span className="text-white text-2xl">
+                        {profile.name.charAt(0).toUpperCase()}
+                      </span>
+                    ) : (
+                      <Person sx={{ color: 'white', fontSize: 32 }} />
+                    )}
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-400 rounded-full border-2 border-white flex items-center justify-center">
-                    <span className="text-white text-xs">✓</span>
+                    <CheckCircle sx={{ color: 'white', fontSize: 16 }} />
                   </div>
                 </div>
 
@@ -114,11 +212,11 @@ export default function ProfilePage() {
                   <p className="text-sage-600 mb-2">{profile.email}</p>
                   <div className="flex items-center gap-4 text-sm text-sage-500">
                     <span className="flex items-center gap-1">
-                      <span>🕌</span>
+                      <AccountBalance sx={{ fontSize: 16 }} />
                       {t('memberSince')} {new Date().getFullYear()}
                     </span>
                     <span className="flex items-center gap-1">
-                      <span>🌍</span>
+                      <Public sx={{ fontSize: 16 }} />
                       {profile.timezone}
                     </span>
                   </div>
@@ -150,7 +248,7 @@ export default function ProfilePage() {
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-lg">👤</span>
+                    <Person sx={{ color: 'white', fontSize: 24 }} />
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-sage-800">{t('basicInformation')}</h3>
@@ -184,7 +282,7 @@ export default function ProfilePage() {
                         className="w-full px-4 py-3 bg-sage-50 border border-sage-200 rounded-xl text-sage-600 cursor-not-allowed"
                       />
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <span className="text-sage-400">🔒</span>
+                        <Lock sx={{ color: '#6b7280', fontSize: 20 }} />
                       </div>
                     </div>
                     <p className="text-xs text-sage-500 mt-1">
@@ -221,13 +319,63 @@ export default function ProfilePage() {
                     </label>
                     <select
                       value={profile.language}
-                      onChange={(e) => setProfile(prev => ({ ...prev, language: e.target.value }))}
+                      onChange={(e) => setProfile(prev => ({ ...prev, language: e.target.value as any }))}
                       className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800"
                     >
-                      <option value="en">🇺🇸 English</option>
-                      <option value="ar">🇸🇦 العربية (Arabic)</option>
-                      <option value="ur">🇵🇰 اردو (Urdu)</option>
+                      <option value="en">English</option>
+                      <option value="ar">العربية (Arabic)</option>
+                      <option value="ur">اردو (Urdu)</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-sage-700 mb-2">
+                      {t('prayerCalculationMethod')}
+                    </label>
+                    <select
+                      value={profile.prayerCalculationMethod}
+                      onChange={(e) => setProfile(prev => ({ ...prev, prayerCalculationMethod: e.target.value as any }))}
+                      className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800"
+                    >
+                      <option value="ISNA">ISNA (Islamic Society of North America)</option>
+                      <option value="MWL">Muslim World League</option>
+                      <option value="Egypt">Egyptian General Authority</option>
+                      <option value="Makkah">Umm Al-Qura, Makkah</option>
+                      <option value="Karachi">University of Islamic Sciences, Karachi</option>
+                      <option value="Tehran">Institute of Geophysics, Tehran</option>
+                      <option value="Jafari">Shia Ithna-Ashari</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-sage-700 mb-2">
+                      {t('location')}
+                    </label>
+                    <div className="w-full">
+                      <LocationSelector
+                        onLocationSelect={(location) => {
+                          setProfile(prev => ({
+                            ...prev,
+                            location: {
+                              lat: location.latitude,
+                              lng: location.longitude,
+                              city: location.city,
+                              country: location.country
+                            }
+                          }));
+                        }}
+                        currentLocation={profile.location ? {
+                          city: profile.location.city || '',
+                          country: profile.location.country || '',
+                          latitude: profile.location.lat,
+                          longitude: profile.location.lng,
+                          timezone: profile.timezone
+                        } : undefined}
+                      />
+                    </div>
+                    <p className="text-xs text-sage-500 mt-1">
+                      {t('locationNote')}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -243,7 +391,7 @@ export default function ProfilePage() {
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-gradient-to-br from-gold-400 to-gold-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-lg">🔔</span>
+                    <Notifications sx={{ color: 'white', fontSize: 24 }} />
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-sage-800">{t('notifications')}</h3>
@@ -257,24 +405,24 @@ export default function ProfilePage() {
                       key: 'fajr',
                       title: t('fajrReminder'),
                       description: t('fajrDescription'),
-                      icon: '🌅'
+                      icon: <WbSunny sx={{ fontSize: 20, color: '#6b7280' }} />
                     },
                     {
                       key: 'daily_reminder',
                       title: t('dailyReminder'),
                       description: t('dailyDescription'),
-                      icon: '📖'
+                      icon: <MenuBook sx={{ fontSize: 20, color: '#6b7280' }} />
                     },
                     {
                       key: 'habit_streak',
                       title: t('habitStreak'),
                       description: t('habitDescription'),
-                      icon: '🔥'
+                      icon: <LocalFireDepartment sx={{ fontSize: 20, color: '#6b7280' }} />
                     }
                   ].map((item) => (
                     <div key={item.key} className="flex items-center justify-between p-4 rounded-xl bg-sage-50/50 border border-sage-100 transition-all duration-200 hover:bg-sage-50">
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">{item.icon}</span>
+                        <div>{item.icon}</div>
                         <div>
                           <h4 className="font-medium text-sage-800">{item.title}</h4>
                           <p className="text-sm text-sage-600">{item.description}</p>
@@ -300,6 +448,52 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Error and Success Messages */}
+        {error && (
+          <div className="relative overflow-hidden rounded-xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-50 to-rose-50"></div>
+            <div className="relative p-4 border border-red-200/50">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Warning sx={{ color: '#dc2626', fontSize: 20 }} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-red-800 mb-1">{t('error')}</h4>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+                <button
+                  onClick={() => setError('')}
+                  className="p-1 hover:bg-red-200 rounded-lg transition-colors"
+                >
+                  <Close sx={{ color: '#ef4444', fontSize: 20 }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <div className="relative overflow-hidden rounded-xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 to-green-50"></div>
+            <div className="relative p-4 border border-emerald-200/50">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <CheckCircle sx={{ color: '#059669', fontSize: 20 }} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-emerald-800 mb-1">{t('success')}</h4>
+                  <p className="text-emerald-700 text-sm">{success}</p>
+                </div>
+                <button
+                  onClick={() => setSuccess('')}
+                  className="p-1 hover:bg-emerald-200 rounded-lg transition-colors"
+                >
+                  <Close sx={{ color: '#10b981', fontSize: 20 }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -316,7 +510,7 @@ export default function ProfilePage() {
             ) : (
               <>
                 <span>{t('saveChanges')}</span>
-                <span className="text-sm">💾</span>
+                <Save sx={{ fontSize: 18 }} />
               </>
             )}
           </button>
@@ -326,7 +520,7 @@ export default function ProfilePage() {
             className="px-6 py-3 bg-white border border-sage-200 rounded-xl font-medium text-sage-700 hover:bg-sage-50 hover:border-sage-300 transition-all duration-200 flex items-center justify-center gap-2"
           >
             <span>{t('signOut')}</span>
-            <span className="text-sm">🚪</span>
+            <ExitToApp sx={{ fontSize: 18 }} />
           </button>
         </div>
 
@@ -336,7 +530,7 @@ export default function ProfilePage() {
           <div className="relative p-6 border border-red-200/50">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-red-600 text-lg">⚠️</span>
+                <Warning sx={{ color: '#dc2626', fontSize: 24 }} />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-red-800 mb-2">{t('accountDeletion')}</h3>
@@ -345,7 +539,7 @@ export default function ProfilePage() {
                 </p>
                 <button className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-lg font-medium text-sm transition-all duration-200">
                   <span>{t('requestDeletion')}</span>
-                  <span className="text-xs">🗑️</span>
+                  <Delete sx={{ fontSize: 16 }} />
                 </button>
               </div>
             </div>

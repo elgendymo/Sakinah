@@ -100,9 +100,24 @@ export const api = {
   },
 
   // Habits
+  getHabits: async (params?: { includeStats?: boolean; includeHistory?: boolean }, token?: string) => {
+    const response = await apiService.get('habits', { params, authToken: token });
+    return response.data;
+  },
+
   toggleHabit: async (habitId: string, completed: boolean, token?: string) => {
     const endpoint = completed ? `habits/${habitId}/complete` : `habits/${habitId}/incomplete`;
     const response = await apiService.post(endpoint, {}, { authToken: token });
+    return response.data;
+  },
+
+  completeHabit: async (habitId: string, token?: string) => {
+    const response = await apiService.post(`habits/complete`, { habitId }, { authToken: token });
+    return response.data;
+  },
+
+  incompleteHabit: async (habitId: string, token?: string) => {
+    const response = await apiService.post(`habits/uncomplete`, { habitId }, { authToken: token });
     return response.data;
   },
 

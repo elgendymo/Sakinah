@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@/lib/supabase-browser';
 import { AuthUtils } from '@/lib/auth-utils';
 import PageContainer from '@/components/PageContainer';
 import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
@@ -57,11 +56,9 @@ export default function HabitsPage() {
   const [completedToday, setCompletedToday] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadingAnalytics, setLoadingAnalytics] = useState<Set<string>>(new Set());
-  const [retryingHabit, setRetryingHabit] = useState<string | null>(null);
   const { error, handleError, clearError } = useErrorHandler();
   // const searchParams = useSearchParams();
   // const planId = searchParams?.get('planId'); // Future use for filtering
-  const supabase = createClient();
 
   useEffect(() => {
      loadHabits();
@@ -122,16 +119,19 @@ export default function HabitsPage() {
       const habitsData = await api.getHabits({
         includeStats: true,
         includeHistory: true
-      });
+      }, token);
 
-      if (habitsData?.habits) {
-        setHabits(habitsData.habits);
+      // Handle both array response and object with habits property
+      const habitsList = Array.isArray(habitsData) ? habitsData : (habitsData as any)?.habits || (habitsData as any)?.data || [];
+
+      if (habitsList && habitsList.length > 0) {
+        setHabits(habitsList);
 
         // Determine which habits are completed today
         const today = new Date().toISOString().split('T')[0];
         const completedTodaySet = new Set<string>();
 
-        habitsData.habits.forEach((habit: Habit) => {
+        habitsList.forEach((habit: Habit) => {
           if (habit.lastCompletedOn === today) {
             completedTodaySet.add(habit.id);
           }
@@ -189,9 +189,9 @@ export default function HabitsPage() {
       try {
         // Call the appropriate v2 API endpoint
         if (isCompleted) {
-          await api.incompleteHabit(habitId);
+          await api.incompleteHabit(habitId, token);
         } else {
-          await api.completeHabit(habitId);
+          await api.completeHabit(habitId, token);
         }
 
         // If successful, load fresh analytics data for this habit
@@ -226,17 +226,17 @@ export default function HabitsPage() {
   };
 
   // Retry a failed habit operation
-  const retryHabitOperation = async (habitId: string) => {
-    setRetryingHabit(habitId);
-    try {
-      await toggleHabit(habitId);
-      clearError();
-    } catch (error) {
-      // Error already handled in toggleHabit
-    } finally {
-      setRetryingHabit(null);
-    }
-  };
+  // const retryHabitOperation = async (habitId: string) => {
+  //   setRetryingHabit(habitId);
+  //   try {
+  //     await toggleHabit(habitId);
+  //     clearError();
+  //   } catch (error) {
+  //     // Error already handled in toggleHabit
+  //   } finally {
+  //     setRetryingHabit(null);
+  //   }
+  // };
 
   // Load analytics for a specific habit
   const loadHabitAnalytics = async (habitId: string) => {
@@ -248,13 +248,13 @@ export default function HabitsPage() {
       const token = await AuthUtils.getAuthTokenWithFallback();
       const analyticsData = await api.getHabitAnalytics(habitId, token);
 
-      if (analyticsData?.analytics) {
+      if ((analyticsData as any)?.analytics) {
         // Update the specific habit with analytics data
         setHabits(prev => prev.map(habit => {
           if (habit.id === habitId) {
             return {
               ...habit,
-              analytics: analyticsData.analytics
+              analytics: (analyticsData as any).analytics
             };
           }
           return habit;

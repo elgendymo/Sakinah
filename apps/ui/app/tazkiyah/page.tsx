@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { createClient } from '@/lib/supabase-browser';
-import { api } from '@/lib/api';
+import { api as serviceApi } from '@/lib/services/api';
 import PageContainer from '@/components/PageContainer';
 import { ErrorDisplay, useErrorHandler } from '@/components/ErrorDisplay';
 
@@ -16,8 +15,8 @@ export default function TazkiyahPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [suggestedPlan, setSuggestedPlan] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const router = useRouter();
-  const supabase = createClient();
   const { error, handleError, clearError } = useErrorHandler();
 
   const COMMON_STRUGGLES = {
@@ -46,28 +45,142 @@ export default function TazkiyahPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     clearError(); // Clear any previous errors
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+    const MAX_RETRIES = 2;
+    let attempt = 0;
 
-      if (!session?.access_token) {
-        router.push('/login');
-        return;
+    const attemptSuggestion = async (): Promise<void> => {
+      try {
+        attempt++;
+
+        if (attempt > 1) {
+          // Add delay for retries
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+
+        // Use service API with enhanced context
+        const response = await serviceApi.suggestPlan(mode, input, {
+          struggles: mode === 'takhliyah' ? [input] : [],
+          goals: mode === 'tahliyah' ? [input] : [],
+          preferences: {
+            difficultyLevel: 'moderate',
+            timeCommitment: 'medium',
+            focusAreas: [input]
+          }
+        });
+
+        setSuggestedPlan((response as any).plan);
+        setRetryCount(0); // Reset retry count on success
+      } catch (error: any) {
+        console.error(`Error generating plan (attempt ${attempt}):`, error);
+
+        // Check if we should retry
+        const isRetryableError = (
+          error?.code === 'NETWORK_ERROR' ||
+          !navigator.onLine ||
+          error?.response?.status >= 500 ||
+          error?.response?.status === 429
+        );
+
+        if (isRetryableError && attempt < MAX_RETRIES) {
+          setRetryCount(attempt);
+          return attemptSuggestion(); // Retry
+        }
+
+        // Enhanced error handling for different failure types
+        let errorMessage = 'Failed to generate plan suggestion';
+        let errorContext = 'Tazkiyah Plan Generation';
+
+        if (error?.response?.status === 429) {
+          errorMessage = 'Too many requests. Please try again in a few minutes.';
+          errorContext = 'Rate Limit Exceeded';
+        } else if (error?.response?.status === 401) {
+          errorMessage = 'Authentication expired. Please log in again.';
+          errorContext = 'Authentication Error';
+          // Redirect to login after a delay
+          setTimeout(() => router.push('/login'), 2000);
+        } else if (error?.response?.status === 400) {
+          errorMessage = 'Invalid input provided. Please check your selection and try again.';
+          errorContext = 'Validation Error';
+        } else if (error?.response?.status >= 500) {
+          errorMessage = 'Server is temporarily unavailable. Please try again later.';
+          errorContext = 'Server Error';
+        } else if (error?.code === 'NETWORK_ERROR' || !navigator.onLine) {
+          errorMessage = 'Network connection failed. Please check your internet connection.';
+          errorContext = 'Connection Error';
+        } else if (error?.response?.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        }
+
+        handleError(new Error(errorMessage), errorContext);
+        throw error; // Re-throw to exit the retry loop
       }
+    };
 
-      const response = await api.suggestPlan(mode, input, session.access_token) as any;
-      setSuggestedPlan(response.plan);
+    try {
+      await attemptSuggestion();
     } catch (error) {
-      handleError(error, 'Tazkiyah Plan Generation');
+      // Error already handled in attemptSuggestion
     } finally {
       setLoading(false);
     }
   };
 
-  const acceptPlan = () => {
-    router.push('/dashboard');
+  const acceptPlan = async () => {
+    if (!suggestedPlan) return;
+
+    setLoading(true);
+    clearError();
+
+    try {
+      // Create the plan using service API
+      const planData = {
+        kind: suggestedPlan.kind,
+        target: suggestedPlan.target,
+        microHabits: suggestedPlan.microHabits.map((habit: any) => ({
+          title: habit.title,
+          schedule: habit.schedule,
+          target: habit.target || 1
+        })),
+        duaIds: suggestedPlan.duaIds || [],
+        contentIds: suggestedPlan.contentIds || []
+      };
+
+      await serviceApi.createPlan(planData);
+
+      // Plan is created and automatically active in v2
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error('Error creating plan:', error);
+
+      // Enhanced error handling for plan creation failures
+      let errorMessage = 'Failed to create your spiritual plan';
+      let errorContext = 'Plan Creation';
+
+      if (error?.response?.status === 429) {
+        errorMessage = 'Too many requests. Please wait before creating another plan.';
+        errorContext = 'Rate Limit Exceeded';
+      } else if (error?.response?.status === 401) {
+        errorMessage = 'Authentication expired. Please log in again.';
+        errorContext = 'Authentication Error';
+        setTimeout(() => router.push('/login'), 2000);
+      } else if (error?.response?.status === 400) {
+        errorMessage = 'Invalid plan data. Please try generating a new plan.';
+        errorContext = 'Validation Error';
+      } else if (error?.response?.status >= 500) {
+        errorMessage = 'Server error while creating plan. Please try again.';
+        errorContext = 'Server Error';
+      } else if (error?.code === 'NETWORK_ERROR' || !navigator.onLine) {
+        errorMessage = 'Network connection failed. Please check your internet connection.';
+        errorContext = 'Connection Error';
+      } else if (error?.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+
+      handleError(new Error(errorMessage), errorContext);
+      setLoading(false);
+    }
   };
 
   return (
@@ -159,7 +272,12 @@ export default function TazkiyahPage() {
                 disabled={loading || !input}
                 className="w-full btn-primary py-3 disabled:opacity-50"
               >
-                {loading ? t('creatingPlan') : t('getPersonalizedPlan')}
+                {loading
+                  ? retryCount > 0
+                    ? `${t('creatingPlan')} (Retry ${retryCount})`
+                    : t('creatingPlan')
+                  : t('getPersonalizedPlan')
+                }
               </button>
             </form>
           </div>
@@ -196,13 +314,15 @@ export default function TazkiyahPage() {
             <div className="flex gap-4">
               <button
                 onClick={acceptPlan}
-                className="flex-1 btn-primary py-3"
+                disabled={loading}
+                className="flex-1 btn-primary py-3 disabled:opacity-50"
               >
-                {t('acceptAndStart')}
+                {loading ? t('creatingPlan') : t('acceptAndStart')}
               </button>
               <button
                 onClick={() => setSuggestedPlan(null)}
-                className="flex-1 btn-secondary py-3"
+                disabled={loading}
+                className="flex-1 btn-secondary py-3 disabled:opacity-50"
               >
                 {t('tryDifferentInput')}
               </button>

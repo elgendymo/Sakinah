@@ -191,32 +191,32 @@ export function getErrorSeverityClasses(severity: ErrorSeverity): {
     case ErrorSeverity.LOW:
       return {
         container: 'bg-emerald-50 border-emerald-200/60 shadow-sm',
-        text: 'text-emerald-800',
+        text: 'text-emerald-900',
         icon: 'text-emerald-600'
       };
     case ErrorSeverity.MEDIUM:
       return {
         container: 'bg-amber-50 border-amber-200/60 shadow-sm',
-        text: 'text-amber-800',
+        text: 'text-amber-900',
         icon: 'text-amber-600'
       };
     case ErrorSeverity.HIGH:
       return {
         container: 'bg-rose-50 border-rose-200/60 shadow-sm',
-        text: 'text-rose-800',
+        text: 'text-rose-900',
         icon: 'text-rose-600'
       };
     case ErrorSeverity.CRITICAL:
       return {
         container: 'bg-red-50 border-red-200/60 shadow-md',
-        text: 'text-red-800',
+        text: 'text-red-900',
         icon: 'text-red-600'
       };
     default:
       return {
-        container: 'bg-sage-50 border-sage-200/60 shadow-sm',
-        text: 'text-sage-800',
-        icon: 'text-sage-600'
+        container: 'bg-slate-50 border-slate-200/60 shadow-sm',
+        text: 'text-slate-900',
+        icon: 'text-slate-600'
       };
   }
 }
@@ -231,31 +231,31 @@ export function getErrorIcon(errorCode: ErrorCode): string {
   const spiritualErrors = [ErrorCode.TAZKIYAH_GENERATION_FAILED, ErrorCode.HABIT_UPDATE_FAILED, ErrorCode.CHECKIN_SAVE_FAILED];
 
   if (networkErrors.includes(errorCode)) {
-    return '🌐'; // Network/connection icon
+    return 'network'; // Network/connection icon
   }
   if (authErrors.includes(errorCode)) {
-    return '🔒'; // Security/auth icon
+    return 'lock'; // Security/auth icon
   }
   if (validationErrors.includes(errorCode)) {
-    return '⚠️'; // Warning/validation icon
+    return 'warning'; // Warning/validation icon
   }
   if (spiritualErrors.includes(errorCode)) {
-    return '🤲'; // Spiritual/prayer icon
+    return 'spiritual'; // Spiritual/prayer icon
   }
 
   // Default icons by severity
   const metadata = ERROR_METADATA[errorCode];
   switch (metadata.severity) {
     case ErrorSeverity.CRITICAL:
-      return '🚨';
+      return 'emergency';
     case ErrorSeverity.HIGH:
-      return '❌';
+      return 'error';
     case ErrorSeverity.MEDIUM:
-      return '⚠️';
+      return 'warning';
     case ErrorSeverity.LOW:
-      return 'ℹ️';
+      return 'info';
     default:
-      return '❓';
+      return 'help';
   }
 }
 

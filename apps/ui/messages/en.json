@@ -414,6 +414,10 @@
     "clearAllFilters": "Clear all filters",
     "footerNote": "Content is curated from authentic Islamic sources | Always verify with scholars for important matters",
     "loadingContent": "Loading content...",
+    "retry": "Try Again",
+    "loadMore": "Load More",
+    "loadingMore": "Loading...",
+    "of": "of",
     "all": "All",
     "types": {
       "ayah": "Quranic Verses",

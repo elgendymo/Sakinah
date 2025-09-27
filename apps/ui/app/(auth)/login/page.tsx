@@ -3,6 +3,14 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
+import {
+  AccountBalance,
+  Email,
+  AutoAwesome,
+  Build,
+  Warning,
+  CheckCircle
+} from '@mui/icons-material';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -96,7 +104,7 @@ function LoginForm() {
               <div className="text-center mb-8">
                 {/* Logo placeholder */}
                 <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <span className="text-white text-2xl">🕌</span>
+                  <AccountBalance sx={{ color: 'white', fontSize: 32 }} />
                 </div>
 
                 <h1 className="text-2xl font-bold text-sage-800 mb-2">
@@ -124,7 +132,7 @@ function LoginForm() {
                       placeholder="Enter your email"
                     />
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                      <span className="text-sage-400">📧</span>
+                      <Email sx={{ color: '#6b7280', fontSize: 20 }} />
                     </div>
                   </div>
                 </div>
@@ -142,7 +150,7 @@ function LoginForm() {
                   ) : (
                     <>
                       <span>{isDevelopment ? 'Enter App (Dev Mode)' : 'Send Magic Link'}</span>
-                      <span className="text-sm">✨</span>
+                      <AutoAwesome sx={{ fontSize: 18 }} />
                     </>
                   )}
                 </button>
@@ -152,7 +160,7 @@ function LoginForm() {
               {isDevelopment && (
                 <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50">
                   <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className="text-blue-600">🔧</span>
+                    <Build sx={{ color: '#2563eb', fontSize: 20 }} />
                     <span className="font-medium text-blue-800">Development Mode</span>
                   </div>
                   <p className="text-sm text-blue-700 text-center leading-relaxed">
@@ -169,7 +177,11 @@ function LoginForm() {
                     : 'bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 text-emerald-700'
                 }`}>
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <span>{message.includes('error') || message.includes('failed') || message.includes('Invalid') ? '⚠️' : '✅'}</span>
+                    {message.includes('error') || message.includes('failed') || message.includes('Invalid') ? (
+                      <Warning sx={{ fontSize: 20 }} />
+                    ) : (
+                      <CheckCircle sx={{ fontSize: 20 }} />
+                    )}
                     <span className="font-medium">{message.includes('error') || message.includes('failed') || message.includes('Invalid') ? 'Error' : 'Success'}</span>
                   </div>
                   <p className="text-sm leading-relaxed">{message}</p>
@@ -224,7 +236,7 @@ export default function LoginPage() {
               <div className="p-8">
                 <div className="text-center mb-8">
                   <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <span className="text-white text-2xl">🕌</span>
+                    <AccountBalance sx={{ color: 'white', fontSize: 32 }} />
                   </div>
                   <h1 className="text-2xl font-bold text-sage-800 mb-2">Loading...</h1>
                 </div>

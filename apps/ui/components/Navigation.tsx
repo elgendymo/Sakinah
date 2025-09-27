@@ -6,6 +6,14 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LogoCSS from './LogoCSS';
 import LanguageSwitcher from './LanguageSwitcher';
+import {
+  Dashboard as DashboardIcon,
+  SelfImprovement as HabitsIcon,
+  AutoStories as JournalIcon,
+  LibraryBooks as LibraryIcon,
+  AutoAwesome as TazkiyahIcon,
+  Person as ProfileIcon
+} from '@mui/icons-material';
 
 interface NavigationProps {
   className?: string;
@@ -16,12 +24,12 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
   const t = useTranslations('navigation');
 
   const navItems = [
-    { href: '/dashboard', label: t('dashboard'), icon: '🪞' },
-    { href: '/habits', label: t('habits'), icon: '🌱' },
-    { href: '/journal', label: t('journal'), icon: '📝' },
-    { href: '/content', label: t('library'), icon: '📚' },
-    { href: '/tazkiyah', label: t('tazkiyah'), icon: '✨' },
-    { href: '/profile', label: t('profile'), icon: '👤' },
+    { href: '/dashboard', label: t('dashboard'), icon: <DashboardIcon sx={{ fontSize: 20 }} /> },
+    { href: '/habits', label: t('habits'), icon: <HabitsIcon sx={{ fontSize: 20 }} /> },
+    { href: '/journal', label: t('journal'), icon: <JournalIcon sx={{ fontSize: 20 }} /> },
+    { href: '/content', label: t('library'), icon: <LibraryIcon sx={{ fontSize: 20 }} /> },
+    { href: '/tazkiyah', label: t('tazkiyah'), icon: <TazkiyahIcon sx={{ fontSize: 20 }} /> },
+    { href: '/profile', label: t('profile'), icon: <ProfileIcon sx={{ fontSize: 20 }} /> },
   ];
 
   return (
@@ -53,7 +61,7 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
                           : 'text-sage-600 hover:text-emerald-600 hover:bg-emerald-50/50'
                       }`}
                     >
-                      <span>{item.icon}</span>
+                      <span className="flex items-center">{item.icon}</span>
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -97,7 +105,7 @@ const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
                   href={item.href}
                   className={`mobile-nav-item ${isActive ? 'active' : 'inactive'}`}
                 >
-                  <span className="mobile-nav-icon hover:scale-110">{item.icon}</span>
+                  <span className="mobile-nav-icon hover:scale-110 flex justify-center">{item.icon}</span>
                   <span className={`mobile-nav-label ${isActive ? 'font-semibold' : ''}`}>{item.label}</span>
                 </Link>
               );

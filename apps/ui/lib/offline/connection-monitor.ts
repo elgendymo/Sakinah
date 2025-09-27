@@ -454,7 +454,7 @@ export class ConnectionMonitor {
         timestamp: new Date(),
         previousStatus,
         currentStatus: updatedStatus,
-        metadata: { triggeredBy }
+        metadata: { triggeredBy: triggeredBy as "manual" | "navigator" | "heartbeat" | "api-test" }
       });
     } else if (qualityChanged) {
       this.emit({
@@ -462,7 +462,7 @@ export class ConnectionMonitor {
         timestamp: new Date(),
         previousStatus,
         currentStatus: updatedStatus,
-        metadata: { triggeredBy }
+        metadata: { triggeredBy: triggeredBy as "manual" | "navigator" | "heartbeat" | "api-test" }
       });
     }
 
@@ -475,7 +475,7 @@ export class ConnectionMonitor {
         previousStatus,
         currentStatus: updatedStatus,
         metadata: {
-          triggeredBy,
+          triggeredBy: triggeredBy as "manual" | "navigator" | "heartbeat" | "api-test",
           details: `${stability.disconnectionCount} disconnections, ${stability.uptime.toFixed(1)}% uptime`
         }
       });

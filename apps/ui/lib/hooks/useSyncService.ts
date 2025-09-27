@@ -347,7 +347,7 @@ function showSyncNotification(processed: number, failed: number, conflicts: numb
   }
 }
 
-function showConflictResolutionNotification(conflictId: string, resolution: string): void {
+function showConflictResolutionNotification(_conflictId: string, resolution: string): void {
   if ('Notification' in window && Notification.permission === 'granted') {
     new Notification('Sakinah - Conflict Resolved', {
       body: `Conflict resolved using ${resolution} version.`,

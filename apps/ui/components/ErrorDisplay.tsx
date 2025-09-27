@@ -1,5 +1,19 @@
+'use client';
+
 import React from 'react';
 import { UIError, toUIError, getErrorSeverityClasses, getErrorIcon } from '@/lib/ui/errorUtils';
+import {
+  Refresh,
+  Close,
+  Public,
+  Lock,
+  Warning,
+  SelfImprovement,
+  Emergency,
+  Error,
+  Info,
+  Help
+} from '@mui/icons-material';
 
 interface ErrorDisplayProps {
   error: UIError | Error | unknown | null;
@@ -23,25 +37,65 @@ export function ErrorDisplay({
     : error as UIError;
 
   const severityClasses = getErrorSeverityClasses(uiError.severity);
-  const icon = getErrorIcon(uiError.code);
+  const iconType = getErrorIcon(uiError.code);
+
+  const renderIcon = () => {
+    switch (iconType) {
+      case 'network':
+        return <Public sx={{ fontSize: 20 }} />;
+      case 'lock':
+        return <Lock sx={{ fontSize: 20 }} />;
+      case 'warning':
+        return <Warning sx={{ fontSize: 20 }} />;
+      case 'spiritual':
+        return <SelfImprovement sx={{ fontSize: 20 }} />;
+      case 'emergency':
+        return <Emergency sx={{ fontSize: 20 }} />;
+      case 'error':
+        return <Error sx={{ fontSize: 20 }} />;
+      case 'info':
+        return <Info sx={{ fontSize: 20 }} />;
+      case 'help':
+        return <Help sx={{ fontSize: 20 }} />;
+      default:
+        return <Help sx={{ fontSize: 20 }} />;
+    }
+  };
 
   return (
     <div className={`rounded-xl border p-5 ${severityClasses.container} ${className} backdrop-blur-sm`}>
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
           {/* Icon with Islamic touch */}
-          <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-white/50 flex items-center justify-center text-lg ${severityClasses.icon} shadow-sm`}>
-            {icon}
+          <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-white/50 flex items-center justify-center ${severityClasses.icon} shadow-sm`}>
+            {renderIcon()}
           </div>
 
           <div className="flex-1">
-            <h3 className={`text-base font-semibold mb-2 ${severityClasses.text}`}>
+            <h3
+              className="text-base font-semibold mb-2"
+              style={{
+                color: severityClasses.text.includes('emerald') ? '#064e3b' :
+                       severityClasses.text.includes('amber') ? '#78350f' :
+                       severityClasses.text.includes('rose') ? '#881337' :
+                       severityClasses.text.includes('red') ? '#7f1d1d' : '#0f172a'
+              }}
+            >
               {uiError.severity === 'critical' && 'Critical Error'}
               {uiError.severity === 'high' && 'Connection Issue'}
               {uiError.severity === 'medium' && 'Something Needs Attention'}
               {uiError.severity === 'low' && 'Gentle Reminder'}
             </h3>
-            <p className={`text-sm leading-relaxed mb-4 ${severityClasses.text}/90`}>
+            <p
+              className="text-sm leading-relaxed mb-4"
+              style={{
+                color: severityClasses.text.includes('emerald') ? '#064e3b' :
+                       severityClasses.text.includes('amber') ? '#78350f' :
+                       severityClasses.text.includes('rose') ? '#881337' :
+                       severityClasses.text.includes('red') ? '#7f1d1d' : '#0f172a',
+                opacity: 0.9
+              }}
+            >
               {uiError.userMessage}
             </p>
 
@@ -52,17 +106,24 @@ export function ErrorDisplay({
                   onClick={onRetry}
                   className="inline-flex items-center gap-2 text-sm px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
                 >
-                  <span>🔄</span>
+                  <Refresh sx={{ fontSize: 16 }} />
                   Try Again
                 </button>
               )}
               {onDismiss && (
                 <button
                   onClick={onDismiss}
-                  className={`inline-flex items-center gap-2 text-sm px-4 py-2 border rounded-lg transition-all duration-200 font-medium ${severityClasses.text} hover:bg-white/50`}
-                  style={{ borderColor: 'currentColor', opacity: 0.7 }}
+                  className={`inline-flex items-center gap-2 text-sm px-4 py-2 border rounded-lg transition-all duration-200 font-medium hover:bg-white/50`}
+                  style={{
+                    color: severityClasses.text.includes('emerald') ? '#064e3b' :
+                           severityClasses.text.includes('amber') ? '#78350f' :
+                           severityClasses.text.includes('rose') ? '#881337' :
+                           severityClasses.text.includes('red') ? '#7f1d1d' : '#0f172a',
+                    borderColor: 'currentColor',
+                    opacity: 0.8
+                  }}
                 >
-                  <span>✕</span>
+                  <Close sx={{ fontSize: 16 }} />
                   Dismiss
                 </button>
               )}
@@ -91,7 +152,14 @@ export function ErrorDisplay({
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className={`flex-shrink-0 ml-4 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/30 transition-all duration-200 ${severityClasses.text}/60 hover:${severityClasses.text}`}
+            className={`flex-shrink-0 ml-4 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/30 transition-all duration-200`}
+            style={{
+              color: severityClasses.text.includes('emerald') ? '#064e3b' :
+                     severityClasses.text.includes('amber') ? '#78350f' :
+                     severityClasses.text.includes('rose') ? '#881337' :
+                     severityClasses.text.includes('red') ? '#7f1d1d' : '#0f172a',
+              opacity: 0.7
+            }}
             aria-label="Dismiss error"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

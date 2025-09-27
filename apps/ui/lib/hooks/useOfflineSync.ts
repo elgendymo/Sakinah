@@ -162,7 +162,8 @@ export function useOfflineSync(): UseOfflineSyncReturn {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      await registration.sync.register(tag);
+      // Type cast to access sync property (Background Sync API)
+      await (registration as any).sync.register(tag);
       return true;
     } catch (error) {
       console.error('Failed to register background sync:', error);

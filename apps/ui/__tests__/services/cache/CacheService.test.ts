@@ -2,11 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   CacheService,
   MemoryCacheStorage,
-  IndexedDBCacheStorage,
   LocalStorageCacheStorage,
-  CacheMetrics,
-  InvalidationOptions
-} from '../../../lib/services/cache/CacheService';
+} from '@/lib/services/cache/CacheService';
 
 // Mock localStorage
 const mockLocalStorage = {

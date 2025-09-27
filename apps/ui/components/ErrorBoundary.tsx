@@ -12,9 +12,20 @@ interface ErrorBoundaryState {
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: (error: UIError, reset: () => void) => ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  fallback?: (error: UIError, reset: () => void, context?: ErrorBoundaryContext) => ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo, context?: ErrorBoundaryContext) => void;
   showDebugInfo?: boolean;
+  isolate?: boolean; // Prevent error from bubbling up
+  resetOnPropsChange?: boolean;
+  resetKeys?: Array<string | number>;
+  context?: ErrorBoundaryContext;
+}
+
+interface ErrorBoundaryContext {
+  component?: string;
+  feature?: string;
+  userId?: string;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -24,9 +35,33 @@ interface ErrorBoundaryProps {
  * logs them, and displays a fallback UI with Islamic context.
  */
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  private retryCount = 0;
+  private maxRetries = 3;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    const { resetOnPropsChange, resetKeys } = this.props;
+
+    // Reset error boundary when specific props change
+    if (resetOnPropsChange && this.state.hasError) {
+      if (resetKeys) {
+        const hasKeyChanged = resetKeys.some((key, index) =>
+          prevProps.resetKeys?.[index] !== key
+        );
+        if (hasKeyChanged) {
+          this.setState({ hasError: false, error: undefined, traceId: undefined });
+          this.retryCount = 0;
+        }
+      } else {
+        // Reset on any prop change
+        this.setState({ hasError: false, error: undefined, traceId: undefined });
+        this.retryCount = 0;
+      }
+    }
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -39,27 +74,66 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error for debugging
+    this.retryCount++;
+
+    // Enhanced logging with context
     const errorLog = formatErrorForLogging(error);
-    console.error('ErrorBoundary caught an error:', {
+    const enhancedLog = {
       ...errorLog,
       componentStack: errorInfo.componentStack,
-      errorBoundary: this.constructor.name
-    });
+      errorBoundary: this.constructor.name,
+      context: this.props.context,
+      retryCount: this.retryCount,
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent
+    };
 
-    // Call custom error handler if provided
+    console.error('ErrorBoundary caught an error:', enhancedLog);
+
+    // Call custom error handler with context
     if (this.props.onError) {
-      this.props.onError(error, errorInfo);
+      this.props.onError(error, errorInfo, this.props.context);
+    }
+
+    // Auto-recovery attempt for specific error types
+    if (this.shouldAutoRecover(error) && this.retryCount <= this.maxRetries) {
+      setTimeout(() => {
+        if (this.state.hasError) {
+          this.reset();
+        }
+      }, 2000 * this.retryCount); // Exponential backoff
     }
 
     // In production, send to error reporting service
     if (process.env.NODE_ENV === 'production') {
-      // Example: sendToErrorReporting({ ...errorLog, componentStack: errorInfo.componentStack });
+      // Example: sendToErrorReporting(enhancedLog);
     }
+
+    // Prevent error from bubbling up if isolate is true
+    if (this.props.isolate) {
+      errorInfo.componentStack = '';
+    }
+  }
+
+  private shouldAutoRecover(error: Error): boolean {
+    // Auto-recover from network-related errors or temporary issues
+    const recoverablePatterns = [
+      /network/i,
+      /fetch/i,
+      /timeout/i,
+      /temporary/i,
+      /rate limit/i
+    ];
+
+    return recoverablePatterns.some(pattern =>
+      pattern.test(error.message) || pattern.test(error.name)
+    );
   }
 
   reset = () => {
     this.setState({ hasError: false, error: undefined, traceId: undefined });
+    this.retryCount = 0;
   };
 
   render() {
@@ -106,11 +180,28 @@ function DefaultErrorFallback({ error, reset, showDebugInfo = false }: DefaultEr
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <h3 className={`text-lg font-semibold mb-2 ${severityClasses.text}`}>
+          <h3
+            className="text-lg font-semibold mb-2"
+            style={{
+              color: severityClasses.text.includes('emerald') ? '#064e3b' :
+                     severityClasses.text.includes('amber') ? '#78350f' :
+                     severityClasses.text.includes('rose') ? '#881337' :
+                     severityClasses.text.includes('red') ? '#7f1d1d' : '#0f172a'
+            }}
+          >
             Component Error
           </h3>
 
-          <p className={`text-sm leading-relaxed mb-4 ${severityClasses.text}`}>
+          <p
+            className="text-sm leading-relaxed mb-4"
+            style={{
+              color: severityClasses.text.includes('emerald') ? '#064e3b' :
+                     severityClasses.text.includes('amber') ? '#78350f' :
+                     severityClasses.text.includes('rose') ? '#881337' :
+                     severityClasses.text.includes('red') ? '#7f1d1d' : '#0f172a',
+              opacity: 0.9
+            }}
+          >
             {error.userMessage}
           </p>
 

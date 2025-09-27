@@ -413,7 +413,7 @@ export class OfflineQueue {
       let failed = 0;
 
       // Process results
-      for (const result of response.data.results) {
+      for (const result of (response.data as any).results) {
         const operation = operations.find(op => op.id === result.operationId);
         if (!operation) continue;
 
@@ -530,7 +530,7 @@ export class OfflineQueue {
     const noRetryStatusCodes = [400, 401, 403, 404, 409];
 
     return noRetryErrors.includes(error.code) ||
-           (error.statusCode && noRetryStatusCodes.includes(error.statusCode));
+           (!!error.statusCode && noRetryStatusCodes.includes(error.statusCode));
   }
 
   private getEntityFromType(type: string): string {

@@ -3,17 +3,45 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import PageContainer from '@/components/PageContainer';
+import { api } from '@/lib/services/api';
+import { toUserMessage } from '@/lib/ui/errorUtils';
+import {
+  MenuBook as AyahIcon,
+  Chat as HadithIcon,
+  FavoriteBorder as DuaIcon,
+  Create as NoteIcon,
+  StarBorder as StarOutlineIcon,
+  Star as StarFilledIcon,
+  Search as SearchIcon,
+  Warning as WarningIcon
+} from '@mui/icons-material';
 
 interface ContentSnippet {
   id: string;
   type: 'ayah' | 'hadith' | 'dua' | 'note';
   title?: string;
-  text: string; // The main content text
+  text: string;
   arabic_text?: string;
   translation?: string;
-  ref: string; // The reference/source
+  ref: string;
   tags: string[];
   createdAt: string;
+}
+
+interface ContentResponse {
+  data: ContentSnippet[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total?: number;
+  };
+}
+
+interface ContentFilters {
+  tags?: string;
+  type?: 'ayah' | 'hadith' | 'dua' | 'note';
+  limit: number;
+  offset: number;
 }
 
 
@@ -21,18 +49,25 @@ export default function ContentLibraryPage() {
   const t = useTranslations('content');
 
   const [content, setContent] = useState<ContentSnippet[]>([]);
-  const [filteredContent, setFilteredContent] = useState<ContentSnippet[]>([]);
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
+  const [pagination, setPagination] = useState({
+    limit: 20,
+    offset: 0,
+    total: 0,
+    hasMore: true
+  });
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const CONTENT_TYPES = {
-    ayah: { label: t('types.ayah'), icon: '📖', color: 'text-green-600' },
-    hadith: { label: t('types.hadith'), icon: '💬', color: 'text-blue-600' },
-    dua: { label: t('types.dua'), icon: '🤲', color: 'text-purple-600' },
-    note: { label: t('types.note'), icon: '📝', color: 'text-orange-600' },
+    ayah: { label: t('types.ayah'), icon: <AyahIcon sx={{ fontSize: 16 }} />, color: 'text-green-600' },
+    hadith: { label: t('types.hadith'), icon: <HadithIcon sx={{ fontSize: 16 }} />, color: 'text-blue-600' },
+    dua: { label: t('types.dua'), icon: <DuaIcon sx={{ fontSize: 16 }} />, color: 'text-purple-600' },
+    note: { label: t('types.note'), icon: <NoteIcon sx={{ fontSize: 16 }} />, color: 'text-orange-600' },
   };
 
   const POPULAR_TAGS = [
@@ -41,79 +76,82 @@ export default function ContentLibraryPage() {
   ];
 
   useEffect(() => {
-    loadContent();
+    loadContent(true); // Reset on initial load
   }, []);
 
   useEffect(() => {
-    filterContent();
-  }, [content, selectedType, selectedTags, searchQuery]);
+    loadContent(true); // Reset when filters change
+  }, [selectedType, selectedTags, searchQuery]);
 
-  const loadContent = async () => {
+  const loadContent = async (reset = false) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setLoading(true);
+        setError(null);
+        setPagination(prev => ({ ...prev, offset: 0, hasMore: true }));
+      } else {
+        setLoadingMore(true);
+      }
 
-      // For development, use mock data instead of API call that returns HTML error
-      const mockContent: ContentSnippet[] = [
-        {
-          id: '1',
-          type: 'ayah',
-          title: 'Patience in Hardship',
-          text: 'وَبَشِّرِ الصَّابِرِينَ',
-          arabic_text: 'وَبَشِّرِ الصَّابِرِينَ',
-          translation: 'And give good tidings to the patient',
-          ref: 'Al-Baqarah 2:155',
-          tags: ['patience', 'hardship', 'tawakkul'],
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          type: 'hadith',
-          title: 'The Best of People',
-          text: 'خَيْرُ النَّاسِ أَنْفَعُهُمْ لِلنَّاسِ',
-          translation: 'The best of people are those who benefit others',
-          ref: 'Reported by Al-Tabarani',
-          tags: ['charity', 'service', 'character'],
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '3',
-          type: 'dua',
-          title: 'Morning Dhikr',
-          text: 'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ',
-          arabic_text: 'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ',
-          translation: 'O Allah, help me to remember You, thank You, and worship You in the best manner',
-          ref: 'Abu Dawud',
-          tags: ['dhikr', 'gratitude', 'worship'],
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      setContent(mockContent);
-    } catch (error) {
-      console.error('Error loading content:', error);
+      // Build filter parameters
+      const filters: ContentFilters = {
+        limit: pagination.limit,
+        offset: reset ? 0 : pagination.offset
+      };
+
+      if (selectedType !== 'all') {
+        filters.type = selectedType as 'ayah' | 'hadith' | 'dua' | 'note';
+      }
+
+      if (selectedTags.length > 0) {
+        filters.tags = selectedTags.join(',');
+      }
+
+      // Use the v2 API endpoint with proper error handling
+      const response = await api.getContent(filters) as ContentResponse;
+
+      if (reset) {
+        setContent(response.data);
+      } else {
+        setContent(prev => [...prev, ...response.data]);
+      }
+
+      setPagination(prev => ({
+        ...prev,
+        offset: reset ? response.pagination.limit : prev.offset + response.pagination.limit,
+        total: response.pagination.total || 0,
+        hasMore: response.data.length >= response.pagination.limit
+      }));
+
+    } catch (err) {
+      const errorMessage = toUserMessage(err);
+      setError(errorMessage);
+      console.error('Error loading content:', err);
+
+      if (reset) {
+        setContent([]);
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const filterContent = () => {
-    let filtered = [...content];
+  const loadMoreContent = async () => {
+    if (!pagination.hasMore || loadingMore) return;
+    await loadContent(false);
+  };
 
-    // Filter by type
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(item => item.type === selectedType);
-    }
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    // Search will trigger loadContent through useEffect
+  };
 
-    // Filter by tags
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(item =>
-        selectedTags.some(tag => item.tags.includes(tag))
-      );
-    }
-
-    // Filter by search query
+  const filteredContent = content.filter(item => {
+    // Client-side search within loaded content
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item =>
+      return (
         (item.title?.toLowerCase().includes(query)) ||
         (item.text?.toLowerCase().includes(query)) ||
         (item.translation?.toLowerCase().includes(query)) ||
@@ -121,9 +159,8 @@ export default function ContentLibraryPage() {
         item.tags.some(tag => tag.toLowerCase().includes(query))
       );
     }
-
-    setFilteredContent(filtered);
-  };
+    return true;
+  });
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
@@ -131,6 +168,12 @@ export default function ContentLibraryPage() {
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
     );
+  };
+
+  const clearAllFilters = () => {
+    setSelectedType('all');
+    setSelectedTags([]);
+    setSearchQuery('');
   };
 
   const toggleBookmark = (contentId: string) => {
@@ -165,7 +208,7 @@ export default function ContentLibraryPage() {
             }`}
             data-testid="bookmark-button"
           >
-            {bookmarked.has(item.id) ? '⭐' : '☆'}
+            {bookmarked.has(item.id) ? <StarFilledIcon sx={{ fontSize: 16, color: '#f59e0b' }} /> : <StarOutlineIcon sx={{ fontSize: 16 }} />}
           </button>
         </div>
 
@@ -209,6 +252,25 @@ export default function ContentLibraryPage() {
     );
   }
 
+  if (error) {
+    return (
+      <PageContainer title={t('title')} subtitle={t('subtitle')}>
+        <div className="text-center py-12">
+          <div className="mb-4">
+            <WarningIcon sx={{ fontSize: 64, color: '#dc2626' }} className="mx-auto" />
+          </div>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => loadContent(true)}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            {t('retry')}
+          </button>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
       title={t('title')}
@@ -224,7 +286,7 @@ export default function ContentLibraryPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               placeholder={t('searchPlaceholder')}
               className="w-full px-4 py-3 border border-sage-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
             />
@@ -291,38 +353,68 @@ export default function ContentLibraryPage() {
               </button>
             )}
           </div>
+
+          {/* Clear All Filters */}
+          {(selectedType !== 'all' || selectedTags.length > 0 || searchQuery.trim()) && (
+            <div className="mt-4 pt-4 border-t border-sage-200">
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
+              >
+                {t('clearAllFilters')}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Results */}
         <div className="mb-6 flex justify-between items-center">
           <div className="text-fg-muted">
             {filteredContent.length} {t('itemsFound')}
+            {pagination.total > 0 && (
+              <span className="text-sm text-sage-500 ml-2">
+                ({t('of')} {pagination.total})
+              </span>
+            )}
           </div>
 
           {bookmarked.size > 0 && (
             <div className="text-sm text-fg-muted">
-              ⭐ {bookmarked.size} {t('bookmarked')}
+              <StarFilledIcon sx={{ fontSize: 14, color: '#f59e0b' }} /> {bookmarked.size} {t('bookmarked')}
             </div>
           )}
         </div>
 
         {/* Content Grid */}
         {filteredContent.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredContent.map(item => (
-              <ContentCard key={item.id} item={item} />
-            ))}
-          </div>
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredContent.map(item => (
+                <ContentCard key={item.id} item={item} />
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {pagination.hasMore && !searchQuery.trim() && (
+              <div className="text-center mt-8">
+                <button
+                  onClick={loadMoreContent}
+                  disabled={loadingMore}
+                  className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? t('loadingMore') : t('loadMore')}
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
+            <div className="mb-4">
+              <SearchIcon sx={{ fontSize: 64, color: '#9ca3af' }} className="mx-auto" />
+            </div>
             <p className="text-sage-600 mb-4">{t('noContentFound')}</p>
             <button
-              onClick={() => {
-                setSelectedType('all');
-                setSelectedTags([]);
-                setSearchQuery('');
-              }}
+              onClick={clearAllFilters}
               className="text-emerald-600 hover:underline transition-colors"
             >
               {t('clearAllFilters')}

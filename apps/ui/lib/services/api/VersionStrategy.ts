@@ -204,7 +204,7 @@ export class QueryVersionStrategy implements VersionStrategy {
     return url.pathname + url.search;
   }
 
-  public extractVersion(headers: Headers): string | undefined {
+  public extractVersion(_headers: Headers): string | undefined {
     // For query-based versioning, version is in URL, not headers
     // This would be extracted from the request URL in practice
     return undefined;

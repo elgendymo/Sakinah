@@ -1,6 +1,6 @@
 import { ErrorCode } from '../../constants/errorCodes';
 import { normalizeErrorCode } from '../../ui/errorMap';
-import { CacheService, InvalidationOptions } from '../cache/CacheService';
+import { CacheService } from '../cache/CacheService';
 import { RequestInterceptor, ResponseInterceptor } from './interceptors';
 import { RequestTransformer, ResponseTransformer } from './transformers';
 
@@ -190,7 +190,7 @@ export class ApiService {
     };
 
     if (authToken) {
-      requestConfig.headers!['Authorization'] = `Bearer ${authToken}`;
+      (requestConfig.headers as any)['Authorization'] = `Bearer ${authToken}`;
     }
 
     // Transform request body if needed

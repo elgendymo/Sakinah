@@ -320,7 +320,6 @@ export class CacheService {
   private enableMetrics: boolean;
   private enableInvalidationTracking: boolean;
   private maxMemoryUsage: number;
-  private compressionThreshold: number;
 
   constructor(config: CacheServiceConfig = {}) {
     this.storage = config.storage || new MemoryCacheStorage();
@@ -330,7 +329,6 @@ export class CacheService {
     this.enableMetrics = config.enableMetrics ?? true;
     this.enableInvalidationTracking = config.enableInvalidationTracking ?? true;
     this.maxMemoryUsage = config.maxMemoryUsage || 50 * 1024 * 1024; // 50MB default
-    this.compressionThreshold = config.compressionThreshold || 1024; // 1KB
     this.metrics = new CacheMetrics();
   }
 
@@ -891,7 +889,7 @@ export class CacheMetrics {
   private memoryUsage = 0;
   private evictions = 0;
 
-  public recordGet(key: string, hit: boolean): void {
+  public recordGet(_key: string, hit: boolean): void {
     const startTime = performance.now();
 
     if (hit) {
@@ -909,16 +907,16 @@ export class CacheMetrics {
     }
   }
 
-  public recordSet(key: string, size: number): void {
+  public recordSet(_key: string, size: number): void {
     this.sets++;
     this.memoryUsage += size;
   }
 
-  public recordDelete(key: string): void {
+  public recordDelete(_key: string): void {
     this.deletes++;
   }
 
-  public recordInvalidation(strategy: InvalidationStrategy, count: number): void {
+  public recordInvalidation(_strategy: InvalidationStrategy, count: number): void {
     this.invalidations += count;
   }
 
