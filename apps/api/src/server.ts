@@ -3,22 +3,37 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './shared/errors';
-import healthRouter from './routes/health';
-import tazkiyahRouter from './routes/tazkiyah';
-import planRouter from './routes/plan';
-import habitRouter from './routes/habit';
-import checkinRouter from './routes/checkin';
-import journalRouter from './routes/journal';
-import contentRouter from './routes/content';
-import aiRouter from './routes/ai';
+import { CacheFactory } from './infrastructure/cache/factory';
+import { PrometheusMetricsProvider } from './infrastructure/observability/PrometheusMetricsProvider';
+import { EventDispatcher } from './domain/events/EventDispatcher';
+import { HabitEventHandlers } from './application/event-handlers/HabitEventHandlers';
+import { container } from './infrastructure/di/container';
+import { EventProjectionManager } from './infrastructure/events/EventProjectionManager';
+import { metricsMiddleware, errorLoggingMiddleware } from './infrastructure/middleware/observability';
+import apiRouter from './routes';
+import swaggerRouter from './infrastructure/swagger/setup';
 
-export function createApp(): Express {
+export async function createApp(): Promise<Express> {
   const app = express();
+
+  // Initialize cache
+  await CacheFactory.create();
+
+  // Initialize metrics
+  const metrics = new PrometheusMetricsProvider();
+
+  // Initialize event handlers
+  const eventDispatcher = EventDispatcher.getInstance();
+  HabitEventHandlers.registerAll(eventDispatcher);
+
+  // Start event projections
+  const projectionManager = container.resolve<EventProjectionManager>('IEventProjectionStore');
+  await projectionManager.startProjections();
 
   // Security middleware
   app.use(helmet());
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3004'],
     credentials: true,
   }));
 
@@ -37,22 +52,29 @@ export function createApp(): Express {
     message: 'Too many AI requests',
   });
   app.use('/api/ai/', aiLimiter);
+  app.use('/api/v*/ai/', aiLimiter);
 
   // Body parsing
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Routes
-  app.use('/api/health', healthRouter);
-  app.use('/api/tazkiyah', tazkiyahRouter);
-  app.use('/api/plans', planRouter);
-  app.use('/api/habits', habitRouter);
-  app.use('/api/checkins', checkinRouter);
-  app.use('/api/journals', journalRouter);
-  app.use('/api/content', contentRouter);
-  app.use('/api/ai', aiRouter);
+  // Observability middleware
+  app.use(metricsMiddleware(metrics));
+
+  // Metrics endpoint
+  app.get('/metrics', async (_req, res) => {
+    res.set('Content-Type', metrics.getContentType());
+    res.end(await metrics.getMetrics());
+  });
+
+  // API Documentation (Swagger)
+  app.use('/api/docs', swaggerRouter);
+
+  // API routes with versioning
+  app.use('/api', apiRouter);
 
   // Error handling
+  app.use(errorLoggingMiddleware);
   app.use(errorHandler);
 
   return app;

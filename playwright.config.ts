@@ -56,12 +56,12 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: [
-    {
-      command: 'npm run dev',
-      url: 'http://localhost:3000',
-      reuseExistingServer: !process.env.CI,
-      timeout: 180 * 1000, // Increased timeout for slower startup
-    }
-  ],
+  // webServer: [
+  //   {
+  //     command: 'CACHE_TYPE=memory npm run dev',
+  //     url: 'http://localhost:3000',
+  //     reuseExistingServer: !process.env.CI,
+  //     timeout: 180 * 1000, // Increased timeout for slower startup
+  //   }
+  // ],
 });

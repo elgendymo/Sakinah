@@ -16,7 +16,10 @@
     "test:e2e:report": "playwright show-report",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "security:audit": "./scripts/security-audit.sh",
+    "security:check": "npm outdated",
+    "security:reinstall": "rm -rf node_modules package-lock.json && npm install"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
@@ -32,8 +35,19 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "@googlemaps/js-api-loader": "^1.16.10",
-    "adhan": "^4.4.3",
-    "react-google-autocomplete": "^2.7.5"
+    "@googlemaps/js-api-loader": "1.16.10",
+    "adhan": "4.4.3",
+    "react-google-autocomplete": "2.7.5"
+  },
+  "overrides": {
+    "simple-swizzle": "0.2.4",
+    "strip-ansi": "6.0.1",
+    "supports-color": "7.2.0",
+    "wrap-ansi": "8.1.0",
+    "ansi-regex": "<6.2.1",
+    "ansi-styles": "<6.2.2",
+    "chalk": "<5.6.1",
+    "color": "<5.0.1",
+    "debug": "<4.4.2"
   }
 }
