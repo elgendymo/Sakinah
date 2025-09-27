@@ -12,6 +12,14 @@ import {
   GetDhikrTypesUseCase
 } from '@/application/usecases/dhikr';
 import { container } from 'tsyringe';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 
 const router = express.Router();
 
@@ -126,9 +134,19 @@ router.post('/sessions',
   authMiddleware,
   validateRequest(createDhikrSessionSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { dhikrType, dhikrText, targetCount, date, tags } = req.body;
+
+      requestLogger.info('Creating dhikr session', {
+        dhikrType,
+        targetCount,
+        date,
+        tags: tags?.length || 0
+      });
 
       const createSessionUseCase = container.resolve<CreateDhikrSessionUseCase>('CreateDhikrSessionUseCase');
       const result = await createSessionUseCase.execute({
@@ -141,22 +159,35 @@ router.post('/sessions',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'SESSION_CREATION_FAILED',
-          message: result.error.message
+        const appError = createAppError(
+          ErrorCode.INVALID_INPUT,
+          result.error.message || 'Failed to create dhikr session'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+
+        requestLogger.warn('Dhikr session creation failed', {
+          error: result.error.message,
+          dhikrType
         });
+
+        res.set(headers).status(status).json(response);
         return;
       }
 
-      res.status(201).json({
-        data: result.value.toDTO()
+      requestLogger.info('Dhikr session created successfully', {
+        sessionId: result.value.id,
+        dhikrType
       });
+
+      const successResponse = createSuccessResponse(result.value.toDTO(), traceId);
+      res.status(201).json(successResponse);
     } catch (error) {
-      console.error('Error creating dhikr session:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create dhikr session'
-      });
+      requestLogger.error('Error creating dhikr session', {
+        dhikrType: req.body?.dhikrType
+      }, error instanceof Error ? error : new Error(String(error)));
+
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to create dhikr session');
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -249,8 +280,11 @@ router.get('/sessions',
   authMiddleware,
   validateRequest(getDhikrSessionsSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const {
         dhikrType,
         date,
@@ -262,6 +296,18 @@ router.get('/sessions',
         sortBy,
         sortOrder
       } = req.query;
+
+      requestLogger.info('Retrieving dhikr sessions', {
+        dhikrType,
+        date,
+        dateFrom,
+        dateTo,
+        tagsCount: tags?.length || 0,
+        page,
+        limit,
+        sortBy,
+        sortOrder
+      });
 
       const getSessionsUseCase = container.resolve<GetDhikrSessionsUseCase>('GetDhikrSessionsUseCase');
       const result = await getSessionsUseCase.execute({
@@ -278,16 +324,31 @@ router.get('/sessions',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'SESSIONS_RETRIEVAL_FAILED',
-          message: result.error.message
+        const appError = createAppError(
+          ErrorCode.INVALID_INPUT,
+          result.error.message || 'Failed to retrieve dhikr sessions'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+
+        requestLogger.warn('Dhikr sessions retrieval failed', {
+          error: result.error.message,
+          filters: { dhikrType, date, dateFrom, dateTo }
         });
+
+        res.set(headers).status(status).json(response);
         return;
       }
 
       const { items, totalCount, page: currentPage, totalPages, hasNext, hasPrevious } = result.value;
 
-      res.json({
+      requestLogger.info('Dhikr sessions retrieved successfully', {
+        itemCount: items.length,
+        totalCount,
+        currentPage,
+        totalPages
+      });
+
+      const responseData = {
         data: items.map(session => session.toDTO()),
         pagination: {
           currentPage,
@@ -297,13 +358,17 @@ router.get('/sessions',
           hasNext,
           hasPrevious
         }
-      });
+      };
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.json(successResponse);
     } catch (error) {
-      console.error('Error getting dhikr sessions:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve dhikr sessions'
-      });
+      requestLogger.error('Error getting dhikr sessions', {
+        filters: req.query
+      }, error instanceof Error ? error : new Error(String(error)));
+
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve dhikr sessions');
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -352,10 +417,18 @@ router.post('/sessions/:id/increment',
   authMiddleware,
   validateRequest(incrementCountSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { id } = req.params;
       const { increment } = req.body;
+
+      requestLogger.info('Incrementing dhikr count', {
+        sessionId: id,
+        increment: increment || 1
+      });
 
       const incrementUseCase = container.resolve<IncrementDhikrCountUseCase>('IncrementDhikrCountUseCase');
       const result = await incrementUseCase.execute({
@@ -365,22 +438,38 @@ router.post('/sessions/:id/increment',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'INCREMENT_FAILED',
-          message: result.error.message
+        const appError = createAppError(
+          ErrorCode.INVALID_INPUT,
+          result.error.message || 'Failed to increment dhikr count'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+
+        requestLogger.warn('Dhikr count increment failed', {
+          error: result.error.message,
+          sessionId: id,
+          increment: increment || 1
         });
+
+        res.set(headers).status(status).json(response);
         return;
       }
 
-      res.json({
-        data: result.value.toDTO()
+      requestLogger.info('Dhikr count incremented successfully', {
+        sessionId: id,
+        newCount: result.value.count,
+        increment: increment || 1
       });
+
+      const successResponse = createSuccessResponse(result.value.toDTO(), traceId);
+      res.json(successResponse);
     } catch (error) {
-      console.error('Error incrementing dhikr count:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to increment dhikr count'
-      });
+      requestLogger.error('Error incrementing dhikr count', {
+        sessionId: req.params?.id,
+        increment: req.body?.increment
+      }, error instanceof Error ? error : new Error(String(error)));
+
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to increment dhikr count');
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -430,10 +519,18 @@ router.post('/sessions/:id/complete',
   authMiddleware,
   validateRequest(completeSessionSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { id } = req.params;
       const { notes } = req.body;
+
+      requestLogger.info('Completing dhikr session', {
+        sessionId: id,
+        hasNotes: !!notes
+      });
 
       const completeSessionUseCase = container.resolve<CompleteDhikrSessionUseCase>('CompleteDhikrSessionUseCase');
       const result = await completeSessionUseCase.execute({
@@ -443,23 +540,42 @@ router.post('/sessions/:id/complete',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'COMPLETION_FAILED',
-          message: result.error.message
+        const appError = createAppError(
+          ErrorCode.INVALID_INPUT,
+          result.error.message || 'Failed to complete dhikr session'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+
+        requestLogger.warn('Dhikr session completion failed', {
+          error: result.error.message,
+          sessionId: id
         });
+
+        res.set(headers).status(status).json(response);
         return;
       }
 
-      res.json({
+      requestLogger.info('Dhikr session completed successfully', {
+        sessionId: id,
+        finalCount: result.value.count,
+        wasCompleted: result.value.isCompleted
+      });
+
+      const responseData = {
         data: result.value.toDTO(),
         message: 'Dhikr session completed successfully'
-      });
+      };
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.json(successResponse);
     } catch (error) {
-      console.error('Error completing dhikr session:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to complete dhikr session'
-      });
+      requestLogger.error('Error completing dhikr session', {
+        sessionId: req.params?.id,
+        hasNotes: !!req.body?.notes
+      }, error instanceof Error ? error : new Error(String(error)));
+
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to complete dhikr session');
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -513,9 +629,19 @@ router.get('/stats',
   authMiddleware,
   validateRequest(getDhikrStatsSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { dhikrType, periodType, periodStart, periodEnd } = req.query;
+
+      requestLogger.info('Retrieving dhikr statistics', {
+        dhikrType,
+        periodType,
+        periodStart,
+        periodEnd
+      });
 
       const getStatsUseCase = container.resolve<GetDhikrStatsUseCase>('GetDhikrStatsUseCase');
       const result = await getStatsUseCase.execute({
@@ -527,22 +653,36 @@ router.get('/stats',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'STATS_RETRIEVAL_FAILED',
-          message: result.error.message
+        const appError = createAppError(
+          ErrorCode.INVALID_INPUT,
+          result.error.message || 'Failed to retrieve dhikr statistics'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+
+        requestLogger.warn('Dhikr statistics retrieval failed', {
+          error: result.error.message,
+          filters: { dhikrType, periodType, periodStart, periodEnd }
         });
+
+        res.set(headers).status(status).json(response);
         return;
       }
 
-      res.json({
-        data: result.value
+      requestLogger.info('Dhikr statistics retrieved successfully', {
+        dhikrType,
+        periodType,
+        hasData: !!result.value
       });
+
+      const successResponse = createSuccessResponse(result.value, traceId);
+      res.json(successResponse);
     } catch (error) {
-      console.error('Error getting dhikr stats:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve dhikr statistics'
-      });
+      requestLogger.error('Error getting dhikr stats', {
+        filters: req.query
+      }, error instanceof Error ? error : new Error(String(error)));
+
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve dhikr statistics');
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -591,8 +731,18 @@ router.get('/types',
   authMiddleware,
   validateRequest(getDhikrTypesSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
       const { isActive, tags, search } = req.query;
+
+      requestLogger.info('Retrieving dhikr types', {
+        isActive,
+        tagsCount: tags?.length || 0,
+        hasSearch: !!search
+      });
 
       const getTypesUseCase = container.resolve<GetDhikrTypesUseCase>('GetDhikrTypesUseCase');
       const result = await getTypesUseCase.execute({
@@ -602,22 +752,36 @@ router.get('/types',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'TYPES_RETRIEVAL_FAILED',
-          message: result.error.message
+        const appError = createAppError(
+          ErrorCode.INVALID_INPUT,
+          result.error.message || 'Failed to retrieve dhikr types'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+
+        requestLogger.warn('Dhikr types retrieval failed', {
+          error: result.error.message,
+          filters: { isActive, tags, search }
         });
+
+        res.set(headers).status(status).json(response);
         return;
       }
 
-      res.json({
-        data: result.value.map(type => type.toDTO())
+      requestLogger.info('Dhikr types retrieved successfully', {
+        typesCount: result.value.length,
+        isActive,
+        hasSearch: !!search
       });
+
+      const successResponse = createSuccessResponse(result.value.map(type => type.toDTO()), traceId);
+      res.json(successResponse);
     } catch (error) {
-      console.error('Error getting dhikr types:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve dhikr types'
-      });
+      requestLogger.error('Error getting dhikr types', {
+        filters: req.query
+      }, error instanceof Error ? error : new Error(String(error)));
+
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve dhikr types');
+      res.set(headers).status(status).json(response);
     }
   }
 );

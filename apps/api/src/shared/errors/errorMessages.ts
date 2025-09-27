@@ -20,6 +20,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.HABIT_NOT_FOUND]: 'This habit was not found. It may have been removed.',
   [ErrorCode.PLAN_NOT_FOUND]: 'This spiritual plan was not found. Please try creating a new one.',
   [ErrorCode.CONTENT_NOT_FOUND]: 'The requested content is not available at this time.',
+  [ErrorCode.JOURNAL_ENTRY_NOT_FOUND]: 'This journal entry was not found. It may have been removed.',
 
   // Conflict (409)
   [ErrorCode.CONFLICT]: 'There was a conflict with the current state. Please refresh and try again.',

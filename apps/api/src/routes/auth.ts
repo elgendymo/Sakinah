@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { DatabaseFactory } from '@/infrastructure/database/factory';
-import { logger } from '@/shared/logger';
 import {
   ErrorCode,
   createAppError,
   handleExpressError,
   getExpressTraceId,
-  createSuccessResponse
+  createSuccessResponse,
+  createRequestLogger
 } from '@/shared/errors';
 import { validateRequest } from '@/infrastructure/middleware/validation';
 
@@ -23,15 +23,18 @@ const tokenSchema = z.object({
 
 router.post('/signup', validateRequest(emailSchema), async (req: Request, res: Response): Promise<void> => {
   const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
 
   try {
     const { email } = req.body;
+
+    requestLogger.info('User signup attempt', { email });
 
     const isLocalDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
     const useSupabase = process.env.USE_SUPABASE === 'true' || process.env.DB_BACKEND?.toLowerCase() === 'supabase';
 
     if (isLocalDev && !useSupabase) {
-      logger.info(`Mock signup for development: ${email}`, { traceId });
+      requestLogger.info('Mock signup for development', { email });
       const response = createSuccessResponse({
         message: 'Development mode: User created',
         userId: '12345678-1234-4567-8901-123456789012'
@@ -56,34 +59,37 @@ router.post('/signup', validateRequest(emailSchema), async (req: Request, res: R
     });
 
     if (error) {
-      logger.error('Signup error:', { error, traceId });
+      requestLogger.error('Signup error', { error: error.message });
       throw createAppError(ErrorCode.SERVER_ERROR, error.message);
     }
 
-    logger.info(`User created successfully: ${email}`, { traceId, userId: data.user?.id });
+    requestLogger.info('User created successfully', { email, userId: data.user?.id });
     const response = createSuccessResponse({
       message: 'User created successfully',
       userId: data.user?.id
     }, traceId);
     res.status(201).json(response);
   } catch (error) {
+    requestLogger.error('Signup error', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
     const { response, status, headers } = handleExpressError(error, traceId);
-    logger.error('Signup error:', { error, traceId });
-    res.status(status).set(headers as any).json(response);
+    res.status(status).set(headers).json(response);
   }
 });
 
 router.post('/login', validateRequest(emailSchema), async (req: Request, res: Response): Promise<void> => {
   const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
 
   try {
     const { email } = req.body;
+
+    requestLogger.info('User login attempt', { email });
 
     const isLocalDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
     const useSupabase = process.env.USE_SUPABASE === 'true' || process.env.DB_BACKEND?.toLowerCase() === 'supabase';
 
     if (isLocalDev && !useSupabase) {
-      logger.info(`Mock login for development: ${email}`, { traceId });
+      requestLogger.info('Mock login for development', { email });
       const response = createSuccessResponse({
         message: 'Development mode: Magic link sent',
         token: 'mock-token-for-dev'
@@ -110,33 +116,36 @@ router.post('/login', validateRequest(emailSchema), async (req: Request, res: Re
     });
 
     if (error) {
-      logger.error('Login error:', { error, traceId });
+      requestLogger.error('Login error', { error: error.message });
       throw createAppError(ErrorCode.SERVER_ERROR, error.message);
     }
 
-    logger.info(`Magic link sent to: ${email}`, { traceId });
+    requestLogger.info('Magic link sent successfully', { email });
     const response = createSuccessResponse({
       message: 'Magic link sent to your email'
     }, traceId);
     res.status(200).json(response);
   } catch (error) {
+    requestLogger.error('Login error', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
     const { response, status, headers } = handleExpressError(error, traceId);
-    logger.error('Login error:', { error, traceId });
-    res.status(status).set(headers as any).json(response);
+    res.status(status).set(headers).json(response);
   }
 });
 
 router.post('/verify', validateRequest(tokenSchema), async (req: Request, res: Response): Promise<void> => {
   const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
 
   try {
     const { token } = req.body;
+
+    requestLogger.info('Token verification attempt');
 
     const isLocalDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
     const useSupabase = process.env.USE_SUPABASE === 'true' || process.env.DB_BACKEND?.toLowerCase() === 'supabase';
 
     if (isLocalDev && !useSupabase) {
-      logger.info('Mock token verification for development', { traceId });
+      requestLogger.info('Mock token verification for development');
       const response = createSuccessResponse({
         user: {
           id: '12345678-1234-4567-8901-123456789012',
@@ -160,8 +169,11 @@ router.post('/verify', validateRequest(tokenSchema), async (req: Request, res: R
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
+      requestLogger.warn('Token verification failed', { error: error?.message });
       throw createAppError(ErrorCode.UNAUTHORIZED, 'Invalid or expired token');
     }
+
+    requestLogger.info('Token verified successfully', { userId: user.id, email: user.email });
 
     const response = createSuccessResponse({
       user: {
@@ -171,23 +183,26 @@ router.post('/verify', validateRequest(tokenSchema), async (req: Request, res: R
     }, traceId);
     res.status(200).json(response);
   } catch (error) {
+    requestLogger.error('Token verification error', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
     const { response, status, headers } = handleExpressError(error, traceId);
-    logger.error('Token verification error:', { error, traceId });
-    res.status(status).set(headers as any).json(response);
+    res.status(status).set(headers).json(response);
   }
 });
 
 router.post('/logout', async (req: Request, res: Response): Promise<void> => {
   const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
 
   try {
     const authHeader = req.headers.authorization;
+
+    requestLogger.info('User logout attempt');
 
     const isLocalDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
     const useSupabase = process.env.USE_SUPABASE === 'true' || process.env.DB_BACKEND?.toLowerCase() === 'supabase';
 
     if (isLocalDev && !useSupabase) {
-      logger.info('Mock logout for development', { traceId });
+      requestLogger.info('Mock logout for development');
       const response = createSuccessResponse({
         message: 'Logged out successfully'
       }, traceId);
@@ -196,6 +211,7 @@ router.post('/logout', async (req: Request, res: Response): Promise<void> => {
     }
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      requestLogger.info('No auth header found, already logged out');
       const response = createSuccessResponse({
         message: 'Already logged out'
       }, traceId);
@@ -218,18 +234,18 @@ router.post('/logout', async (req: Request, res: Response): Promise<void> => {
     const { error } = await supabase.auth.admin.signOut(token);
 
     if (error) {
-      logger.error('Logout error:', { error, traceId });
+      requestLogger.error('Logout error', { error: error.message });
     }
 
-    logger.info('User logged out successfully', { traceId });
+    requestLogger.info('User logged out successfully');
     const response = createSuccessResponse({
       message: 'Logged out successfully'
     }, traceId);
     res.status(200).json(response);
   } catch (error) {
+    requestLogger.error('Logout error', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
     const { response, status, headers } = handleExpressError(error, traceId);
-    logger.error('Logout error:', { error, traceId });
-    res.status(status).set(headers as any).json(response);
+    res.status(status).set(headers).json(response);
   }
 });
 

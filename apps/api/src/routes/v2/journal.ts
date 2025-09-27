@@ -4,8 +4,8 @@ import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
 import { validateQuery, validateBody } from '@/infrastructure/middleware/validation';
 import { ManageJournalUseCase } from '@/application/usecases/ManageJournalUseCase';
 import { z } from 'zod';
-import { logger } from '@/shared/logger';
 import { Result } from '@/shared/result';
+import { ErrorCode, createAppError, handleExpressError, getExpressTraceId, createSuccessResponse, createRequestLogger } from '@/shared/errors';
 
 // Extend Request interface to include correlationId (added by middleware)
 interface ExtendedAuthRequest extends AuthRequest {
@@ -132,12 +132,14 @@ const updateJournalSchema = z.object({
  *         description: Internal server error
  */
 router.get('/', authMiddleware, validateQuery(getJournalQuerySchema), async (req: ExtendedAuthRequest, res: Response) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    const correlationId = req.correlationId || 'unknown';
     const userId = req.userId!;
     const { search, tags, page, limit, sortBy, sortOrder } = req.query as z.infer<typeof getJournalQuerySchema>;
 
-    logger.info(`[${correlationId}] Getting journal entries for user ${userId}`, {
+    requestLogger.info('Getting journal entries', {
       search, tags, page, limit, sortBy, sortOrder
     });
 
@@ -147,13 +149,23 @@ router.get('/', authMiddleware, validateQuery(getJournalQuerySchema), async (req
     const result = await useCase.getUserEntries(userId, search);
 
     if ('error' in result && result.error) {
-      logger.error(`[${correlationId}] Error getting journal entries: ${result.error.message}`);
-      return res.status(400).json({ error: result.error.message });
+      requestLogger.error('Error getting journal entries', { error: result.error.message });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.VALIDATION_ERROR, result.error.message),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     if (Result.isError(result)) {
-      logger.error(`[${correlationId}] Unknown error getting journal entries`);
-      return res.status(500).json({ error: 'Unknown error' });
+      requestLogger.error('Unknown error getting journal entries');
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to get journal entries'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     let entries = result.value.map(e => e.toDTO());
@@ -194,16 +206,27 @@ router.get('/', authMiddleware, validateQuery(getJournalQuerySchema), async (req
       hasPrevPage: page > 1
     };
 
-    logger.info(`[${correlationId}] Successfully retrieved ${paginatedEntries.length} entries (page ${page}/${totalPages})`);
+    requestLogger.info('Journal entries retrieved successfully', {
+      count: paginatedEntries.length,
+      page,
+      totalPages,
+      total
+    });
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       entries: paginatedEntries,
       pagination
-    });
+    }, traceId);
+    res.json(successResponse);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[${req.correlationId || 'unknown'}] Error in GET /v2/journal: ${errorMessage}`);
-    return res.status(500).json({ error: 'Internal server error' });
+    requestLogger.error('Error getting journal entries', {
+      error: error instanceof Error ? error.message : String(error)
+    }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get journal entries'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -265,12 +288,14 @@ router.get('/', authMiddleware, validateQuery(getJournalQuerySchema), async (req
  *         description: Internal server error
  */
 router.post('/', authMiddleware, validateBody(createJournalSchema), async (req: ExtendedAuthRequest, res: Response) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    const correlationId = req.correlationId || 'unknown';
     const userId = req.userId!;
     const { content, tags } = req.body as z.infer<typeof createJournalSchema>;
 
-    logger.info(`[${correlationId}] Creating journal entry for user ${userId}`);
+    requestLogger.info('Creating journal entry', { hasContent: !!content, tagsCount: tags?.length || 0 });
 
     const useCase = container.resolve(ManageJournalUseCase);
     const result = await useCase.createEntry({
@@ -280,24 +305,40 @@ router.post('/', authMiddleware, validateBody(createJournalSchema), async (req: 
     });
 
     if ('error' in result && result.error) {
-      logger.error(`[${correlationId}] Error creating journal entry: ${result.error.message}`);
-      return res.status(400).json({ error: result.error.message });
+      requestLogger.error('Error creating journal entry', { error: result.error.message });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.VALIDATION_ERROR, result.error.message),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     if (Result.isError(result)) {
-      logger.error(`[${correlationId}] Unknown error creating journal entry`);
-      return res.status(500).json({ error: 'Unknown error' });
+      requestLogger.error('Unknown error creating journal entry');
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to create journal entry'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
-    logger.info(`[${correlationId}] Successfully created journal entry ${result.value.id}`);
+    requestLogger.info('Journal entry created successfully', { entryId: result.value.id });
 
-    return res.status(201).json({
+    const successResponse = createSuccessResponse({
       entry: result.value.toDTO()
-    });
+    }, traceId);
+    res.status(201).json(successResponse);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[${req.correlationId || 'unknown'}] Error in POST /v2/journal: ${errorMessage}`);
-    return res.status(500).json({ error: 'Internal server error' });
+    requestLogger.error('Error creating journal entry', {
+      error: error instanceof Error ? error.message : String(error)
+    }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to create journal entry'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -347,46 +388,75 @@ router.post('/', authMiddleware, validateBody(createJournalSchema), async (req: 
  *         description: Internal server error
  */
 router.get('/:id', authMiddleware, async (req: ExtendedAuthRequest, res: Response) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    const correlationId = req.correlationId || 'unknown';
     const userId = req.userId!;
     const { id } = req.params;
 
-    logger.info(`[${correlationId}] Getting journal entry ${id} for user ${userId}`);
+    requestLogger.info('Getting journal entry', { entryId: id });
 
     const useCase = container.resolve(ManageJournalUseCase);
     const result = await useCase.getEntry(id);
 
     if ('error' in result && result.error) {
-      logger.error(`[${correlationId}] Error getting journal entry: ${result.error.message}`);
-      return res.status(400).json({ error: result.error.message });
+      requestLogger.error('Error getting journal entry', { error: result.error.message, entryId: id });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.VALIDATION_ERROR, result.error.message),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     if (Result.isError(result)) {
-      logger.error(`[${correlationId}] Unknown error getting journal entry`);
-      return res.status(500).json({ error: 'Unknown error' });
+      requestLogger.error('Unknown error getting journal entry', { entryId: id });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to get journal entry'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     if (!result.value) {
-      logger.warn(`[${correlationId}] Journal entry ${id} not found`);
-      return res.status(404).json({ error: 'Journal entry not found' });
+      requestLogger.warn('Journal entry not found', { entryId: id });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.JOURNAL_ENTRY_NOT_FOUND, 'Journal entry not found'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     // Check if entry belongs to the user
     if (result.value.userId.toString() !== userId) {
-      logger.warn(`[${correlationId}] User ${userId} tried to access journal entry ${id} owned by another user`);
-      return res.status(404).json({ error: 'Journal entry not found' });
+      requestLogger.warn('User tried to access journal entry owned by another user', { entryId: id });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.JOURNAL_ENTRY_NOT_FOUND, 'Journal entry not found'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
-    logger.info(`[${correlationId}] Successfully retrieved journal entry ${id}`);
+    requestLogger.info('Journal entry retrieved successfully', { entryId: id });
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       entry: result.value.toDTO()
-    });
+    }, traceId);
+    res.json(successResponse);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[${req.correlationId || 'unknown'}] Error in GET /v2/journal/:id: ${errorMessage}`);
-    return res.status(500).json({ error: 'Internal server error' });
+    requestLogger.error('Error getting journal entry', {
+      error: error instanceof Error ? error.message : String(error),
+      entryId: req.params.id
+    }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get journal entry'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -453,13 +523,15 @@ router.get('/:id', authMiddleware, async (req: ExtendedAuthRequest, res: Respons
  *         description: Internal server error
  */
 router.put('/:id', authMiddleware, validateBody(updateJournalSchema), async (req: ExtendedAuthRequest, res: Response) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    const correlationId = req.correlationId || 'unknown';
     const userId = req.userId!;
     const { id } = req.params;
     const { content, tags } = req.body as z.infer<typeof updateJournalSchema>;
 
-    logger.info(`[${correlationId}] Updating journal entry ${id} for user ${userId}`);
+    requestLogger.info('Updating journal entry', { entryId: id, hasContent: !!content, tagsCount: tags?.length || 0 });
 
     const useCase = container.resolve(ManageJournalUseCase);
     const result = await useCase.updateEntry({
@@ -470,26 +542,43 @@ router.put('/:id', authMiddleware, validateBody(updateJournalSchema), async (req
     });
 
     if ('error' in result && result.error) {
-      logger.error(`[${correlationId}] Error updating journal entry: ${result.error.message}`);
-      const statusCode = result.error.message.includes('not found') ? 404 :
-                        result.error.message.includes('Unauthorized') ? 403 : 400;
-      return res.status(statusCode).json({ error: result.error.message });
+      requestLogger.error('Error updating journal entry', { error: result.error.message, entryId: id });
+      const errorCode = result.error.message.includes('not found') ? ErrorCode.JOURNAL_ENTRY_NOT_FOUND :
+                        result.error.message.includes('Unauthorized') ? ErrorCode.UNAUTHORIZED : ErrorCode.VALIDATION_ERROR;
+      const { response, status, headers } = handleExpressError(
+        createAppError(errorCode, result.error.message),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     if (Result.isError(result)) {
-      logger.error(`[${correlationId}] Unknown error updating journal entry`);
-      return res.status(500).json({ error: 'Unknown error' });
+      requestLogger.error('Unknown error updating journal entry', { entryId: id });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to update journal entry'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
-    logger.info(`[${correlationId}] Successfully updated journal entry ${id}`);
+    requestLogger.info('Journal entry updated successfully', { entryId: id });
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       entry: result.value.toDTO()
-    });
+    }, traceId);
+    res.json(successResponse);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[${req.correlationId || 'unknown'}] Error in PUT /v2/journal/:id: ${errorMessage}`);
-    return res.status(500).json({ error: 'Internal server error' });
+    requestLogger.error('Error updating journal entry', {
+      error: error instanceof Error ? error.message : String(error),
+      entryId: req.params.id
+    }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to update journal entry'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -520,35 +609,53 @@ router.put('/:id', authMiddleware, validateBody(updateJournalSchema), async (req
  *         description: Internal server error
  */
 router.delete('/:id', authMiddleware, async (req: ExtendedAuthRequest, res: Response) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    const correlationId = req.correlationId || 'unknown';
     const userId = req.userId!;
     const { id } = req.params;
 
-    logger.info(`[${correlationId}] Deleting journal entry ${id} for user ${userId}`);
+    requestLogger.info('Deleting journal entry', { entryId: id });
 
     const useCase = container.resolve(ManageJournalUseCase);
     const result = await useCase.deleteEntry(id, userId);
 
     if ('error' in result && result.error) {
-      logger.error(`[${correlationId}] Error deleting journal entry: ${result.error.message}`);
-      const statusCode = result.error.message.includes('not found') ? 404 :
-                        result.error.message.includes('Unauthorized') ? 403 : 400;
-      return res.status(statusCode).json({ error: result.error.message });
+      requestLogger.error('Error deleting journal entry', { error: result.error.message, entryId: id });
+      const errorCode = result.error.message.includes('not found') ? ErrorCode.JOURNAL_ENTRY_NOT_FOUND :
+                        result.error.message.includes('Unauthorized') ? ErrorCode.UNAUTHORIZED : ErrorCode.VALIDATION_ERROR;
+      const { response, status, headers } = handleExpressError(
+        createAppError(errorCode, result.error.message),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
     if (Result.isError(result)) {
-      logger.error(`[${correlationId}] Unknown error deleting journal entry`);
-      return res.status(500).json({ error: 'Unknown error' });
+      requestLogger.error('Unknown error deleting journal entry', { entryId: id });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to delete journal entry'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
+      return;
     }
 
-    logger.info(`[${correlationId}] Successfully deleted journal entry ${id}`);
+    requestLogger.info('Journal entry deleted successfully', { entryId: id });
 
-    return res.status(204).send();
+    res.status(204).send();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[${req.correlationId || 'unknown'}] Error in DELETE /v2/journal/:id: ${errorMessage}`);
-    return res.status(500).json({ error: 'Internal server error' });
+    requestLogger.error('Error deleting journal entry', {
+      error: error instanceof Error ? error.message : String(error),
+      entryId: req.params.id
+    }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to delete journal entry'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 

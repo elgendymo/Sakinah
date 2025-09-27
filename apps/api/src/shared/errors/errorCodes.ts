@@ -18,6 +18,7 @@ export enum ErrorCode {
   HABIT_NOT_FOUND = 'habit_not_found',
   PLAN_NOT_FOUND = 'plan_not_found',
   CONTENT_NOT_FOUND = 'content_not_found',
+  JOURNAL_ENTRY_NOT_FOUND = 'journal_entry_not_found',
 
   // Conflict (409)
   CONFLICT = 'conflict',
@@ -84,6 +85,7 @@ export const ErrorCodeToStatus: Record<ErrorCode, number> = {
   [ErrorCode.HABIT_NOT_FOUND]: 404,
   [ErrorCode.PLAN_NOT_FOUND]: 404,
   [ErrorCode.CONTENT_NOT_FOUND]: 404,
+  [ErrorCode.JOURNAL_ENTRY_NOT_FOUND]: 404,
 
   // Conflict (409)
   [ErrorCode.CONFLICT]: 409,

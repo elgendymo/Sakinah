@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId
+} from '@/shared/errors';
 
 export function validateRequest(schema: z.ZodSchema<any>) {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -8,23 +14,29 @@ export function validateRequest(schema: z.ZodSchema<any>) {
       req.body = validatedData;
       next();
     } catch (error) {
+      const traceId = getExpressTraceId(req);
+
       if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'VALIDATION_ERROR',
-          message: 'Request validation failed',
-          details: error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message,
-            code: err.code
-          }))
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          'Request validation failed',
+          undefined,
+          {
+            details: error.errors.map(err => ({
+              field: err.path.join('.'),
+              message: err.message,
+              code: err.code
+            }))
+          }
+        );
+        const { response, status } = handleExpressError(appError, traceId);
+        res.status(status).json(response);
         return;
       }
 
-      res.status(400).json({
-        error: 'VALIDATION_ERROR',
-        message: 'Invalid request data'
-      });
+      const appError = createAppError(ErrorCode.VALIDATION_ERROR, 'Invalid request data');
+      const { response, status } = handleExpressError(appError, traceId);
+      res.status(status).json(response);
     }
   };
 }
@@ -40,23 +52,29 @@ export function validateQuery(schema: z.ZodSchema<any>) {
       req.query = validatedData as any;
       next();
     } catch (error) {
+      const traceId = getExpressTraceId(req);
+
       if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'VALIDATION_ERROR',
-          message: 'Query validation failed',
-          details: error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message,
-            code: err.code
-          }))
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          'Query validation failed',
+          undefined,
+          {
+            details: error.errors.map(err => ({
+              field: err.path.join('.'),
+              message: err.message,
+              code: err.code
+            }))
+          }
+        );
+        const { response, status } = handleExpressError(appError, traceId);
+        res.status(status).json(response);
         return;
       }
 
-      res.status(400).json({
-        error: 'VALIDATION_ERROR',
-        message: 'Invalid query parameters'
-      });
+      const appError = createAppError(ErrorCode.VALIDATION_ERROR, 'Invalid query parameters');
+      const { response, status } = handleExpressError(appError, traceId);
+      res.status(status).json(response);
     }
   };
 }
@@ -68,23 +86,29 @@ export function validateParams(schema: z.ZodSchema<any>) {
       req.params = validatedData;
       next();
     } catch (error) {
+      const traceId = getExpressTraceId(req);
+
       if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'VALIDATION_ERROR',
-          message: 'Parameter validation failed',
-          details: error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message,
-            code: err.code
-          }))
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          'Parameter validation failed',
+          undefined,
+          {
+            details: error.errors.map(err => ({
+              field: err.path.join('.'),
+              message: err.message,
+              code: err.code
+            }))
+          }
+        );
+        const { response, status } = handleExpressError(appError, traceId);
+        res.status(status).json(response);
         return;
       }
 
-      res.status(400).json({
-        error: 'VALIDATION_ERROR',
-        message: 'Invalid parameters'
-      });
+      const appError = createAppError(ErrorCode.VALIDATION_ERROR, 'Invalid parameters');
+      const { response, status } = handleExpressError(appError, traceId);
+      res.status(status).json(response);
     }
   };
 }

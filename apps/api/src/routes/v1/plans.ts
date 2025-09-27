@@ -1,14 +1,21 @@
 import { Router } from 'express';
 import { container } from 'tsyringe';
 import { authMiddleware } from '@/infrastructure/auth/middleware';
-import { logger } from '../../shared/logger';
+import { validateBody, validateQuery } from '@/infrastructure/middleware/validation';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 import { IPlanRepository } from '@/domain/repositories';
 import { UserId } from '@/domain/value-objects/UserId';
 import { PlanId } from '@/domain/value-objects/PlanId';
-import { Plan, PlanKind } from '@/domain/entities/Plan';
+import { Plan } from '@/domain/entities/Plan';
 import { MicroHabit } from '@/domain/entities/MicroHabit';
 import { Result } from '@/shared/result';
-import { ValidationError } from '@/shared/errors';
 import { z } from 'zod';
 
 const router = Router();
@@ -43,35 +50,24 @@ const PlanQuerySchema = z.object({
  * @apiName GetPlans
  * @apiGroup Plans
  */
-router.get('/', authMiddleware, async (req, res): Promise<void> => {
+router.get('/', authMiddleware, validateQuery(PlanQuerySchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
-    const queryResult = PlanQuerySchema.safeParse(req.query);
-
-    if (!queryResult.success) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: queryResult.error.errors
-        }
-      });
-      return;
-    }
-
-    const { status = 'all', kind, includeContent = false, includeStats = false } = queryResult.data;
+    const { status = 'all', kind, includeContent = false, includeStats = false } = req.query as z.infer<typeof PlanQuerySchema>;
 
     const planRepo = container.resolve<IPlanRepository>('IPlanRepository');
     const result = await planRepo.findByUserId(new UserId(userId));
 
     if (Result.isError(result)) {
-      logger.error('Error fetching plans v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch plans'
-        }
-      });
+      requestLogger.error('Error fetching plans v1', { error: result.error });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch plans'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
@@ -110,7 +106,7 @@ router.get('/', authMiddleware, async (req, res): Promise<void> => {
       return planData;
     }));
 
-    res.json({
+    const successResponse = createSuccessResponse({
       plans: enhancedPlans,
       metadata: {
         total: enhancedPlans.length,
@@ -121,15 +117,14 @@ router.get('/', authMiddleware, async (req, res): Promise<void> => {
           tahliyah: enhancedPlans.filter(p => p.kind === 'tahliyah').length
         }
       }
-    });
+    }, traceId);
+
+    requestLogger.info('Plans retrieved successfully', { count: enhancedPlans.length, status, kind });
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error fetching plans v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch plans'
-      }
-    });
+    requestLogger.error('Error fetching plans v1', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 
@@ -140,19 +135,21 @@ router.get('/', authMiddleware, async (req, res): Promise<void> => {
  * @apiGroup Plans
  */
 router.get('/active', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
     const planRepo = container.resolve<IPlanRepository>('IPlanRepository');
     const result = await planRepo.findByUserId(new UserId(userId));
 
     if (Result.isError(result)) {
-      logger.error('Error fetching active plans v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch active plans'
-        }
-      });
+      requestLogger.error('Error fetching active plans v1', { error: result.error });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch active plans'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
@@ -160,21 +157,20 @@ router.get('/active', authMiddleware, async (req, res): Promise<void> => {
       .filter(plan => plan.status === 'active')
       .map(plan => plan.toDTO());
 
-    res.json({
+    const successResponse = createSuccessResponse({
       plans: activePlans,
       metadata: {
         total: activePlans.length,
         lastUpdated: new Date().toISOString()
       }
-    });
+    }, traceId);
+
+    requestLogger.info('Active plans retrieved successfully', { count: activePlans.length });
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error fetching active plans v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch active plans'
-      }
-    });
+    requestLogger.error('Error fetching active plans v1', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 
@@ -185,6 +181,9 @@ router.get('/active', authMiddleware, async (req, res): Promise<void> => {
  * @apiGroup Plans
  */
 router.get('/:id', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
@@ -193,23 +192,21 @@ router.get('/:id', authMiddleware, async (req, res): Promise<void> => {
     const result = await planRepo.findById(new PlanId(id));
 
     if (Result.isError(result)) {
-      logger.error('Error fetching plan v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch plan'
-        }
-      });
+      requestLogger.error('Error fetching plan v1', { error: result.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     if (!result.value) {
-      res.status(404).json({
-        error: {
-          code: 'PLAN_NOT_FOUND',
-          message: 'Plan not found'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.PLAN_NOT_FOUND, 'Plan not found'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
@@ -217,26 +214,24 @@ router.get('/:id', authMiddleware, async (req, res): Promise<void> => {
 
     // Verify ownership
     if (plan.userId.toString() !== userId) {
-      res.status(403).json({
-        error: {
-          code: 'ACCESS_DENIED',
-          message: 'You do not have permission to access this plan'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'You do not have permission to access this plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
-    res.json({
+    requestLogger.info('Plan retrieved successfully', { planId: id });
+    const successResponse = createSuccessResponse({
       plan: plan.toDTO()
-    });
+    }, traceId);
+
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error fetching plan v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch plan'
-      }
-    });
+    requestLogger.error('Error fetching plan v1', { error, traceId });
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 
@@ -246,23 +241,13 @@ router.get('/:id', authMiddleware, async (req, res): Promise<void> => {
  * @apiName CreatePlan
  * @apiGroup Plans
  */
-router.post('/', authMiddleware, async (req, res): Promise<void> => {
+router.post('/', authMiddleware, validateBody(CreatePlanSchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
-    const parseResult = CreatePlanSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid plan data',
-          details: parseResult.error.errors
-        }
-      });
-      return;
-    }
-
-    const { kind, target, microHabits, duaIds = [], contentIds = [] } = parseResult.data;
+    const { kind, target, microHabits, duaIds = [], contentIds = [] } = req.body as z.infer<typeof CreatePlanSchema>;
 
     const plan = Plan.create({
       userId,
@@ -280,28 +265,26 @@ router.post('/', authMiddleware, async (req, res): Promise<void> => {
     const result = await planRepo.create(plan);
 
     if (Result.isError(result)) {
-      logger.error('Error creating plan v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to create plan'
-        }
-      });
+      requestLogger.error('Error creating plan v1', { error: result.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to create plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
-    res.status(201).json({
+    const successResponse = createSuccessResponse({
       plan: result.value.toDTO(),
       events: ['plan_created']
-    });
+    }, traceId);
+
+    requestLogger.info('Plan created successfully', { planId: result.value.id.toString(), kind, target });
+    res.status(201).json(successResponse);
   } catch (error) {
-    logger.error('Error creating plan v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to create plan'
-      }
-    });
+    requestLogger.error('Error creating plan v1', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 
@@ -311,86 +294,71 @@ router.post('/', authMiddleware, async (req, res): Promise<void> => {
  * @apiName UpdatePlanStatus
  * @apiGroup Plans
  */
-router.patch('/:id/status', authMiddleware, async (req, res): Promise<void> => {
+router.patch('/:id/status', authMiddleware, validateBody(UpdatePlanStatusSchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const parseResult = UpdatePlanStatusSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid status data',
-          details: parseResult.error.errors
-        }
-      });
-      return;
-    }
-
-    const { status } = parseResult.data;
+    const { status } = req.body as z.infer<typeof UpdatePlanStatusSchema>;
 
     const planRepo = container.resolve<IPlanRepository>('IPlanRepository');
 
     // First, verify the plan exists and user owns it
     const planResult = await planRepo.findById(new PlanId(id));
     if (Result.isError(planResult)) {
-      logger.error('Error fetching plan for status update', planResult.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch plan'
-        }
-      });
+      requestLogger.error('Error fetching plan for status update', { error: planResult.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     if (!planResult.value) {
-      res.status(404).json({
-        error: {
-          code: 'PLAN_NOT_FOUND',
-          message: 'Plan not found'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.PLAN_NOT_FOUND, 'Plan not found'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     // Verify ownership
     if (planResult.value.userId.toString() !== userId) {
-      res.status(403).json({
-        error: {
-          code: 'ACCESS_DENIED',
-          message: 'You do not have permission to modify this plan'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'You do not have permission to modify this plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     const result = await planRepo.updateStatus(new PlanId(id), status);
 
     if (Result.isError(result)) {
-      logger.error('Error updating plan status v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to update plan status'
-        }
-      });
+      requestLogger.error('Error updating plan status v1', { error: result.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to update plan status'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
-    res.json({
+    requestLogger.info('Plan status updated successfully', { planId: id, status });
+    const successResponse = createSuccessResponse({
       plan: result.value.toDTO(),
       events: [`plan_${status}`]
-    });
+    }, traceId);
+
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error updating plan status v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to update plan status'
-      }
-    });
+    requestLogger.error('Error updating plan status v1', { error, traceId });
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 
@@ -401,6 +369,9 @@ router.patch('/:id/status', authMiddleware, async (req, res): Promise<void> => {
  * @apiGroup Plans
  */
 router.post('/:id/activate', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
@@ -410,62 +381,57 @@ router.post('/:id/activate', authMiddleware, async (req, res): Promise<void> => 
     // First, verify the plan exists and user owns it
     const planResult = await planRepo.findById(new PlanId(id));
     if (Result.isError(planResult)) {
-      logger.error('Error fetching plan for activation', planResult.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch plan'
-        }
-      });
+      requestLogger.error('Error fetching plan for activation', { error: planResult.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     if (!planResult.value) {
-      res.status(404).json({
-        error: {
-          code: 'PLAN_NOT_FOUND',
-          message: 'Plan not found'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.PLAN_NOT_FOUND, 'Plan not found'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     // Verify ownership
     if (planResult.value.userId.toString() !== userId) {
-      res.status(403).json({
-        error: {
-          code: 'ACCESS_DENIED',
-          message: 'You do not have permission to modify this plan'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'You do not have permission to modify this plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     const result = await planRepo.updateStatus(new PlanId(id), 'active');
 
     if (Result.isError(result)) {
-      logger.error('Error activating plan v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to activate plan'
-        }
-      });
+      requestLogger.error('Error activating plan v1', { error: result.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to activate plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
-    res.json({
+    requestLogger.info('Plan activated successfully', { planId: id });
+    const successResponse = createSuccessResponse({
       plan: result.value.toDTO(),
       events: ['plan_activated']
-    });
+    }, traceId);
+
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error activating plan v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to activate plan'
-      }
-    });
+    requestLogger.error('Error activating plan v1', { error, traceId });
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 
@@ -476,6 +442,9 @@ router.post('/:id/activate', authMiddleware, async (req, res): Promise<void> => 
  * @apiGroup Plans
  */
 router.post('/:id/deactivate', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
@@ -485,62 +454,57 @@ router.post('/:id/deactivate', authMiddleware, async (req, res): Promise<void> =
     // First, verify the plan exists and user owns it
     const planResult = await planRepo.findById(new PlanId(id));
     if (Result.isError(planResult)) {
-      logger.error('Error fetching plan for deactivation', planResult.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch plan'
-        }
-      });
+      requestLogger.error('Error fetching plan for deactivation', { error: planResult.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     if (!planResult.value) {
-      res.status(404).json({
-        error: {
-          code: 'PLAN_NOT_FOUND',
-          message: 'Plan not found'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.PLAN_NOT_FOUND, 'Plan not found'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     // Verify ownership
     if (planResult.value.userId.toString() !== userId) {
-      res.status(403).json({
-        error: {
-          code: 'ACCESS_DENIED',
-          message: 'You do not have permission to modify this plan'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'You do not have permission to modify this plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     const result = await planRepo.updateStatus(new PlanId(id), 'archived');
 
     if (Result.isError(result)) {
-      logger.error('Error deactivating plan v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to deactivate plan'
-        }
-      });
+      requestLogger.error('Error deactivating plan v1', { error: result.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to deactivate plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
-    res.json({
+    requestLogger.info('Plan deactivated successfully', { planId: id });
+    const successResponse = createSuccessResponse({
       plan: result.value.toDTO(),
       events: ['plan_deactivated']
-    });
+    }, traceId);
+
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error deactivating plan v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to deactivate plan'
-      }
-    });
+    requestLogger.error('Error deactivating plan v1', { error, traceId });
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 
@@ -551,6 +515,9 @@ router.post('/:id/deactivate', authMiddleware, async (req, res): Promise<void> =
  * @apiGroup Plans
  */
 router.delete('/:id', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
@@ -560,34 +527,31 @@ router.delete('/:id', authMiddleware, async (req, res): Promise<void> => {
     // First, verify the plan exists and user owns it
     const planResult = await planRepo.findById(new PlanId(id));
     if (Result.isError(planResult)) {
-      logger.error('Error fetching plan for deletion', planResult.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch plan'
-        }
-      });
+      requestLogger.error('Error fetching plan for deletion', { error: planResult.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     if (!planResult.value) {
-      res.status(404).json({
-        error: {
-          code: 'PLAN_NOT_FOUND',
-          message: 'Plan not found'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.PLAN_NOT_FOUND, 'Plan not found'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
     // Verify ownership
     if (planResult.value.userId.toString() !== userId) {
-      res.status(403).json({
-        error: {
-          code: 'ACCESS_DENIED',
-          message: 'You do not have permission to delete this plan'
-        }
-      });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'You do not have permission to delete this plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
@@ -595,25 +559,21 @@ router.delete('/:id', authMiddleware, async (req, res): Promise<void> => {
     const result = await planRepo.updateStatus(new PlanId(id), 'archived');
 
     if (Result.isError(result)) {
-      logger.error('Error deleting plan v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to delete plan'
-        }
-      });
+      requestLogger.error('Error deleting plan v1', { error: result.error, traceId });
+      const { response, status: httpStatus, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to delete plan'),
+        traceId
+      );
+      res.status(httpStatus).set(headers).json(response);
       return;
     }
 
+    requestLogger.info('Plan deleted successfully', { planId: id });
     res.status(204).send();
   } catch (error) {
-    logger.error('Error deleting plan v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to delete plan'
-      }
-    });
+    requestLogger.error('Error deleting plan v1', { error, traceId });
+    const { response, status: httpStatus, headers } = handleExpressError(error, traceId);
+    res.status(httpStatus).set(headers).json(response);
   }
 });
 

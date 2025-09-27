@@ -1,33 +1,50 @@
 import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
 import { CreateCheckinInputSchema } from '@sakinah/types';
-import { ValidationError } from '@/shared/errors';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
+import { validateBody } from '@/infrastructure/middleware/validation';
 import { logCheckin } from '@/application/logCheckin';
 import { Result } from '@/shared/result';
 
 const router = Router();
 
-router.post('/', authMiddleware, async (req: AuthRequest, res, next) => {
+router.post('/', authMiddleware, validateBody(CreateCheckinInputSchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    const parseResult = CreateCheckinInputSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      throw new ValidationError(parseResult.error.errors[0].message);
-    }
-
     const userId = req.userId!;
+    const checkinData = req.body;
+
+    requestLogger.info('Creating checkin', {
+      mood: checkinData.mood,
+      gratefulnessLevel: checkinData.gratefulnessLevel
+    });
+
     const result = await logCheckin({
       userId,
-      ...parseResult.data,
+      ...checkinData,
     });
 
     if (Result.isError(result)) {
-      throw (result as any).error;
+      requestLogger.error('Checkin creation failed', { error: result.error });
+      throw createAppError(ErrorCode.SERVER_ERROR, 'Failed to create checkin');
     }
 
-    res.json({ checkin: result.value });
+    requestLogger.info('Checkin created successfully', { checkinId: result.value.id });
+    const response = createSuccessResponse({ checkin: result.value }, traceId);
+    res.status(201).json(response);
   } catch (error) {
-    next(error);
+    requestLogger.error('Checkin creation error', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    res.status(status).set(headers).json(response);
   }
 });
 

@@ -6,36 +6,27 @@ import { IOnboardingRepository } from '@/domain/repositories/IOnboardingReposito
 import { OnboardingEntity, OnboardingStep, ONBOARDING_STEPS, ONBOARDING_FLOW } from '@/domain/entities/Onboarding';
 import { UserId } from '@/domain/value-objects/UserId';
 import { Result } from '@/shared/result';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
+import { validateBody } from '@/infrastructure/middleware/validation';
 
 const router = express.Router();
 
 // Helper function to get user ID from request
 function getUserIdFromRequest(req: AuthRequest): string {
   if (!req.userId) {
-    throw new Error('User not authenticated');
+    throw createAppError(ErrorCode.UNAUTHORIZED, 'User not authenticated');
   }
   return req.userId;
 }
 
-// Validation middleware
-function validateRequest(schema: z.ZodSchema) {
-  return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
-    try {
-      const validated = schema.parse(req.body);
-      req.body = validated;
-      next();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Validation error',
-          details: error.errors
-        });
-        return;
-      }
-      next(error);
-    }
-  };
-}
+// Using centralized validation middleware from @/infrastructure/middleware/validation
 
 // Validation schemas
 const OnboardingStepSchema = z.enum([
@@ -109,44 +100,61 @@ const MoveToStepSchema = z.object({
  * @description Get current user's onboarding status and progress
  * @access Private
  */
-router.get('/', async (req: AuthRequest, res, next) => {
+router.get('/', async (req: AuthRequest, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
+    requestLogger.info('Fetching onboarding status');
     const userId = getUserIdFromRequest(req);
     const repository = container.resolve<IOnboardingRepository>('IOnboardingRepository');
 
     const result = await repository.getByUserId(UserId.fromString(userId));
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to fetch onboarding status',
-        message: result.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch onboarding status'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
     // If no onboarding record exists, create a new one
     if (!result.value) {
+      requestLogger.info('Creating new onboarding record');
       const newOnboarding = OnboardingEntity.createNew(userId);
       const createResult = await repository.create(newOnboarding);
 
       if (Result.isError(createResult)) {
-        return res.status(500).json({
-          error: 'Failed to create onboarding record',
-          message: createResult.error.message
-        });
+        const { response, status, headers } = handleExpressError(
+          createAppError(ErrorCode.DATABASE_ERROR, 'Failed to create onboarding record'),
+          traceId
+        );
+        Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+        return res.status(status).json(response);
       }
 
-      return res.json({
+      const successResponse = createSuccessResponse({
         data: createResult.value.toJSON(),
         progress: createResult.value.getProgress()
-      });
+      }, traceId);
+      res.setHeader('X-Trace-Id', traceId);
+      requestLogger.info('New onboarding record created successfully');
+      return res.json(successResponse);
     }
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       data: result.value.toJSON(),
       progress: result.value.getProgress()
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Onboarding status fetched successfully');
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 
@@ -156,13 +164,22 @@ router.get('/', async (req: AuthRequest, res, next) => {
  * @access Private
  */
 router.get('/steps', async (req: AuthRequest, res, next) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    return res.json({
+    requestLogger.info('Fetching onboarding steps configuration');
+    const successResponse = createSuccessResponse({
       steps: ONBOARDING_STEPS,
       flow: ONBOARDING_FLOW
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Onboarding steps fetched successfully');
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 
@@ -171,29 +188,40 @@ router.get('/steps', async (req: AuthRequest, res, next) => {
  * @description Complete an onboarding step with optional data
  * @access Private
  */
-router.post('/complete-step', validateRequest(CompleteStepSchema), async (req: AuthRequest, res, next) => {
+router.post('/complete-step', validateBody(CompleteStepSchema), async (req: AuthRequest, res, next) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = getUserIdFromRequest(req);
     const { step, data } = req.body;
 
+    requestLogger.info('Completing onboarding step', { step, userId });
     const repository = container.resolve<IOnboardingRepository>('IOnboardingRepository');
 
     const result = await repository.completeStep(UserId.fromString(userId), step, data);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to complete onboarding step',
-        message: result.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to complete onboarding step'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       data: result.value.toJSON(),
       progress: result.value.getProgress(),
       message: `Step '${step}' completed successfully`
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Onboarding step completed successfully', { step });
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 
@@ -202,18 +230,25 @@ router.post('/complete-step', validateRequest(CompleteStepSchema), async (req: A
  * @description Skip an onboarding step (only allowed for non-required steps)
  * @access Private
  */
-router.post('/skip-step', validateRequest(SkipStepSchema), async (req: AuthRequest, res, next) => {
+router.post('/skip-step', validateBody(SkipStepSchema), async (req: AuthRequest, res, next) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = getUserIdFromRequest(req);
     const { step } = req.body;
 
+    requestLogger.info('Attempting to skip onboarding step', { step, userId });
+
     // Check if step can be skipped
     const stepConfig = ONBOARDING_STEPS[step as OnboardingStep];
     if (stepConfig?.required) {
-      return res.status(400).json({
-        error: 'Cannot skip required step',
-        message: `Step '${step}' is required and cannot be skipped`
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.BAD_REQUEST, `Step '${step}' is required and cannot be skipped`),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
     const repository = container.resolve<IOnboardingRepository>('IOnboardingRepository');
@@ -221,19 +256,26 @@ router.post('/skip-step', validateRequest(SkipStepSchema), async (req: AuthReque
     const result = await repository.skipStep(UserId.fromString(userId), step);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to skip onboarding step',
-        message: result.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to skip onboarding step'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       data: result.value.toJSON(),
       progress: result.value.getProgress(),
       message: `Step '${step}' skipped successfully`
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Onboarding step skipped successfully', { step });
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 
@@ -242,29 +284,40 @@ router.post('/skip-step', validateRequest(SkipStepSchema), async (req: AuthReque
  * @description Move to a specific onboarding step
  * @access Private
  */
-router.post('/move-to-step', validateRequest(MoveToStepSchema), async (req: AuthRequest, res, next) => {
+router.post('/move-to-step', validateBody(MoveToStepSchema), async (req: AuthRequest, res, next) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = getUserIdFromRequest(req);
     const { step } = req.body;
 
+    requestLogger.info('Moving to onboarding step', { step, userId });
     const repository = container.resolve<IOnboardingRepository>('IOnboardingRepository');
 
     const result = await repository.moveToStep(UserId.fromString(userId), step);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to move to onboarding step',
-        message: result.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to move to onboarding step'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       data: result.value.toJSON(),
       progress: result.value.getProgress(),
       message: `Moved to step '${step}' successfully`
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Moved to onboarding step successfully', { step });
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 
@@ -274,26 +327,37 @@ router.post('/move-to-step', validateRequest(MoveToStepSchema), async (req: Auth
  * @access Private
  */
 router.post('/complete', async (req: AuthRequest, res, next) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = getUserIdFromRequest(req);
+    requestLogger.info('Completing onboarding', { userId });
     const repository = container.resolve<IOnboardingRepository>('IOnboardingRepository');
 
     const result = await repository.markCompleted(UserId.fromString(userId));
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to complete onboarding',
-        message: result.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to complete onboarding'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       data: result.value.toJSON(),
       progress: result.value.getProgress(),
       message: 'Onboarding completed successfully'
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Onboarding completed successfully');
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 
@@ -303,8 +367,12 @@ router.post('/complete', async (req: AuthRequest, res, next) => {
  * @access Private
  */
 router.delete('/', async (req: AuthRequest, res, next) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = getUserIdFromRequest(req);
+    requestLogger.info('Resetting onboarding', { userId });
     const repository = container.resolve<IOnboardingRepository>('IOnboardingRepository');
 
     const result = await repository.delete(UserId.fromString(userId));
@@ -312,22 +380,32 @@ router.delete('/', async (req: AuthRequest, res, next) => {
     if (Result.isError(result)) {
       // If onboarding doesn't exist, that's fine
       if (result.error.message.includes('not found')) {
-        return res.json({
+        const successResponse = createSuccessResponse({
           message: 'Onboarding reset successfully'
-        });
+        }, traceId);
+        res.setHeader('X-Trace-Id', traceId);
+        requestLogger.info('Onboarding reset (no existing record)');
+        return res.json(successResponse);
       }
 
-      return res.status(500).json({
-        error: 'Failed to reset onboarding',
-        message: result.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to reset onboarding'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       message: 'Onboarding reset successfully'
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Onboarding reset successfully');
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 
@@ -337,23 +415,30 @@ router.delete('/', async (req: AuthRequest, res, next) => {
  * @access Private
  */
 router.patch('/bulk-update', async (req: AuthRequest, res, next) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = getUserIdFromRequest(req);
     const updates = req.body;
 
+    requestLogger.info('Bulk updating onboarding', { userId, updateFields: Object.keys(updates) });
     const repository = container.resolve<IOnboardingRepository>('IOnboardingRepository');
 
     // Get existing onboarding
     const existingResult = await repository.getByUserId(UserId.fromString(userId));
     if (Result.isError(existingResult)) {
-      return res.status(500).json({
-        error: 'Failed to fetch onboarding',
-        message: existingResult.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch onboarding'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
     let onboarding = existingResult.value;
     if (!onboarding) {
+      requestLogger.info('Creating new onboarding record for bulk update');
       onboarding = OnboardingEntity.createNew(userId);
     }
 
@@ -405,19 +490,26 @@ router.patch('/bulk-update', async (req: AuthRequest, res, next) => {
     const result = await repository.upsert(onboarding);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to update onboarding',
-        message: result.error.message
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to update onboarding'),
+        traceId
+      );
+      Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+      return res.status(status).json(response);
     }
 
-    return res.json({
+    const successResponse = createSuccessResponse({
       data: result.value.toJSON(),
       progress: result.value.getProgress(),
       message: 'Onboarding updated successfully'
-    });
+    }, traceId);
+    res.setHeader('X-Trace-Id', traceId);
+    requestLogger.info('Onboarding bulk update completed successfully');
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+    return res.status(status).json(response);
   }
 });
 

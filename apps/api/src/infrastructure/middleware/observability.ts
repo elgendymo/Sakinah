@@ -2,6 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { StructuredLogger } from '../observability/StructuredLogger';
 import { IMetricsProvider } from '../observability/IMetricsProvider';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId
+} from '@/shared/errors';
 
 const logger = StructuredLogger.getInstance();
 
@@ -95,18 +101,24 @@ export function metricsMiddleware(metrics: IMetricsProvider) {
 }
 
 export function errorLoggingMiddleware(err: Error, req: Request, res: Response, _next: NextFunction): void {
-  console.error('Error caught by middleware:', {
+  const traceId = getExpressTraceId(req);
+
+  logger.error('Error caught by middleware', {
     message: err.message,
     stack: err.stack,
     url: req.url,
     method: req.method,
+    traceId,
     timestamp: new Date().toISOString()
   });
 
   if (!res.headersSent) {
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-    });
+    const appError = createAppError(
+      ErrorCode.SERVER_ERROR,
+      process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    );
+
+    const { response, status } = handleExpressError(appError, traceId);
+    res.status(status).json(response);
   }
 }

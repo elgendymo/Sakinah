@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { StructuredLogger } from '../observability/StructuredLogger';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId
+} from '@/shared/errors';
 
 const logger = StructuredLogger.getInstance();
 
@@ -39,20 +45,27 @@ export class TimeoutHandler {
         if (!res.headersSent) {
           timeoutTriggered = true;
 
+          const traceId = getExpressTraceId(req);
+
           logger.warn('Request timeout', {
             method: req.method,
             url: req.url,
             timeoutMs,
-            correlationId: (req as any).correlationId,
-            requestId: (req as any).requestId
+            traceId
           });
 
-          res.status(408).json({
-            error: message || 'Request Timeout',
-            message: `Request timed out after ${timeoutMs}ms`,
-            timeout: timeoutMs,
-            timestamp: new Date().toISOString()
-          });
+          const timeoutError = createAppError(
+            ErrorCode.TIMEOUT_ERROR,
+            message || 'Request Timeout',
+            undefined,
+            {
+              timeout: timeoutMs,
+              timestamp: new Date().toISOString()
+            }
+          );
+
+          const { response, status } = handleExpressError(timeoutError, traceId);
+          res.status(status).json(response);
         }
       }, timeoutMs);
 

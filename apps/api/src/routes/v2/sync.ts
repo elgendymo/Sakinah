@@ -1,8 +1,15 @@
 import express from 'express';
 import { authMiddleware } from '@/infrastructure/auth/middleware';
 import { validateRequest } from '@/infrastructure/middleware/validation';
-import { logger } from '@/shared/logger';
+import { createRequestLogger } from '@/shared/logger';
 import { z } from 'zod';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse
+} from '@/shared/errors';
 
 const router = express.Router();
 
@@ -163,14 +170,15 @@ router.post('/batch',
   authMiddleware,
   validateRequest(syncBatchSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId);
+
     try {
       const { operations, deviceId, lastSyncTimestamp } = req.body;
       const userId = req.user.id;
-      const requestId = req.headers['x-correlation-id'] || generateCorrelationId();
 
-      logger.info('Starting batch sync', {
+      requestLogger.info('Starting batch sync', {
         userId,
-        requestId,
         operationCount: operations.length,
         deviceId,
         lastSyncTimestamp
@@ -185,7 +193,7 @@ router.post('/batch',
       // Process each operation
       for (const operation of operations) {
         try {
-          const result = await processSyncOperation(userId, operation, requestId);
+          const result = await processSyncOperation(userId, operation, traceId);
 
           if (result.conflict) {
             conflicts.push(result.conflict);
@@ -199,9 +207,8 @@ router.post('/batch',
           results.push(result);
 
         } catch (error) {
-          logger.error('Error processing sync operation', {
+          requestLogger.error('Error processing sync operation', {
             userId,
-            requestId,
             operationId: operation.id,
             error: error instanceof Error ? error.message : 'Unknown error'
           });
@@ -236,28 +243,28 @@ router.post('/batch',
         response.nextSyncToken = generateSyncToken(userId);
       }
 
-      logger.info('Batch sync completed', {
+      requestLogger.info('Batch sync completed', {
         userId,
-        requestId,
         totalProcessed: operations.length,
         successCount,
         conflictCount,
         errorCount
       });
 
-      res.json(response);
+      const successResponse = createSuccessResponse(response, traceId);
+      res.json(successResponse);
 
     } catch (error) {
-      logger.error('Batch sync failed', {
+      requestLogger.error('Batch sync failed', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      res.status(500).json({
-        success: false,
-        error: 'SYNC_FAILED',
-        message: 'Failed to process sync batch'
-      });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to process sync batch'),
+        traceId
+      );
+      res.status(status).json(response);
     }
   }
 );
@@ -306,15 +313,16 @@ router.post('/conflicts/:conflictId/resolve',
   authMiddleware,
   validateRequest(conflictResolutionSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId);
+
     try {
       const { conflictId } = req.params;
-      const { resolution, mergedData } = req.body;
+      const { resolution } = req.body;
       const userId = req.user.id;
-      const requestId = req.headers['x-correlation-id'] || generateCorrelationId();
 
-      logger.info('Resolving sync conflict', {
+      requestLogger.info('Resolving sync conflict', {
         userId,
-        requestId,
         conflictId,
         resolution
       });
@@ -327,26 +335,28 @@ router.post('/conflicts/:conflictId/resolve',
       // 4. Remove the conflict from pending conflicts
 
       // For now, return success placeholder
-      res.json({
-        success: true,
+      const responseData = {
         conflictId,
         resolution,
         resolvedAt: new Date().toISOString(),
         message: 'Conflict resolved successfully'
-      });
+      };
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.json(successResponse);
 
     } catch (error) {
-      logger.error('Conflict resolution failed', {
+      requestLogger.error('Conflict resolution failed', {
         userId: req.user?.id,
         conflictId: req.params.conflictId,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      res.status(500).json({
-        success: false,
-        error: 'CONFLICT_RESOLUTION_FAILED',
-        message: 'Failed to resolve conflict'
-      });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to resolve conflict'),
+        traceId
+      );
+      res.status(status).json(response);
     }
   }
 );
@@ -379,11 +389,13 @@ router.post('/conflicts/:conflictId/resolve',
  *                   enum: [healthy, warning, error]
  */
 router.get('/status', authMiddleware, async (req: any, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const userId = req.user.id;
-    const requestId = req.headers['x-correlation-id'] || generateCorrelationId();
 
-    logger.info('Getting sync status', { userId, requestId });
+    requestLogger.info('Getting sync status', { userId });
 
     // TODO: Implement actual sync status retrieval from database
     // This would typically query:
@@ -399,19 +411,20 @@ router.get('/status', authMiddleware, async (req: any, res): Promise<void> => {
       serverTimestamp: new Date().toISOString()
     };
 
-    res.json(syncStatus);
+    const successResponse = createSuccessResponse(syncStatus, traceId);
+    res.json(successResponse);
 
   } catch (error) {
-    logger.error('Failed to get sync status', {
+    requestLogger.error('Failed to get sync status', {
       userId: req.user?.id,
       error: error instanceof Error ? error.message : 'Unknown error'
     });
 
-    res.status(500).json({
-      success: false,
-      error: 'SYNC_STATUS_FAILED',
-      message: 'Failed to retrieve sync status'
-    });
+    const { response, status } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to retrieve sync status'),
+      traceId
+    );
+    res.status(status).json(response);
   }
 });
 
@@ -421,12 +434,12 @@ router.get('/status', authMiddleware, async (req: any, res): Promise<void> => {
 async function processSyncOperation(
   userId: string,
   operation: SyncOperation,
-  requestId: string
+  traceId: string
 ): Promise<SyncResult> {
+  const requestLogger = createRequestLogger(traceId);
 
-  logger.info('Processing sync operation', {
+  requestLogger.info('Processing sync operation', {
     userId,
-    requestId,
     operationId: operation.id,
     type: operation.type,
     entity: operation.entity
@@ -454,9 +467,8 @@ async function processSyncOperation(
     }
 
   } catch (error) {
-    logger.error('Sync operation processing failed', {
+    requestLogger.error('Sync operation processing failed', {
       userId,
-      requestId,
       operationId: operation.id,
       error: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -568,12 +580,6 @@ async function processCheckinCreate(
   };
 }
 
-/**
- * Generate unique correlation ID
- */
-function generateCorrelationId(): string {
-  return `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
 
 /**
  * Generate sync token for next sync

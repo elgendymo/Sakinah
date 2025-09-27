@@ -19,7 +19,9 @@ export {
   createSuccessResponse,
   handleApiError,
   createAppError,
-  getTraceId
+  getTraceId,
+  handleExpressError,
+  getExpressTraceId
 } from './errorResponse';
 
 export {

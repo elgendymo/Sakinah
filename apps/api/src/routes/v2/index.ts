@@ -1,4 +1,5 @@
 import express from 'express';
+import { correlationIdMiddleware, requestLoggingMiddleware } from '@/infrastructure/middleware/observability';
 import habitsCqrsRoutes from './habits-cqrs';
 import checkinsRoutes from './checkins';
 import contentRoutes from './content';
@@ -12,6 +13,10 @@ import aiRoutes from './ai';
 import plansRoutes from './plans';
 
 const router = express.Router();
+
+// Apply observability middleware for V2 routes
+router.use(correlationIdMiddleware);
+router.use(requestLoggingMiddleware);
 
 // Mount v2 routes
 router.use('/habits', habitsCqrsRoutes);

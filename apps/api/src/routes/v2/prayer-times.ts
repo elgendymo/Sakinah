@@ -5,8 +5,15 @@ import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
 import { validateRequest } from '@/infrastructure/middleware/validation';
 import { GetPrayerTimesUseCase } from '@/application/usecases/GetPrayerTimesUseCase';
 import { GetPrayerTimesRangeUseCase } from '@/application/usecases/GetPrayerTimesRangeUseCase';
-import { CalculationMethod } from '@/domain/value-objects/CalculationMethod';
 import { Result } from '@/shared/result';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 
 const router = express.Router();
 
@@ -185,6 +192,10 @@ router.get('/',
   authMiddleware,
   validateRequest(getPrayerTimesSchema),
   async (req: AuthRequest, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId!;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
       const {
         latitude,
@@ -194,7 +205,13 @@ router.get('/',
         timezone
       } = req.query as any;
 
-      const userId = req.userId!;
+      requestLogger.info('Fetching prayer times', {
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        calculationMethod,
+        timezone,
+        hasDate: !!date
+      });
 
       const getPrayerTimesUseCase = container.resolve(GetPrayerTimesUseCase);
 
@@ -208,25 +225,49 @@ router.get('/',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'PRAYER_TIMES_CALCULATION_FAILED',
-          message: result.error.message
+        requestLogger.warn('Prayer times calculation failed', {
+          error: result.error.message,
+          calculationMethod,
+          coordinates: `${latitude},${longitude}`
         });
+
+        const errorResponse = handleExpressError(
+          createAppError(ErrorCode.BAD_REQUEST, result.error.message),
+          traceId,
+          'Failed to calculate prayer times'
+        );
+
+        res.status(errorResponse.status)
+          .set(errorResponse.headers)
+          .json(errorResponse.response);
         return;
       }
 
-      res.json({
-        data: {
-          prayerTimes: result.value.prayerTimes.toDTO(),
-          qiblaDirection: Math.round(result.value.qiblaDirection * 100) / 100
-        }
+      const responseData = {
+        prayerTimes: result.value.prayerTimes.toDTO(),
+        qiblaDirection: Math.round(result.value.qiblaDirection * 100) / 100
+      };
+
+      requestLogger.info('Prayer times calculated successfully', {
+        calculationMethod,
+        qiblaDirection: responseData.qiblaDirection
       });
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
+
     } catch (error) {
-      console.error('Error getting prayer times:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to get prayer times'
-      });
+      requestLogger.error('Unexpected error getting prayer times', { error: (error as Error).message }, error as Error);
+
+      const errorResponse = handleExpressError(
+        error,
+        traceId,
+        'Failed to get prayer times'
+      );
+
+      res.status(errorResponse.status)
+        .set(errorResponse.headers)
+        .json(errorResponse.response);
     }
   }
 );
@@ -317,6 +358,10 @@ router.get('/range',
   authMiddleware,
   validateRequest(getPrayerTimesRangeSchema),
   async (req: AuthRequest, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId!;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
       const {
         latitude,
@@ -327,7 +372,19 @@ router.get('/range',
         timezone
       } = req.query as any;
 
-      const userId = req.userId!;
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      const daysDiff = Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
+
+      requestLogger.info('Fetching prayer times range', {
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        startDate,
+        endDate,
+        dayCount: daysDiff,
+        calculationMethod,
+        timezone
+      });
 
       const getPrayerTimesRangeUseCase = container.resolve(GetPrayerTimesRangeUseCase);
 
@@ -335,33 +392,59 @@ router.get('/range',
         userId,
         latitude: Number(latitude),
         longitude: Number(longitude),
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: startDateObj,
+        endDate: endDateObj,
         calculationMethod,
         timezone
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'PRAYER_TIMES_RANGE_FAILED',
-          message: result.error.message
+        requestLogger.warn('Prayer times range calculation failed', {
+          error: result.error.message,
+          calculationMethod,
+          coordinates: `${latitude},${longitude}`,
+          dateRange: `${startDate} to ${endDate}`
         });
+
+        const errorResponse = handleExpressError(
+          createAppError(ErrorCode.BAD_REQUEST, result.error.message),
+          traceId,
+          'Failed to calculate prayer times range'
+        );
+
+        res.status(errorResponse.status)
+          .set(errorResponse.headers)
+          .json(errorResponse.response);
         return;
       }
 
-      res.json({
-        data: {
-          prayerTimesList: result.value.prayerTimesList.map(pt => pt.toDTO()),
-          qiblaDirection: Math.round(result.value.qiblaDirection * 100) / 100,
-          totalDays: result.value.totalDays
-        }
+      const responseData = {
+        prayerTimesList: result.value.prayerTimesList.map(pt => pt.toDTO()),
+        qiblaDirection: Math.round(result.value.qiblaDirection * 100) / 100,
+        totalDays: result.value.totalDays
+      };
+
+      requestLogger.info('Prayer times range calculated successfully', {
+        calculationMethod,
+        qiblaDirection: responseData.qiblaDirection,
+        totalDays: responseData.totalDays
       });
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
+
     } catch (error) {
-      console.error('Error getting prayer times range:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to get prayer times range'
-      });
+      requestLogger.error('Unexpected error getting prayer times range', { error: (error as Error).message }, error as Error);
+
+      const errorResponse = handleExpressError(
+        error,
+        traceId,
+        'Failed to get prayer times range'
+      );
+
+      res.status(errorResponse.status)
+        .set(errorResponse.headers)
+        .json(errorResponse.response);
     }
   }
 );
@@ -414,7 +497,12 @@ router.get('/range',
  *                     region: "Saudi Arabia"
  */
 router.get('/methods', async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
+    requestLogger.info('Fetching available prayer time calculation methods');
+
     const methods = [
       {
         id: 'MuslimWorldLeague',
@@ -490,17 +578,29 @@ router.get('/methods', async (req, res): Promise<void> => {
       }
     ];
 
-    res.json({
-      data: {
-        methods
-      }
+    const responseData = {
+      methods
+    };
+
+    requestLogger.info('Prayer time calculation methods retrieved successfully', {
+      methodCount: methods.length
     });
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.set('X-Trace-Id', traceId).json(successResponse);
+
   } catch (error) {
-    console.error('Error getting calculation methods:', error);
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to get calculation methods'
-    });
+    requestLogger.error('Unexpected error getting calculation methods', { error: (error as Error).message }, error as Error);
+
+    const errorResponse = handleExpressError(
+      error,
+      traceId,
+      'Failed to get calculation methods'
+    );
+
+    res.status(errorResponse.status)
+      .set(errorResponse.headers)
+      .json(errorResponse.response);
   }
 });
 

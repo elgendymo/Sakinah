@@ -1,11 +1,47 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { container } from 'tsyringe';
 import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
+import { validateBody, validateQuery } from '@/infrastructure/middleware/validation';
 import { ManageJournalUseCase } from '@/application/usecases/ManageJournalUseCase';
-import { logger } from '../../shared/logger';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 import { Result } from '@/shared/result';
 
 const router = Router();
+
+// Validation schemas
+const getJournalEntriesQuerySchema = z.object({
+  search: z.string().optional(),
+  tags: z.string().optional(),
+  page: z.string().optional().default('1'),
+  limit: z.string().optional().default('20'),
+  sortBy: z.enum(['createdAt', 'content']).optional().default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc')
+});
+
+const createJournalEntryBodySchema = z.object({
+  content: z.string().min(1, 'Content cannot be empty').max(5000, 'Content must be 5000 characters or less'),
+  tags: z.array(z.string().max(50, 'Each tag must be 50 characters or less')).max(10, 'Maximum 10 tags allowed').optional()
+});
+
+const updateJournalEntryBodySchema = z.object({
+  content: z.string().min(1, 'Content cannot be empty').max(5000, 'Content must be 5000 characters or less').optional(),
+  tags: z.array(z.string().max(50, 'Each tag must be 50 characters or less')).max(10, 'Maximum 10 tags allowed').optional()
+});
+
+const searchJournalEntriesQuerySchema = z.object({
+  q: z.string().min(1, 'Search query cannot be empty'),
+  tags: z.string().optional(),
+  page: z.string().optional().default('1'),
+  limit: z.string().optional().default('20')
+});
 
 /**
  * @api {get} /api/v1/journal Get user journal entries with search and filtering
@@ -19,40 +55,36 @@ const router = Router();
  * @apiParam {String} [sortBy=createdAt] Sort field (createdAt, content)
  * @apiParam {String} [sortOrder=desc] Sort order (asc, desc)
  */
-router.get('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+router.get('/', authMiddleware, validateQuery(getJournalEntriesQuerySchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const {
       search,
       tags,
-      page = '1',
-      limit = '20',
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
+      page,
+      limit,
+      sortBy,
+      sortOrder
+    } = req.query as z.infer<typeof getJournalEntriesQuerySchema>;
 
     // Validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
     const offset = (pageNum - 1) * limitNum;
 
-    // Validate sort parameters
-    const validSortFields = ['createdAt', 'content'];
-    const validSortOrders = ['asc', 'desc'];
-    const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
-    const sortDirection = validSortOrders.includes(sortOrder as string) ? sortOrder as string : 'desc';
-
     const useCase = container.resolve(ManageJournalUseCase);
-    const result = await useCase.getUserEntries(userId, search as string);
+    const result = await useCase.getUserEntries(userId, search);
 
     if (Result.isError(result)) {
-      logger.error('Error fetching journal entries v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch journal entries'
-        }
-      });
+      requestLogger.error('Error fetching journal entries v1', { error: result.error, traceId });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to fetch journal entries'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
@@ -60,7 +92,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => 
 
     // Apply tag filtering if specified
     if (tags) {
-      const tagList = (tags as string).split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean);
+      const tagList = tags.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean);
       if (tagList.length > 0) {
         entries = entries.filter(entry =>
           tagList.some(tag => entry.tags.includes(tag))
@@ -72,7 +104,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => 
     entries.sort((a, b) => {
       let aVal: any, bVal: any;
 
-      switch (sortField) {
+      switch (sortBy) {
         case 'content':
           aVal = a.content.toLowerCase();
           bVal = b.content.toLowerCase();
@@ -84,7 +116,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => 
           break;
       }
 
-      if (sortDirection === 'asc') {
+      if (sortOrder === 'asc') {
         return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       } else {
         return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
@@ -99,7 +131,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => 
     // Transform to DTOs
     const entriesDTO = paginatedEntries.map(entry => entry.toDTO());
 
-    res.json({
+    const responseData = {
       entries: entriesDTO,
       pagination: {
         page: pageNum,
@@ -111,20 +143,19 @@ router.get('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => 
       },
       filters: {
         search: search || null,
-        tags: tags ? (tags as string).split(',').map(t => t.trim()).filter(Boolean) : null,
-        sortBy: sortField,
-        sortOrder: sortDirection
+        tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : null,
+        sortBy,
+        sortOrder
       }
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
 
   } catch (error) {
-    logger.error('Unexpected error in get journal entries v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred'
-      }
-    });
+    requestLogger.error('Unexpected error in get journal entries v1', { error, traceId });
+    const { response, status } = handleExpressError(error, traceId);
+    res.status(status).json(response);
   }
 });
 
@@ -136,6 +167,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => 
  * @apiParam {String} id Journal entry ID
  */
 router.get('/:id', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -144,49 +178,45 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res): Promise<void> 
     const result = await useCase.getEntry(id);
 
     if (Result.isError(result)) {
-      logger.error('Error fetching journal entry v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch journal entry'
-        }
-      });
+      requestLogger.error('Error fetching journal entry v1', { error: result.error, traceId });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to fetch journal entry'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
     if (!result.value) {
-      res.status(404).json({
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Journal entry not found'
-        }
-      });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.NOT_FOUND, 'Journal entry not found'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
     // Check ownership
     if (result.value.userId.toString() !== userId) {
-      res.status(403).json({
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Access denied to this journal entry'
-        }
-      });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'Access denied to this journal entry'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
-    res.json({
+    const responseData = {
       entry: result.value.toDTO()
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
 
   } catch (error) {
-    logger.error('Unexpected error in get journal entry v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred'
-      }
-    });
+    requestLogger.error('Unexpected error in get journal entry v1', { error, traceId });
+    const { response, status } = handleExpressError(error, traceId);
+    res.status(status).json(response);
   }
 });
 
@@ -198,77 +228,13 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res): Promise<void> 
  * @apiParam {String} content Entry content (required, max 5000 characters)
  * @apiParam {String[]} [tags] Array of tags (max 10 tags, each max 50 characters)
  */
-router.post('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+router.post('/', authMiddleware, validateBody(createJournalEntryBodySchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
-    const { content, tags } = req.body;
-
-    // Validation
-    if (!content || typeof content !== 'string') {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Content is required and must be a string',
-          field: 'content'
-        }
-      });
-      return;
-    }
-
-    if (content.trim().length === 0) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Content cannot be empty',
-          field: 'content'
-        }
-      });
-      return;
-    }
-
-    if (content.length > 5000) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Content must be 5000 characters or less',
-          field: 'content'
-        }
-      });
-      return;
-    }
-
-    if (tags && !Array.isArray(tags)) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Tags must be an array',
-          field: 'tags'
-        }
-      });
-      return;
-    }
-
-    if (tags && tags.length > 10) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Maximum 10 tags allowed',
-          field: 'tags'
-        }
-      });
-      return;
-    }
-
-    if (tags && tags.some((tag: any) => typeof tag !== 'string' || tag.length > 50)) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Each tag must be a string of 50 characters or less',
-          field: 'tags'
-        }
-      });
-      return;
-    }
+    const { content, tags } = req.body as z.infer<typeof createJournalEntryBodySchema>;
 
     const useCase = container.resolve(ManageJournalUseCase);
     const result = await useCase.createEntry({
@@ -278,40 +244,36 @@ router.post('/', authMiddleware, async (req: AuthRequest, res): Promise<void> =>
     });
 
     if (Result.isError(result)) {
-      logger.error('Error creating journal entry v1', result.error);
+      requestLogger.error('Error creating journal entry v1', { error: result.error, traceId });
 
       if (result.error.message.includes('cannot be empty')) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: result.error.message,
-            field: 'content'
-          }
-        });
+        const { response, status } = handleExpressError(
+          createAppError(ErrorCode.VALIDATION_ERROR, result.error.message),
+          traceId
+        );
+        res.status(status).json(response);
         return;
       }
 
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to create journal entry'
-        }
-      });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to create journal entry'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
-    res.status(201).json({
+    const responseData = {
       entry: result.value.toDTO()
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.status(201).json(successResponse);
 
   } catch (error) {
-    logger.error('Unexpected error in create journal entry v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred'
-      }
-    });
+    requestLogger.error('Unexpected error in create journal entry v1', { error, traceId });
+    const { response, status } = handleExpressError(error, traceId);
+    res.status(status).json(response);
   }
 });
 
@@ -324,82 +286,14 @@ router.post('/', authMiddleware, async (req: AuthRequest, res): Promise<void> =>
  * @apiParam {String} [content] Updated content (max 5000 characters)
  * @apiParam {String[]} [tags] Updated tags array (max 10 tags, each max 50 characters)
  */
-router.put('/:id', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+router.put('/:id', authMiddleware, validateBody(updateJournalEntryBodySchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { content, tags } = req.body;
-
-    // Validation
-    if (content !== undefined) {
-      if (typeof content !== 'string') {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Content must be a string',
-            field: 'content'
-          }
-        });
-        return;
-      }
-
-      if (content.trim().length === 0) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Content cannot be empty',
-            field: 'content'
-          }
-        });
-        return;
-      }
-
-      if (content.length > 5000) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Content must be 5000 characters or less',
-            field: 'content'
-          }
-        });
-        return;
-      }
-    }
-
-    if (tags !== undefined) {
-      if (!Array.isArray(tags)) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Tags must be an array',
-            field: 'tags'
-          }
-        });
-        return;
-      }
-
-      if (tags.length > 10) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Maximum 10 tags allowed',
-            field: 'tags'
-          }
-        });
-        return;
-      }
-
-      if (tags.some((tag: any) => typeof tag !== 'string' || tag.length > 50)) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Each tag must be a string of 50 characters or less',
-            field: 'tags'
-          }
-        });
-        return;
-      }
-    }
+    const { content, tags } = req.body as z.infer<typeof updateJournalEntryBodySchema>;
 
     const useCase = container.resolve(ManageJournalUseCase);
     const result = await useCase.updateEntry({
@@ -410,60 +304,54 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res): Promise<void> 
     });
 
     if (Result.isError(result)) {
-      logger.error('Error updating journal entry v1', result.error);
+      requestLogger.error('Error updating journal entry v1', { error: result.error, traceId });
 
       if (result.error.message.includes('not found')) {
-        res.status(404).json({
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Journal entry not found'
-          }
-        });
+        const { response, status } = handleExpressError(
+          createAppError(ErrorCode.NOT_FOUND, 'Journal entry not found'),
+          traceId
+        );
+        res.status(status).json(response);
         return;
       }
 
       if (result.error.message.includes('Unauthorized')) {
-        res.status(403).json({
-          error: {
-            code: 'FORBIDDEN',
-            message: 'Access denied to this journal entry'
-          }
-        });
+        const { response, status } = handleExpressError(
+          createAppError(ErrorCode.UNAUTHORIZED, 'Access denied to this journal entry'),
+          traceId
+        );
+        res.status(status).json(response);
         return;
       }
 
       if (result.error.message.includes('cannot be empty')) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: result.error.message,
-            field: 'content'
-          }
-        });
+        const { response, status } = handleExpressError(
+          createAppError(ErrorCode.VALIDATION_ERROR, result.error.message),
+          traceId
+        );
+        res.status(status).json(response);
         return;
       }
 
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to update journal entry'
-        }
-      });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to update journal entry'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
-    res.json({
+    const responseData = {
       entry: result.value.toDTO()
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
 
   } catch (error) {
-    logger.error('Unexpected error in update journal entry v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred'
-      }
-    });
+    requestLogger.error('Unexpected error in update journal entry v1', { error, traceId });
+    const { response, status } = handleExpressError(error, traceId);
+    res.status(status).json(response);
   }
 });
 
@@ -475,6 +363,9 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res): Promise<void> 
  * @apiParam {String} id Journal entry ID
  */
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -483,47 +374,40 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res): Promise<voi
     const result = await useCase.deleteEntry(id, userId);
 
     if (Result.isError(result)) {
-      logger.error('Error deleting journal entry v1', result.error);
+      requestLogger.error('Error deleting journal entry v1', { error: result.error, traceId });
 
       if (result.error.message.includes('not found')) {
-        res.status(404).json({
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Journal entry not found'
-          }
-        });
+        const { response, status } = handleExpressError(
+          createAppError(ErrorCode.NOT_FOUND, 'Journal entry not found'),
+          traceId
+        );
+        res.status(status).json(response);
         return;
       }
 
       if (result.error.message.includes('Unauthorized')) {
-        res.status(403).json({
-          error: {
-            code: 'FORBIDDEN',
-            message: 'Access denied to this journal entry'
-          }
-        });
+        const { response, status } = handleExpressError(
+          createAppError(ErrorCode.UNAUTHORIZED, 'Access denied to this journal entry'),
+          traceId
+        );
+        res.status(status).json(response);
         return;
       }
 
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to delete journal entry'
-        }
-      });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to delete journal entry'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
     res.status(204).send();
 
   } catch (error) {
-    logger.error('Unexpected error in delete journal entry v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred'
-      }
-    });
+    requestLogger.error('Unexpected error in delete journal entry v1', { error, traceId });
+    const { response, status } = handleExpressError(error, traceId);
+    res.status(status).json(response);
   }
 });
 
@@ -537,55 +421,36 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res): Promise<voi
  * @apiParam {Number} [page=1] Page number for pagination
  * @apiParam {Number} [limit=20] Number of entries per page (max 50)
  */
-router.get('/search', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+router.get('/search', authMiddleware, validateQuery(searchJournalEntriesQuerySchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const {
       q: query,
       tags,
-      page = '1',
-      limit = '20'
-    } = req.query;
-
-    if (!query || typeof query !== 'string') {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Search query (q) is required',
-          field: 'q'
-        }
-      });
-      return;
-    }
+      page,
+      limit
+    } = req.query as z.infer<typeof searchJournalEntriesQuerySchema>;
 
     const searchTerm = query.trim();
-    if (searchTerm.length === 0) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Search query cannot be empty',
-          field: 'q'
-        }
-      });
-      return;
-    }
 
     // Validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
-    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 20));
     const offset = (pageNum - 1) * limitNum;
 
     const useCase = container.resolve(ManageJournalUseCase);
     const result = await useCase.getUserEntries(userId, searchTerm);
 
     if (Result.isError(result)) {
-      logger.error('Error searching journal entries v1', result.error);
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to search journal entries'
-        }
-      });
+      requestLogger.error('Error searching journal entries v1', { error: result.error, traceId });
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to search journal entries'),
+        traceId
+      );
+      res.status(status).json(response);
       return;
     }
 
@@ -593,7 +458,7 @@ router.get('/search', authMiddleware, async (req: AuthRequest, res): Promise<voi
 
     // Apply tag filtering if specified
     if (tags) {
-      const tagList = (tags as string).split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean);
+      const tagList = tags.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean);
       if (tagList.length > 0) {
         entries = entries.filter(entry =>
           tagList.some(tag => entry.tags.includes(tag))
@@ -621,7 +486,7 @@ router.get('/search', authMiddleware, async (req: AuthRequest, res): Promise<voi
     // Transform to DTOs
     const entriesDTO = paginatedEntries.map(entry => entry.toDTO());
 
-    res.json({
+    const responseData = {
       entries: entriesDTO,
       pagination: {
         page: pageNum,
@@ -633,18 +498,17 @@ router.get('/search', authMiddleware, async (req: AuthRequest, res): Promise<voi
       },
       search: {
         query: searchTerm,
-        tags: tags ? (tags as string).split(',').map(t => t.trim()).filter(Boolean) : null
+        tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : null
       }
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
 
   } catch (error) {
-    logger.error('Unexpected error in search journal entries v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred'
-      }
-    });
+    requestLogger.error('Unexpected error in search journal entries v1', { error, traceId });
+    const { response, status } = handleExpressError(error, traceId);
+    res.status(status).json(response);
   }
 });
 

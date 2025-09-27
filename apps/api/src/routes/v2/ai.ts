@@ -1,7 +1,15 @@
 import { Router } from 'express';
 import { container } from 'tsyringe';
 import { authMiddleware } from '@/infrastructure/auth/middleware';
-import { logger } from '../../shared/logger';
+import { validateBody } from '@/infrastructure/middleware/validation';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 import { SuggestPlanUseCase } from '@/application/usecases/SuggestPlanUseCase';
 import { Result } from '@/shared/result';
 import { ValidationError } from '@/shared/errors';
@@ -30,6 +38,14 @@ const SuggestPlanSchema = z.object({
 const ExplainSchema = z.object({
   struggle: z.string().min(1, 'Struggle description is required'),
   context: z.string().optional()
+});
+
+const AnalyzeProgressSchema = z.object({
+  planId: z.string().min(1, 'Plan ID is required'),
+  completedHabits: z.array(z.string()).optional().default([]),
+  challenges: z.array(z.string()).optional().default([]),
+  reflections: z.string().optional().default(''),
+  timeframe: z.enum(['7d', '30d', '90d', '1y']).optional().default('30d')
 });
 
 /**
@@ -114,23 +130,13 @@ const ExplainSchema = z.object({
  *       500:
  *         description: Internal server error
  */
-router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => {
+router.post('/suggest-plan', authMiddleware, validateBody(SuggestPlanSchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
-    const parseResult = SuggestPlanSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request data',
-          details: parseResult.error.errors
-        }
-      });
-      return;
-    }
-
-    const { mode, input, context = {} } = parseResult.data;
+    const { mode, input, context = {} } = req.body;
 
     // Enhanced request structure for v2 API
     const suggestPlanRequest = {
@@ -152,32 +158,30 @@ router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => 
     const result = await useCase.execute(suggestPlanRequest);
 
     if (Result.isError(result)) {
-      logger.error('Error suggesting plan v2', result.error);
+      requestLogger.error('Error suggesting plan v2', { error: result.error, mode, input });
 
       // Handle specific error types
       if (result.error instanceof ValidationError) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: result.error.message
-          }
-        });
+        const { response, status, headers } = handleExpressError(
+          createAppError(ErrorCode.VALIDATION_ERROR, result.error.message),
+          traceId
+        );
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to generate plan suggestion'
-        }
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to generate plan suggestion'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
       return;
     }
 
     const suggestedPlan = result.value.toDTO();
 
     // V2 response format - cleaner structure, no wrapping 'suggestion' object
-    res.json({
+    const responseData = {
       plan: suggestedPlan,
       confidence: 0.85, // AI confidence score
       reasoning: {
@@ -202,15 +206,18 @@ router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => 
         version: '2.0',
         aiProvider: process.env.AI_PROVIDER || 'rules'
       }
-    });
+    };
+
+    requestLogger.info('Plan suggestion generated successfully', { mode: req.body.mode, planHabitsCount: suggestedPlan.microHabits.length });
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error in suggest-plan v2', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to generate plan suggestion'
-      }
-    });
+    requestLogger.error('Error in suggest-plan v2', { error: error instanceof Error ? error.message : String(error), mode: req.body.mode, input: req.body.input }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to generate plan suggestion'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -248,22 +255,12 @@ router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => 
  *       500:
  *         description: Internal server error
  */
-router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
+router.post('/explain', authMiddleware, validateBody(ExplainSchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
-    const parseResult = ExplainSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request data',
-          details: parseResult.error.errors
-        }
-      });
-      return;
-    }
-
-    const { struggle, context = '' } = parseResult.data;
+    const { struggle, context = '' } = req.body;
 
     // Import AI provider dynamically to avoid circular dependencies
     const { getAIProvider } = await import('@/infrastructure/ai/factory');
@@ -272,7 +269,7 @@ router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
     const response = await ai.explain(struggle);
 
     // V2 response format - cleaner structure
-    res.json({
+    const responseData = {
       concept: struggle,
       guidance: (response as any).explanation || (response as any).guidance || 'Islamic guidance provided',
       verses: (response as any).verses || [],
@@ -286,15 +283,18 @@ router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
         aiProvider: process.env.AI_PROVIDER || 'rules',
         contextUsed: !!context
       }
-    });
+    };
+
+    requestLogger.info('Explanation provided successfully', { concept: struggle, hasContext: !!context });
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error in explain v2', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to provide explanation'
-      }
-    });
+    requestLogger.error('Error in explain v2', { error: error instanceof Error ? error.message : String(error), concept: req.body.struggle }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to provide explanation'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -343,27 +343,18 @@ router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
  *       500:
  *         description: Internal server error
  */
-router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const userId = (req as any).userId;
-    const {
-      planId,
-      completedHabits = [],
-      challenges = [],
-      reflections = '',
-      timeframe = '30d'
-    } = req.body;
+router.post('/analyze-progress', authMiddleware, validateBody(AnalyzeProgressSchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
 
-    // Validation
-    if (!planId) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Plan ID is required for progress analysis'
-        }
-      });
-      return;
-    }
+  try {
+      const {
+          planId,
+      completedHabits,
+      challenges,
+      reflections,
+      timeframe
+    } = req.body;
 
     // TODO: Implement progress analysis logic
     // This would involve:
@@ -397,7 +388,7 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
     };
 
     // V2 response format
-    res.json({
+    const responseData = {
       analysis,
       metadata: {
         analyzedAt: new Date().toISOString(),
@@ -405,15 +396,18 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
         dataPoints: completedHabits.length + challenges.length,
         version: '2.0'
       }
-    });
+    };
+
+    requestLogger.info('Progress analysis completed successfully', { planId, timeframe, dataPoints: completedHabits.length + challenges.length });
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error in analyze-progress v2', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to analyze progress'
-      }
-    });
+    requestLogger.error('Error in analyze-progress v2', { error: error instanceof Error ? error.message : String(error), planId: req.body.planId, timeframe: req.body.timeframe }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to analyze progress'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -435,6 +429,9 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
  *         description: Internal server error
  */
 router.get('/capabilities', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const capabilities = {
       features: {
@@ -475,21 +472,24 @@ router.get('/capabilities', authMiddleware, async (req, res): Promise<void> => {
     };
 
     // V2 response format
-    res.json({
+    const responseData = {
       capabilities,
       metadata: {
         retrievedAt: new Date().toISOString(),
         version: '2.0'
       }
-    });
+    };
+
+    requestLogger.info('AI capabilities retrieved successfully');
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error fetching AI capabilities v2', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch AI capabilities'
-      }
-    });
+    requestLogger.error('Error fetching AI capabilities v2', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to fetch AI capabilities'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 

@@ -3,6 +3,9 @@ import { container } from 'tsyringe';
 import { ICacheService } from '@/domain/services/ICacheService';
 import { CqrsModule } from '@/infrastructure/cqrs/CqrsModule';
 import { authMiddleware } from '@/infrastructure/auth/middleware';
+import { createAppError, handleExpressError, getExpressTraceId, createSuccessResponse } from '@/shared/errors/errorResponse';
+import { ErrorCode } from '@/shared/errors/errorCodes';
+import { createRequestLogger } from '@/shared/errors';
 
 const router = Router();
 
@@ -66,8 +69,13 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/stats', authMiddleware, async (_req, res) => {
+router.get('/stats', authMiddleware, async (_req, res): Promise<void> => {
+  const traceId = getExpressTraceId(_req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
+    requestLogger.info('Getting cache stats');
+
     const cacheService = container.resolve<ICacheService>('ICacheService');
     const cacheStats = await cacheService.getStats();
     const queryStats = await CqrsModule.getCacheStats();
@@ -76,23 +84,29 @@ router.get('/stats', authMiddleware, async (_req, res) => {
     const totalRequests = cacheStats.hits + cacheStats.misses;
     const hitRate = totalRequests > 0 ? (cacheStats.hits / totalRequests) * 100 : 0;
 
-    res.json({
-      success: true,
-      data: {
-        cache: {
-          ...cacheStats,
-          hitRate: Math.round(hitRate * 100) / 100
-        },
-        queries: queryStats,
-        timestamp: new Date().toISOString()
-      }
+    requestLogger.info('Cache stats retrieved successfully', {
+      cacheHits: cacheStats.hits,
+      cacheMisses: cacheStats.misses,
+      hitRate: Math.round(hitRate * 100) / 100
     });
+
+    const successResponse = createSuccessResponse({
+      cache: {
+        ...cacheStats,
+        hitRate: Math.round(hitRate * 100) / 100
+      },
+      queries: queryStats,
+      timestamp: new Date().toISOString()
+    }, traceId);
+
+    res.json(successResponse);
   } catch (error) {
-    console.error('Error getting cache stats:', error);
-    res.status(500).json({
-      error: 'CACHE_STATS_ERROR',
-      message: 'Failed to retrieve cache statistics'
-    });
+    requestLogger.error('Error getting cache stats', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to retrieve cache statistics'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -162,14 +176,24 @@ router.get('/stats', authMiddleware, async (_req, res) => {
  *         description: Internal server error
  */
 router.post('/invalidate', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const { pattern, userId, clearAll } = req.body;
 
+    requestLogger.info('Cache invalidation requested', {
+      hasPattern: !!pattern,
+      hasUserId: !!userId,
+      clearAll: !!clearAll
+    });
+
     if (!pattern && !userId && !clearAll) {
-      res.status(400).json({
-        error: 'INVALID_REQUEST',
-        message: 'Must specify pattern, userId, or clearAll'
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.BAD_REQUEST, 'Must specify pattern, userId, or clearAll'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
       return;
     }
 
@@ -184,17 +208,26 @@ router.post('/invalidate', authMiddleware, async (req, res): Promise<void> => {
       deletedCount = await CqrsModule.invalidateCache(pattern);
     }
 
-    res.json({
-      success: true,
+    requestLogger.info('Cache invalidated successfully', { deletedCount });
+
+    const successResponse = createSuccessResponse({
       deleted: deletedCount,
       message: 'Cache invalidated successfully'
-    });
+    }, traceId);
+
+    res.json(successResponse);
   } catch (error) {
-    console.error('Error invalidating cache:', error);
-    res.status(500).json({
-      error: 'CACHE_INVALIDATION_ERROR',
-      message: 'Failed to invalidate cache'
-    });
+    requestLogger.error('Error invalidating cache', {
+      error: error instanceof Error ? error.message : String(error),
+      pattern: req.body?.pattern,
+      userId: req.body?.userId,
+      clearAll: req.body?.clearAll
+    }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to invalidate cache'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -238,8 +271,13 @@ router.post('/invalidate', authMiddleware, async (req, res): Promise<void> => {
  *       503:
  *         description: Cache service is unhealthy
  */
-router.get('/health', async (_req, res) => {
+router.get('/health', async (_req, res): Promise<void> => {
+  const traceId = getExpressTraceId(_req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
+    requestLogger.info('Cache health check started');
+
     const cacheService = container.resolve<ICacheService>('ICacheService');
     const stats = await cacheService.getStats();
 
@@ -255,10 +293,7 @@ router.get('/health', async (_req, res) => {
                      setResult &&
                      getResult === testValue;
 
-    const statusCode = isHealthy ? 200 : 503;
-
-    res.status(statusCode).json({
-      success: isHealthy,
+    const responseData = {
       status: isHealthy ? 'healthy' : 'unhealthy',
       connection: {
         redis: stats.connectionStatus,
@@ -270,14 +305,44 @@ router.get('/health', async (_req, res) => {
         keys: stats.keys
       },
       timestamp: new Date().toISOString()
+    };
+
+    requestLogger.info('Cache health check completed', {
+      status: responseData.status,
+      connectionStatus: stats.connectionStatus,
+      pingSuccessful: setResult && getResult === testValue
     });
+
+    if (isHealthy) {
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.status(200).json(successResponse);
+    } else {
+      requestLogger.warn('Cache service is unhealthy');
+      const { response, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Cache service is unhealthy'),
+        traceId
+      );
+      // Override with health-specific response but keep error structure
+      res.status(503).set(headers).json({
+        ...response,
+        data: responseData
+      });
+    }
   } catch (error) {
-    console.error('Cache health check error:', error);
-    res.status(503).json({
-      success: false,
-      status: 'unhealthy',
-      error: error.message,
-      timestamp: new Date().toISOString()
+    requestLogger.error('Cache health check error', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const { response, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Cache health check failed'),
+      traceId
+    );
+    // Override with health-specific response but keep error structure
+    res.status(503).set(headers).json({
+      ...response,
+      data: {
+        status: 'unhealthy',
+        error: errorMessage,
+        timestamp: new Date().toISOString()
+      }
     });
   }
 });
@@ -330,9 +395,14 @@ router.get('/health', async (_req, res) => {
  *                   type: string
  *                   example: "query:*"
  */
-router.get('/keys', authMiddleware, async (req, res) => {
+router.get('/keys', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const { pattern = '*' } = req.query;
+
+    requestLogger.info('Listing cache keys', { pattern });
 
     const cacheService = container.resolve<ICacheService>('ICacheService');
 
@@ -340,19 +410,29 @@ router.get('/keys', authMiddleware, async (req, res) => {
     // For now, return cache stats instead
     const stats = await cacheService.getStats();
 
-    res.json({
-      success: true,
+    requestLogger.info('Cache keys listing completed', {
+      totalKeys: stats.keys,
+      pattern: pattern as string
+    });
+
+    const successResponse = createSuccessResponse({
       keys: [], // Placeholder - would contain actual keys
       count: stats.keys,
       pattern: pattern as string,
       note: 'Key listing not fully implemented - use cache stats instead'
-    });
+    }, traceId);
+
+    res.json(successResponse);
   } catch (error) {
-    console.error('Error listing cache keys:', error);
-    res.status(500).json({
-      error: 'CACHE_KEYS_ERROR',
-      message: 'Failed to list cache keys'
-    });
+    requestLogger.error('Error listing cache keys', {
+      error: error instanceof Error ? error.message : String(error),
+      pattern: req.query?.pattern
+    }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to list cache keys'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 

@@ -4,13 +4,8 @@ import { validateQuery } from '@/infrastructure/middleware/validation';
 import { IContentRepository, ContentFilter } from '@/domain/repositories';
 import { ContentType } from '@sakinah/types';
 import { z } from 'zod';
-import { logger } from '@/shared/logger';
 import { Result } from '@/shared/result';
-
-// Extend Request interface to include correlationId (added by middleware)
-interface ExtendedRequest extends Request {
-  correlationId?: string;
-}
+import { ErrorCode, createAppError, handleExpressError, getExpressTraceId, createSuccessResponse, createRequestLogger } from '@/shared/errors';
 
 const router = express.Router();
 
@@ -140,7 +135,10 @@ const getContentQuerySchema = z.object({
  */
 router.get('/',
   validateQuery(getContentQuerySchema),
-  async (req: ExtendedRequest, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId);
+
     try {
       const query = req.query;
       const tagsString = query.tags as string | undefined;
@@ -149,12 +147,11 @@ router.get('/',
       const limit = Number(query.limit) || 20;
       const offset = Number(query.offset) || 0;
 
-      logger.info('Content request received', {
+      requestLogger.info('Content request received', {
         tags,
         type,
         limit,
-        offset,
-        correlationId: req.correlationId || 'unknown'
+        offset
       });
 
       const contentRepository = container.resolve<IContentRepository>('IContentRepository');
@@ -169,28 +166,27 @@ router.get('/',
       const result = await contentRepository.findWithFilter(filter);
 
       if (Result.isError(result)) {
-        logger.error('Failed to retrieve content', {
+        requestLogger.error('Failed to retrieve content', {
           error: result.error.message || 'Unknown error',
-          filter,
-          correlationId: req.correlationId || 'unknown'
+          filter
         });
 
-        res.status(500).json({
-          error: 'CONTENT_RETRIEVAL_FAILED',
-          message: 'Failed to retrieve content'
-        });
+        const { response, status, headers } = handleExpressError(
+          createAppError(ErrorCode.SERVER_ERROR, 'Failed to retrieve content'),
+          traceId
+        );
+        res.status(status).set(headers).json(response);
         return;
       }
 
       const content = result.value;
 
-      logger.info('Content retrieved successfully', {
+      requestLogger.info('Content retrieved successfully', {
         itemCount: content.length,
-        filter,
-        correlationId: req.correlationId || 'unknown'
+        filter
       });
 
-      res.json({
+      const successResponse = createSuccessResponse({
         data: content,
         pagination: {
           limit,
@@ -198,18 +194,18 @@ router.get('/',
           // Note: We could add total count here if needed in the future
           // This would require a separate database query or count method
         }
-      });
+      }, traceId);
+      res.json(successResponse);
     } catch (error) {
-      logger.error('Unexpected error in content endpoint', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        correlationId: req.correlationId || 'unknown'
-      });
+      requestLogger.error('Unexpected error in content endpoint', {
+        error: error instanceof Error ? error.message : String(error)
+      }, error instanceof Error ? error : undefined);
 
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve content'
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to retrieve content'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -288,7 +284,10 @@ router.get('/',
  *                   type: string
  *                   example: "Failed to retrieve content"
  */
-router.get('/:id', async (req: ExtendedRequest, res: Response): Promise<void> => {
+router.get('/:id', async (req: Request, res: Response): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const { id } = req.params;
 
@@ -296,23 +295,24 @@ router.get('/:id', async (req: ExtendedRequest, res: Response): Promise<void> =>
     try {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(id)) {
-        res.status(400).json({
-          error: 'INVALID_UUID',
-          message: 'Invalid content ID format'
-        });
+        const { response, status, headers } = handleExpressError(
+          createAppError(ErrorCode.VALIDATION_ERROR, 'Invalid content ID format'),
+          traceId
+        );
+        res.status(status).set(headers).json(response);
         return;
       }
     } catch (validationError) {
-      res.status(400).json({
-        error: 'INVALID_UUID',
-        message: 'Invalid content ID format'
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.VALIDATION_ERROR, 'Invalid content ID format'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
       return;
     }
 
-    logger.info('Content by ID request received', {
-      contentId: id,
-      correlationId: req.correlationId || 'unknown'
+    requestLogger.info('Content by ID request received', {
+      contentId: id
     });
 
     const contentRepository = container.resolve<IContentRepository>('IContentRepository');
@@ -320,53 +320,52 @@ router.get('/:id', async (req: ExtendedRequest, res: Response): Promise<void> =>
     const result = await contentRepository.findById(id);
 
     if (Result.isError(result)) {
-      logger.error('Failed to retrieve content by ID', {
+      requestLogger.error('Failed to retrieve content by ID', {
         error: result.error.message || 'Unknown error',
-        contentId: id,
-        correlationId: req.correlationId || 'unknown'
+        contentId: id
       });
 
-      res.status(500).json({
-        error: 'CONTENT_RETRIEVAL_FAILED',
-        message: 'Failed to retrieve content'
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to retrieve content'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
       return;
     }
 
     if (!result.value) {
-      logger.info('Content not found', {
-        contentId: id,
-        correlationId: req.correlationId || 'unknown'
+      requestLogger.info('Content not found', {
+        contentId: id
       });
 
-      res.status(404).json({
-        error: 'CONTENT_NOT_FOUND',
-        message: 'Content with the specified ID was not found'
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.CONTENT_NOT_FOUND, 'Content with the specified ID was not found'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
       return;
     }
 
-    logger.info('Content retrieved successfully by ID', {
+    requestLogger.info('Content retrieved successfully by ID', {
       contentId: id,
-      contentType: result.value.type,
-      correlationId: req.correlationId || 'unknown'
+      contentType: result.value.type
     });
 
-    res.json({
+    const successResponse = createSuccessResponse({
       data: result.value
-    });
+    }, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Unexpected error in content by ID endpoint', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      contentId: req.params.id,
-      correlationId: req.correlationId || 'unknown'
-    });
+    requestLogger.error('Unexpected error in content by ID endpoint', {
+      error: error instanceof Error ? error.message : String(error),
+      contentId: req.params.id
+    }, error instanceof Error ? error : undefined);
 
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to retrieve content'
-    });
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to retrieve content'),
+      traceId
+    );
+    res.status(status).set(headers).json(response);
   }
 });
 

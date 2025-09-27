@@ -1,9 +1,11 @@
 import express from 'express';
 import { container } from 'tsyringe';
 import { AuthRequest } from '@/infrastructure/auth/middleware';
+import { validateRequest, validateBody } from '@/infrastructure/middleware/validation';
 import { IUserPreferencesRepository } from '@/infrastructure/repos/UserPreferencesRepository';
 import { UserPreferencesEntity } from '@/domain/entities/UserPreferences';
 import { Result } from '@/shared/result';
+import { ErrorCode, createAppError, handleExpressError, getExpressTraceId, createSuccessResponse, createRequestLogger } from '@/shared/errors';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -11,30 +13,12 @@ const router = express.Router();
 // Helper function to get user ID from request
 function getUserIdFromRequest(req: AuthRequest): string {
   if (!req.userId) {
-    throw new Error('User not authenticated');
+    throw createAppError(ErrorCode.UNAUTHORIZED, 'User not authenticated');
   }
   return req.userId;
 }
 
-// Validation middleware
-function validateRequest(schema: z.ZodSchema) {
-  return (req: express.Request, res: express.Response, next: express.NextFunction): void => {
-    try {
-      const validated = schema.parse(req.body);
-      req.body = validated;
-      next();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          error: 'Validation error',
-          details: error.errors
-        });
-        return;
-      }
-      next(error);
-    }
-  };
-}
+// Note: Using centralized validation middleware from @/infrastructure/middleware/validation
 
 // Validation schemas
 const LocationSchema = z.object({
@@ -73,49 +57,73 @@ const UpdatePreferencesSchema = z.object({
   displaySettings: DisplaySettingsSchema.optional()
 });
 
+const UpdateLanguageSchema = z.object({
+  language: z.enum(['en', 'ar', 'ur'], {
+    errorMap: () => ({ message: 'Language must be one of: en, ar, ur' })
+  })
+});
+
 /**
  * @route GET /api/v2/users/preferences
  * @description Get current user's preferences
  * @access Private
  */
-router.get('/preferences', async (req: AuthRequest, res, next) => {
+router.get('/preferences', async (req: AuthRequest, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const userId = getUserIdFromRequest(req);
-    const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
+    requestLogger.info('Fetching user preferences', { userId });
 
+    const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
     const result = await repository.getByUserId(userId);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to fetch preferences',
-        message: result.error.message
+      requestLogger.error('Failed to fetch preferences from repository', {
+        userId,
+        error: result.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch preferences'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
     // If preferences don't exist, create default ones
     if (!result.value) {
+      requestLogger.info('No preferences found, creating default preferences', { userId });
+
       const defaultPreferences = UserPreferencesEntity.createDefault(userId);
       const createResult = await repository.create(defaultPreferences);
 
       if (Result.isError(createResult)) {
-        return res.status(500).json({
-          error: 'Failed to create default preferences',
-          message: createResult.error.message
+        requestLogger.error('Failed to create default preferences', {
+          userId,
+          error: createResult.error.message
         });
+
+        const { response, status } = handleExpressError(
+          createAppError(ErrorCode.DATABASE_ERROR, 'Failed to create default preferences'),
+          traceId
+        );
+        return res.status(status).json(response);
       }
 
-      return res.json({
-        success: true,
-        data: createResult.value.toJSON()
-      });
+      requestLogger.info('Default preferences created successfully', { userId });
+      const successResponse = createSuccessResponse(createResult.value.toJSON(), traceId);
+      return res.json(successResponse);
     }
 
-    return res.json({
-      success: true,
-      data: result.value.toJSON()
-    });
+    requestLogger.info('User preferences fetched successfully', { userId });
+    const successResponse = createSuccessResponse(result.value.toJSON(), traceId);
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    requestLogger.error('Unexpected error in GET /preferences', { error });
+    const { response, status } = handleExpressError(error, traceId);
+    return res.status(status).json(response);
   }
 });
 
@@ -124,10 +132,18 @@ router.get('/preferences', async (req: AuthRequest, res, next) => {
  * @description Update current user's preferences
  * @access Private
  */
-router.put('/preferences', validateRequest(UpdatePreferencesSchema), async (req: AuthRequest, res, next) => {
+router.put('/preferences', validateRequest(UpdatePreferencesSchema), async (req: AuthRequest, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const userId = getUserIdFromRequest(req);
     const updates = req.body;
+
+    requestLogger.info('Updating user preferences', {
+      userId,
+      updatesKeys: Object.keys(updates)
+    });
 
     const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
 
@@ -137,14 +153,20 @@ router.put('/preferences', validateRequest(UpdatePreferencesSchema), async (req:
     let preferences: UserPreferencesEntity;
 
     if (Result.isError(existingResult)) {
-      return res.status(500).json({
-        error: 'Failed to fetch preferences',
-        message: existingResult.error.message
+      requestLogger.error('Failed to fetch existing preferences', {
+        userId,
+        error: existingResult.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch preferences'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
     if (!existingResult.value) {
-      // Create new preferences with updates
+      requestLogger.info('No existing preferences found, creating new ones', { userId });
       preferences = UserPreferencesEntity.createDefault(userId);
     } else {
       preferences = existingResult.value;
@@ -179,19 +201,28 @@ router.put('/preferences', validateRequest(UpdatePreferencesSchema), async (req:
     const result = await repository.upsert(preferences);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to update preferences',
-        message: result.error.message
+      requestLogger.error('Failed to update preferences in repository', {
+        userId,
+        error: result.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to update preferences'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
-    return res.json({
-      success: true,
+    requestLogger.info('User preferences updated successfully', { userId });
+    const successResponse = createSuccessResponse({
       data: result.value.toJSON(),
       message: 'Preferences updated successfully'
-    });
+    }, traceId);
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    requestLogger.error('Unexpected error in PUT /preferences', { error });
+    const { response, status } = handleExpressError(error, traceId);
+    return res.status(status).json(response);
   }
 });
 
@@ -200,27 +231,30 @@ router.put('/preferences', validateRequest(UpdatePreferencesSchema), async (req:
  * @description Update user's language preference
  * @access Private
  */
-router.patch('/preferences/language', async (req: AuthRequest, res, next) => {
+router.patch('/preferences/language', validateBody(UpdateLanguageSchema), async (req: AuthRequest, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const userId = getUserIdFromRequest(req);
     const { language } = req.body;
 
-    if (!['en', 'ar', 'ur'].includes(language)) {
-      return res.status(400).json({
-        error: 'Invalid language',
-        message: 'Language must be one of: en, ar, ur'
-      });
-    }
+    requestLogger.info('Updating user language preference', { userId, language });
 
     const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
-
     const existingResult = await repository.getByUserId(userId);
 
     if (Result.isError(existingResult)) {
-      return res.status(500).json({
-        error: 'Failed to fetch preferences',
-        message: existingResult.error.message
+      requestLogger.error('Failed to fetch existing preferences for language update', {
+        userId,
+        error: existingResult.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch preferences'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
     const preferences = existingResult.value || UserPreferencesEntity.createDefault(userId);
@@ -229,19 +263,29 @@ router.patch('/preferences/language', async (req: AuthRequest, res, next) => {
     const result = await repository.upsert(preferences);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to update language',
-        message: result.error.message
+      requestLogger.error('Failed to update language preference in repository', {
+        userId,
+        language,
+        error: result.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to update language'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
-    return res.json({
-      success: true,
+    requestLogger.info('Language preference updated successfully', { userId, language });
+    const successResponse = createSuccessResponse({
       data: { language },
       message: 'Language updated successfully'
-    });
+    }, traceId);
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    requestLogger.error('Unexpected error in PATCH /preferences/language', { error });
+    const { response, status } = handleExpressError(error, traceId);
+    return res.status(status).json(response);
   }
 });
 
@@ -250,20 +294,33 @@ router.patch('/preferences/language', async (req: AuthRequest, res, next) => {
  * @description Update user's location
  * @access Private
  */
-router.patch('/preferences/location', validateRequest(LocationSchema), async (req: AuthRequest, res, next) => {
+router.patch('/preferences/location', validateBody(LocationSchema), async (req: AuthRequest, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const userId = getUserIdFromRequest(req);
     const location = req.body;
 
-    const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
+    requestLogger.info('Updating user location preference', {
+      userId,
+      location: { lat: location.lat, lng: location.lng, city: location.city, country: location.country }
+    });
 
+    const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
     const existingResult = await repository.getByUserId(userId);
 
     if (Result.isError(existingResult)) {
-      return res.status(500).json({
-        error: 'Failed to fetch preferences',
-        message: existingResult.error.message
+      requestLogger.error('Failed to fetch existing preferences for location update', {
+        userId,
+        error: existingResult.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch preferences'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
     const preferences = existingResult.value || UserPreferencesEntity.createDefault(userId);
@@ -272,19 +329,29 @@ router.patch('/preferences/location', validateRequest(LocationSchema), async (re
     const result = await repository.upsert(preferences);
 
     if (Result.isError(result)) {
-      return res.status(500).json({
-        error: 'Failed to update location',
-        message: result.error.message
+      requestLogger.error('Failed to update location preference in repository', {
+        userId,
+        location,
+        error: result.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to update location'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
-    return res.json({
-      success: true,
+    requestLogger.info('Location preference updated successfully', { userId });
+    const successResponse = createSuccessResponse({
       data: { location },
       message: 'Location updated successfully'
-    });
+    }, traceId);
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    requestLogger.error('Unexpected error in PATCH /preferences/location', { error });
+    const { response, status } = handleExpressError(error, traceId);
+    return res.status(status).json(response);
   }
 });
 
@@ -293,34 +360,48 @@ router.patch('/preferences/location', validateRequest(LocationSchema), async (re
  * @description Delete user's preferences (reset to defaults)
  * @access Private
  */
-router.delete('/preferences', async (req: AuthRequest, res, next) => {
+router.delete('/preferences', async (req: AuthRequest, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
     const userId = getUserIdFromRequest(req);
-    const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
+    requestLogger.info('Resetting user preferences to defaults', { userId });
 
+    const repository = container.resolve<IUserPreferencesRepository>('IUserPreferencesRepository');
     const result = await repository.delete(userId);
 
     if (Result.isError(result)) {
       // If preferences don't exist, that's fine
       if (result.error.message.includes('not found')) {
-        return res.json({
-          success: true,
+        requestLogger.info('No preferences found to delete, considering reset successful', { userId });
+        const successResponse = createSuccessResponse({
           message: 'Preferences reset successfully'
-        });
+        }, traceId);
+        return res.json(successResponse);
       }
 
-      return res.status(500).json({
-        error: 'Failed to delete preferences',
-        message: result.error.message
+      requestLogger.error('Failed to delete preferences from repository', {
+        userId,
+        error: result.error.message
       });
+
+      const { response, status } = handleExpressError(
+        createAppError(ErrorCode.DATABASE_ERROR, 'Failed to delete preferences'),
+        traceId
+      );
+      return res.status(status).json(response);
     }
 
-    return res.json({
-      success: true,
+    requestLogger.info('User preferences reset successfully', { userId });
+    const successResponse = createSuccessResponse({
       message: 'Preferences reset successfully'
-    });
+    }, traceId);
+    return res.json(successResponse);
   } catch (error) {
-    return next(error);
+    requestLogger.error('Unexpected error in DELETE /preferences', { error });
+    const { response, status } = handleExpressError(error, traceId);
+    return res.status(status).json(response);
   }
 });
 

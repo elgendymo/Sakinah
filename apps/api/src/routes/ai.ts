@@ -1,26 +1,37 @@
 import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
 import { AIExplainInputSchema } from '@sakinah/types';
-import { ValidationError } from '@/shared/errors';
+import {
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
+import { validateBody } from '@/infrastructure/middleware/validation';
 import { getAIProvider } from '@/infrastructure/ai/factory';
 
 const router = Router();
 
-router.post('/explain', authMiddleware, async (req: AuthRequest, res, next) => {
+router.post('/explain', authMiddleware, validateBody(AIExplainInputSchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
-    const parseResult = AIExplainInputSchema.safeParse(req.body);
+    const { struggle } = req.body;
+      requestLogger.info('AI explain request', {
+      strugggleLength: struggle?.length || 0
+    });
 
-    if (!parseResult.success) {
-      throw new ValidationError(parseResult.error.errors[0].message);
-    }
-
-    const { struggle } = parseResult.data;
     const ai = getAIProvider();
-    const response = await ai.explain(struggle);
+    const aiResponse = await ai.explain(struggle);
 
-    res.json(response);
+    requestLogger.info('AI explain completed successfully', { concept: struggle });
+    const response = createSuccessResponse(aiResponse, traceId);
+    res.status(200).json(response);
   } catch (error) {
-    next(error);
+    requestLogger.error('AI explain error', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    res.status(status).set(headers).json(response);
   }
 });
 

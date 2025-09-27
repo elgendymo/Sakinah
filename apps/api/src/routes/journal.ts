@@ -1,47 +1,90 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
+import {
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
+import { validateBody, validateParams, validateQuery } from '@/infrastructure/middleware/validation';
 import { JournalRepository } from '@/infrastructure/repos/JournalRepository';
+
+const journalQuerySchema = z.object({
+  search: z.string().optional(),
+  tags: z.union([z.string(), z.array(z.string())]).optional(),
+  page: z.string().transform(val => parseInt(val, 10) || 1).optional(),
+  limit: z.string().transform(val => parseInt(val, 10) || 20).optional(),
+  sortBy: z.enum(['createdAt', 'content']).optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional()
+});
+
+const createJournalSchema = z.object({
+  content: z.string().min(1, 'Content is required'),
+  tags: z.array(z.string()).optional()
+});
+
+const updateJournalSchema = z.object({
+  content: z.string().min(1, 'Content is required').optional(),
+  tags: z.array(z.string()).optional()
+});
+
+const journalParamsSchema = z.object({
+  id: z.string().min(1, 'Journal ID is required')
+});
 
 const router = Router();
 const journalRepo = new JournalRepository();
 
-router.get('/', authMiddleware, async (req: AuthRequest, res, next) => {
+router.get('/', authMiddleware, validateQuery(journalQuerySchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
-    const {
-      search,
-      tags,
-      page,
-      limit,
-      sortBy,
-      sortOrder
-    } = req.query;
+    const filters = req.query;
 
-    // Parse and validate query parameters
-    const filters: any = {};
-
-    if (search) filters.search = search as string;
-    if (tags) {
-      filters.tags = typeof tags === 'string'
-        ? tags.split(',').map(t => t.trim()).filter(Boolean)
-        : tags as string[];
+    // Handle tags parsing for string input
+    if (filters.tags && typeof filters.tags === 'string') {
+      filters.tags = filters.tags.split(',').map(t => t.trim()).filter(Boolean);
     }
-    if (page) filters.page = parseInt(page as string, 10) || 1;
-    if (limit) filters.limit = parseInt(limit as string, 10) || 20;
-    if (sortBy) filters.sortBy = sortBy as 'createdAt' | 'content';
-    if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
+
+    requestLogger.info('Fetching journal entries', {
+      filters: {
+        search: filters.search,
+        tagsCount: filters.tags ? (Array.isArray(filters.tags) ? filters.tags.length : 1) : 0,
+        page: filters.page,
+        limit: filters.limit
+      }
+    });
 
     const result = await journalRepo.getUserEntries(userId, filters);
-    res.json(result);
+
+    requestLogger.info('Journal entries fetched successfully', {
+      entriesCount: result.entries?.length || 0,
+      totalCount: result.pagination?.total || 0
+    });
+    const response = createSuccessResponse(result, traceId);
+    res.status(200).json(response);
   } catch (error) {
-    next(error);
+    requestLogger.error('Error fetching journal entries:', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    res.status(status).set(headers).json(response);
   }
 });
 
-router.post('/', authMiddleware, async (req: AuthRequest, res, next) => {
+router.post('/', authMiddleware, validateBody(createJournalSchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const { content, tags } = req.body;
+
+    requestLogger.info('Creating journal entry', {
+      contentLength: content.length,
+      tagsCount: tags?.length || 0
+    });
 
     const entry = await journalRepo.createEntry({
       userId,
@@ -49,38 +92,65 @@ router.post('/', authMiddleware, async (req: AuthRequest, res, next) => {
       tags,
     });
 
-    res.json({ entry });
+    requestLogger.info('Journal entry created successfully', { entryId: entry.id });
+    const response = createSuccessResponse({ entry }, traceId);
+    res.status(201).json(response);
   } catch (error) {
-    next(error);
+    requestLogger.error('Error creating journal entry:', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    res.status(status).set(headers).json(response);
   }
 });
 
-router.put('/:id', authMiddleware, async (req: AuthRequest, res, next) => {
+router.put('/:id', authMiddleware, validateParams(journalParamsSchema), validateBody(updateJournalSchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const { id } = req.params;
     const { content, tags } = req.body;
+
+    requestLogger.info('Updating journal entry', {
+      entryId: id,
+      contentLength: content?.length,
+      tagsCount: tags?.length || 0
+    });
 
     const entry = await journalRepo.updateEntry(id, userId, {
       content,
       tags,
     });
 
-    res.json({ entry });
+    requestLogger.info('Journal entry updated successfully', { entryId: id });
+    const response = createSuccessResponse({ entry }, traceId);
+    res.status(200).json(response);
   } catch (error) {
-    next(error);
+    requestLogger.error('Error updating journal entry:', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    res.status(status).set(headers).json(response);
   }
 });
 
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res, next) => {
+router.delete('/:id', authMiddleware, validateParams(journalParamsSchema), async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId!;
     const { id } = req.params;
 
+    requestLogger.info('Deleting journal entry', { entryId: id });
+
     await journalRepo.deleteEntry(id, userId);
-    res.json({ success: true });
+
+    requestLogger.info('Journal entry deleted successfully', { entryId: id });
+    const response = createSuccessResponse({ message: 'Journal entry deleted successfully' }, traceId);
+    res.status(200).json(response);
   } catch (error) {
-    next(error);
+    requestLogger.error('Error deleting journal entry:', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+    const { response, status, headers } = handleExpressError(error, traceId);
+    res.status(status).set(headers).json(response);
   }
 });
 

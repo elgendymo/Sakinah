@@ -7,7 +7,14 @@ import { ICheckinRepository } from '@/domain/repositories/ICheckinRepository';
 import { UserId } from '@/domain/value-objects/UserId';
 import { Result } from '@/shared/result';
 import { z } from 'zod';
-import { logger } from '@/shared/logger';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 
 const router = express.Router();
 
@@ -120,9 +127,21 @@ router.post('/',
   authMiddleware,
   validateRequest(createCheckinSchemaV2),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { mood, intention, reflection, gratitude, improvements, date } = req.body;
+
+      requestLogger.info('Creating/updating daily check-in', {
+        hasIntention: !!intention,
+        hasReflection: !!reflection,
+        hasGratitude: !!gratitude?.length,
+        hasImprovements: !!improvements,
+        mood,
+        date
+      });
 
       // Combine gratitude and improvements into reflection for storage compatibility
       let combinedReflection = reflection || '';
@@ -151,32 +170,42 @@ router.post('/',
       });
 
       if (Result.isError(result)) {
-        logger.error('Error creating/updating check-in v2', (result as any).error);
-        res.status(500).json({
-          error: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to save check-in'
-        });
+        const error = createAppError(
+          ErrorCode.SERVER_ERROR,
+          'Failed to save check-in',
+          (result as any).error
+        );
+        requestLogger.error('Error creating/updating check-in', { result: result }, (result as any).error);
+        const { response, status, headers } = handleExpressError(error, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
       // Calculate streak information
-      const streakInfo = await calculateCheckinStreak(userId);
+      const streakInfo = await calculateCheckinStreak(userId, traceId);
 
       // Check if this was an update (check if checkin already existed for today)
       const targetDate = date || new Date().toISOString().split('T')[0];
-      const isUpdate = await checkIfCheckinExistsForDate(userId, targetDate);
+      const isUpdate = await checkIfCheckinExistsForDate(userId, targetDate, traceId);
 
-      res.json({
+      const responseData = {
         data: result.value.toDTO(),
         streak: streakInfo,
         isUpdate
+      };
+
+      requestLogger.info('Check-in created/updated successfully', {
+        isUpdate,
+        currentStreak: streakInfo.current,
+        longestStreak: streakInfo.longest
       });
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      logger.error('Error in POST /v2/checkins', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to save check-in'
-      });
+      requestLogger.error('Unexpected error in POST /v2/checkins', {}, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to save check-in');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -257,16 +286,26 @@ router.get('/',
   authMiddleware,
   validateQuery(getCheckinsSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { from, to, limit, offset } = req.query;
 
-      // Get check-ins using repository pattern
-      const checkins = await getCheckinsForUser(userId, { from, to, limit, offset });
-      const streakInfo = await calculateCheckinStreak(userId);
-      const total = await getCheckinsCount(userId, { from, to });
+      requestLogger.info('Retrieving check-ins', {
+        from,
+        to,
+        limit,
+        offset
+      });
 
-      res.json({
+      // Get check-ins using repository pattern
+      const checkins = await getCheckinsForUser(userId, { from, to, limit, offset }, traceId);
+      const streakInfo = await calculateCheckinStreak(userId, traceId);
+      const total = await getCheckinsCount(userId, { from, to }, traceId);
+
+      const responseData = {
         data: checkins.map(checkin => checkin.toDTO()),
         pagination: {
           total,
@@ -274,13 +313,21 @@ router.get('/',
           offset
         },
         streak: streakInfo
+      };
+
+      requestLogger.info('Check-ins retrieved successfully', {
+        count: checkins.length,
+        total,
+        currentStreak: streakInfo.current,
+        longestStreak: streakInfo.longest
       });
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      logger.error('Error in GET /v2/checkins', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve check-ins'
-      });
+      requestLogger.error('Unexpected error in GET /v2/checkins', {}, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve check-ins');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -324,34 +371,48 @@ router.get('/',
 router.get('/today',
   authMiddleware,
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
+      requestLogger.info('Getting today\'s check-in');
 
       const logCheckinUseCase = container.resolve(LogCheckinUseCase);
       const result = await logCheckinUseCase.getToday(userId);
 
       if (Result.isError(result)) {
-        logger.error('Error getting today\'s check-in', (result as any).error);
-        res.status(500).json({
-          error: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to retrieve today\'s check-in'
-        });
+        const error = createAppError(
+          ErrorCode.SERVER_ERROR,
+          'Failed to retrieve today\'s check-in',
+          (result as any).error
+        );
+        requestLogger.error('Error getting today\'s check-in', { result: result }, (result as any).error);
+        const { response, status, headers } = handleExpressError(error, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      const streakInfo = await calculateCheckinStreak(userId);
+      const streakInfo = await calculateCheckinStreak(userId, traceId);
 
-      res.json({
+      const responseData = {
         data: result.value ? result.value.toDTO() : null,
         hasCheckedIn: !!result.value,
         streak: streakInfo
+      };
+
+      requestLogger.info('Today\'s check-in retrieved successfully', {
+        hasCheckedIn: !!result.value,
+        currentStreak: streakInfo.current,
+        longestStreak: streakInfo.longest
       });
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      logger.error('Error in GET /v2/checkins/today', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve today\'s check-in'
-      });
+      requestLogger.error('Unexpected error in GET /v2/checkins/today', {}, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve today\'s check-in');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -394,30 +455,44 @@ router.get('/today',
 router.get('/streak',
   authMiddleware,
   async (req: any, res): Promise<void> => {
-    try {
-      const userId = req.userId;
-      const streakInfo = await calculateCheckinStreak(userId);
-      const totalCheckins = await getCheckinsCount(userId);
-      const lastCheckin = await getLastCheckin(userId);
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
 
-      res.json({
+    try {
+      requestLogger.info('Getting check-in streak information');
+
+      const streakInfo = await calculateCheckinStreak(userId, traceId);
+      const totalCheckins = await getCheckinsCount(userId, {}, traceId);
+      const lastCheckin = await getLastCheckin(userId, traceId);
+
+      const responseData = {
         ...streakInfo,
         lastCheckinDate: lastCheckin?.date || null,
         totalCheckins
+      };
+
+      requestLogger.info('Streak information retrieved successfully', {
+        currentStreak: streakInfo.current,
+        longestStreak: streakInfo.longest,
+        totalCheckins,
+        hasLastCheckin: !!lastCheckin
       });
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      logger.error('Error in GET /v2/checkins/streak', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve streak information'
-      });
+      requestLogger.error('Unexpected error in GET /v2/checkins/streak', {}, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve streak information');
+      res.status(status).set(headers).json(response);
     }
   }
 );
 
 // Helper functions
 
-async function calculateCheckinStreak(userId: string): Promise<{ current: number; longest: number }> {
+async function calculateCheckinStreak(userId: string, traceId?: string): Promise<{ current: number; longest: number }> {
+  const requestLogger = createRequestLogger(traceId || 'no-trace', userId);
   try {
     const checkinRepo = container.resolve<ICheckinRepository>('ICheckinRepository');
     const result = await checkinRepo.findAllByUser(new UserId(userId));
@@ -485,12 +560,13 @@ async function calculateCheckinStreak(userId: string): Promise<{ current: number
 
     return { current: currentStreak, longest: longestStreak };
   } catch (error) {
-    logger.error('Error calculating check-in streak', error);
+    requestLogger.error('Error calculating check-in streak', {}, error as Error);
     return { current: 0, longest: 0 };
   }
 }
 
-async function checkIfCheckinExistsForDate(userId: string, date: string): Promise<boolean> {
+async function checkIfCheckinExistsForDate(userId: string, date: string, traceId?: string): Promise<boolean> {
+  const requestLogger = createRequestLogger(traceId || 'no-trace', userId);
   try {
     const checkinRepo = container.resolve<ICheckinRepository>('ICheckinRepository');
     const targetDate = new Date(date);
@@ -499,12 +575,13 @@ async function checkIfCheckinExistsForDate(userId: string, date: string): Promis
     const result = await checkinRepo.findByUserAndDate(new UserId(userId), targetDate);
     return result.ok && result.value !== null;
   } catch (error) {
-    logger.error('Error checking if checkin exists for date', error);
+    requestLogger.error('Error checking if checkin exists for date', { date }, error as Error);
     return false;
   }
 }
 
-async function getCheckinsForUser(userId: string, filters: any): Promise<any[]> {
+async function getCheckinsForUser(userId: string, filters: any, traceId?: string): Promise<any[]> {
+  const requestLogger = createRequestLogger(traceId || 'no-trace', userId);
   try {
     const checkinRepo = container.resolve<ICheckinRepository>('ICheckinRepository');
 
@@ -517,12 +594,13 @@ async function getCheckinsForUser(userId: string, filters: any): Promise<any[]> 
 
     return result.ok ? result.value : [];
   } catch (error) {
-    logger.error('Error getting checkins for user', error);
+    requestLogger.error('Error getting checkins for user', { filters }, error as Error);
     return [];
   }
 }
 
-async function getCheckinsCount(userId: string, filters: any = {}): Promise<number> {
+async function getCheckinsCount(userId: string, filters: any = {}, traceId?: string): Promise<number> {
+  const requestLogger = createRequestLogger(traceId || 'no-trace', userId);
   try {
     const checkinRepo = container.resolve<ICheckinRepository>('ICheckinRepository');
 
@@ -533,19 +611,20 @@ async function getCheckinsCount(userId: string, filters: any = {}): Promise<numb
 
     return result.ok ? result.value : 0;
   } catch (error) {
-    logger.error('Error getting checkins count', error);
+    requestLogger.error('Error getting checkins count', { filters }, error as Error);
     return 0;
   }
 }
 
-async function getLastCheckin(userId: string): Promise<any | null> {
+async function getLastCheckin(userId: string, traceId?: string): Promise<any | null> {
+  const requestLogger = createRequestLogger(traceId || 'no-trace', userId);
   try {
     const checkinRepo = container.resolve<ICheckinRepository>('ICheckinRepository');
 
     const result = await checkinRepo.findLatestByUser(new UserId(userId));
     return result.ok ? result.value : null;
   } catch (error) {
-    logger.error('Error getting last checkin', error);
+    requestLogger.error('Error getting last checkin', {}, error as Error);
     return null;
   }
 }

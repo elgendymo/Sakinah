@@ -1,10 +1,46 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { authMiddleware } from '@/infrastructure/auth/middleware';
-import { logger } from '../../shared/logger';
 import { HabitRepository } from '@/infrastructure/repos/HabitRepository';
 import { Result } from '@/shared/result';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
+import {
+  validateQuery,
+  validateBody,
+  validateParams
+} from '@/infrastructure/middleware/validation';
 
 const router = Router();
+
+// Validation schemas
+const getHabitsQuerySchema = z.object({
+  includeStats: z.string().optional().default('false'),
+  includeHistory: z.string().optional().default('false')
+});
+
+const habitIdParamsSchema = z.object({
+  id: z.string().min(1, 'Habit ID is required')
+});
+
+const completeHabitBodySchema = z.object({
+  notes: z.string().optional(),
+  date: z.string().optional()
+});
+
+const incompleteHabitBodySchema = z.object({
+  date: z.string().optional()
+});
+
+const analyticsQuerySchema = z.object({
+  period: z.string().optional().default('30d')
+});
 
 /**
  * @api {get} /api/v1/habits Get user habits with detailed information
@@ -12,22 +48,23 @@ const router = Router();
  * @apiName GetHabits
  * @apiGroup Habits
  */
-router.get('/', authMiddleware, async (req, res): Promise<void> => {
-    try {
-        const userId = (req as any).userId;
-        const { includeStats = 'false', includeHistory = 'false' } = req.query;
+router.get('/', authMiddleware, validateQuery(getHabitsQuerySchema), async (req, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, (req as any).userId);
+    const userId = (req as any).userId;
+    const { includeStats, includeHistory } = req.query as z.infer<typeof getHabitsQuerySchema>;
 
+    try {
         const habitRepo = new HabitRepository();
         const habitsResult = await habitRepo.getHabitsByUser(userId);
 
         if (Result.isError(habitsResult)) {
-            logger.error('Error fetching habits v1', habitsResult.error);
-            res.status(500).json({
-                error: {
-                    code: 'INTERNAL_ERROR',
-                    message: 'Failed to fetch habits'
-                }
-            });
+            requestLogger.error('Error fetching habits v1', { error: habitsResult.error });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch habits'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
@@ -51,21 +88,20 @@ router.get('/', authMiddleware, async (req, res): Promise<void> => {
         }));
 
         // v1 enhanced response format
-        res.json({
+        const responseData = {
             habits: enhancedHabits,
             metadata: {
                 total: enhancedHabits.length,
                 activeCount: enhancedHabits.filter(h => h.streakCount > 0).length
             }
-        });
+        };
+
+        requestLogger.info('Habits retrieved successfully', { count: enhancedHabits.length, includeStats: includeStats === 'true', includeHistory: includeHistory === 'true' });
+        res.json(createSuccessResponse(responseData, traceId));
     } catch (error) {
-        logger.error('Error fetching habits v1', error);
-        res.status(500).json({
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Failed to fetch habits'
-            }
-        });
+        requestLogger.error('Error fetching habits v1', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+        const { response, status, headers } = handleExpressError(error, traceId);
+        res.status(status).set(headers).json(response);
     }
 });
 
@@ -75,34 +111,35 @@ router.get('/', authMiddleware, async (req, res): Promise<void> => {
  * @apiName CompleteHabit
  * @apiGroup Habits
  */
-router.post('/:id/complete', authMiddleware, async (req, res): Promise<void> => {
-    try {
-        const userId = (req as any).userId;
-        const { id } = req.params;
-        const { notes, date } = req.body;
+router.post('/:id/complete', authMiddleware, validateParams(habitIdParamsSchema), validateBody(completeHabitBodySchema), async (req, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, (req as any).userId);
+    const userId = (req as any).userId;
+    const { id } = req.params as z.infer<typeof habitIdParamsSchema>;
+    const { notes, date } = req.body as z.infer<typeof completeHabitBodySchema>;
 
+    try {
         const habitRepo = new HabitRepository();
 
         // Get the habit first to verify ownership
         const habitResult = await habitRepo.getHabit(id, userId);
         if (Result.isError(habitResult)) {
-            logger.error('Error fetching habit for completion', habitResult.error);
-            res.status(500).json({
-                error: {
-                    code: 'INTERNAL_ERROR',
-                    message: 'Failed to fetch habit'
-                }
-            });
+            requestLogger.error('Error fetching habit for completion', { error: habitResult.error, habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch habit'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
         if (!habitResult.value) {
-            res.status(404).json({
-                error: {
-                    code: 'HABIT_NOT_FOUND',
-                    message: 'Habit not found or access denied'
-                }
-            });
+            requestLogger.warn('Habit not found for completion', { habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.HABIT_NOT_FOUND, 'Habit not found or access denied'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
@@ -112,13 +149,12 @@ router.post('/:id/complete', authMiddleware, async (req, res): Promise<void> => 
         // Mark as completed
         const markResult = await habitRepo.markCompleted(id, userId, completionDate);
         if (Result.isError(markResult)) {
-            logger.error('Error marking habit complete', markResult.error);
-            res.status(500).json({
-                error: {
-                    code: 'INTERNAL_ERROR',
-                    message: 'Failed to complete habit'
-                }
-            });
+            requestLogger.error('Error marking habit complete', { error: markResult.error, habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.DATABASE_ERROR, 'Failed to complete habit'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
@@ -129,11 +165,11 @@ router.post('/:id/complete', authMiddleware, async (req, res): Promise<void> => 
 
         const streakResult = await habitRepo.updateHabitStreak(id, userId, newStreakCount, completionDate);
         if (Result.isError(streakResult)) {
-            logger.error('Error updating habit streak', streakResult.error);
+            requestLogger.warn('Error updating habit streak', { error: streakResult.error, habitId: id });
             // Continue even if streak update fails
         }
 
-        res.json({
+        const responseData = {
             habit: {
                 id,
                 completed: true,
@@ -142,15 +178,14 @@ router.post('/:id/complete', authMiddleware, async (req, res): Promise<void> => 
                 notes
             },
             events: []
-        });
+        };
+
+        requestLogger.info('Habit completed successfully', { habitId: id, newStreak: newStreakCount, completionDate });
+        res.json(createSuccessResponse(responseData, traceId));
     } catch (error) {
-        logger.error('Error completing habit v1', error);
-        res.status(500).json({
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Failed to complete habit'
-            }
-        });
+        requestLogger.error('Error completing habit v1', { error: error instanceof Error ? error.message : String(error), habitId: req.params.id }, error instanceof Error ? error : undefined);
+        const { response, status, headers } = handleExpressError(error, traceId);
+        res.status(status).set(headers).json(response);
     }
 });
 
@@ -160,34 +195,35 @@ router.post('/:id/complete', authMiddleware, async (req, res): Promise<void> => 
  * @apiName IncompleteHabit
  * @apiGroup Habits
  */
-router.post('/:id/incomplete', authMiddleware, async (req, res): Promise<void> => {
-    try {
-        const userId = (req as any).userId;
-        const { id } = req.params;
-        const { date } = req.body;
+router.post('/:id/incomplete', authMiddleware, validateParams(habitIdParamsSchema), validateBody(incompleteHabitBodySchema), async (req, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, (req as any).userId);
+    const userId = (req as any).userId;
+    const { id } = req.params as z.infer<typeof habitIdParamsSchema>;
+    const { date } = req.body as z.infer<typeof incompleteHabitBodySchema>;
 
+    try {
         const habitRepo = new HabitRepository();
 
         // Get the habit first to verify ownership
         const habitResult = await habitRepo.getHabit(id, userId);
         if (Result.isError(habitResult)) {
-            logger.error('Error fetching habit for incompletion', habitResult.error);
-            res.status(500).json({
-                error: {
-                    code: 'INTERNAL_ERROR',
-                    message: 'Failed to fetch habit'
-                }
-            });
+            requestLogger.error('Error fetching habit for incompletion', { error: habitResult.error, habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch habit'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
         if (!habitResult.value) {
-            res.status(404).json({
-                error: {
-                    code: 'HABIT_NOT_FOUND',
-                    message: 'Habit not found or access denied'
-                }
-            });
+            requestLogger.warn('Habit not found for incompletion', { habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.HABIT_NOT_FOUND, 'Habit not found or access denied'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
@@ -197,13 +233,12 @@ router.post('/:id/incomplete', authMiddleware, async (req, res): Promise<void> =
         // Mark as incomplete
         const unmarkResult = await habitRepo.markIncomplete(id, userId, incompletionDate);
         if (Result.isError(unmarkResult)) {
-            logger.error('Error marking habit incomplete', unmarkResult.error);
-            res.status(500).json({
-                error: {
-                    code: 'INTERNAL_ERROR',
-                    message: 'Failed to mark habit incomplete'
-                }
-            });
+            requestLogger.error('Error marking habit incomplete', { error: unmarkResult.error, habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.DATABASE_ERROR, 'Failed to mark habit incomplete'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
@@ -216,26 +251,25 @@ router.post('/:id/incomplete', authMiddleware, async (req, res): Promise<void> =
             newStreakCount = 0; // Simple reset for now, could be more sophisticated
             const streakResult = await habitRepo.updateHabitStreak(id, userId, newStreakCount, undefined);
             if (Result.isError(streakResult)) {
-                logger.error('Error updating habit streak', streakResult.error);
+                requestLogger.warn('Error updating habit streak', { error: streakResult.error, habitId: id });
                 // Continue even if streak update fails
             }
         }
 
-        res.json({
+        const responseData = {
             habit: {
                 id,
                 completed: false,
                 streakCount: newStreakCount
             }
-        });
+        };
+
+        requestLogger.info('Habit marked incomplete successfully', { habitId: id, newStreak: newStreakCount, incompletionDate });
+        res.json(createSuccessResponse(responseData, traceId));
     } catch (error) {
-        logger.error('Error marking habit incomplete v1', error);
-        res.status(500).json({
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Failed to mark habit incomplete'
-            }
-        });
+        requestLogger.error('Error marking habit incomplete v1', { error: error instanceof Error ? error.message : String(error), habitId: req.params.id }, error instanceof Error ? error : undefined);
+        const { response, status, headers } = handleExpressError(error, traceId);
+        res.status(status).set(headers).json(response);
     }
 });
 
@@ -245,34 +279,35 @@ router.post('/:id/incomplete', authMiddleware, async (req, res): Promise<void> =
  * @apiName GetHabitAnalytics
  * @apiGroup Habits
  */
-router.get('/:id/analytics', authMiddleware, async (req, res): Promise<void> => {
-    try {
-        const userId = (req as any).userId;
-        const { id } = req.params;
-        const { period = '30d' } = req.query;
+router.get('/:id/analytics', authMiddleware, validateParams(habitIdParamsSchema), validateQuery(analyticsQuerySchema), async (req, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, (req as any).userId);
+    const userId = (req as any).userId;
+    const { id } = req.params as z.infer<typeof habitIdParamsSchema>;
+    const { period } = req.query as z.infer<typeof analyticsQuerySchema>;
 
+    try {
         const habitRepo = new HabitRepository();
 
         // Verify habit ownership
         const habitResult = await habitRepo.getHabit(id, userId);
         if (Result.isError(habitResult)) {
-            logger.error('Error fetching habit for analytics', habitResult.error);
-            res.status(500).json({
-                error: {
-                    code: 'INTERNAL_ERROR',
-                    message: 'Failed to fetch habit'
-                }
-            });
+            requestLogger.error('Error fetching habit for analytics', { error: habitResult.error, habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch habit'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
         if (!habitResult.value) {
-            res.status(404).json({
-                error: {
-                    code: 'HABIT_NOT_FOUND',
-                    message: 'Habit not found or access denied'
-                }
-            });
+            requestLogger.warn('Habit not found for analytics', { habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.HABIT_NOT_FOUND, 'Habit not found or access denied'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
@@ -281,20 +316,19 @@ router.get('/:id/analytics', authMiddleware, async (req, res): Promise<void> => 
         // Get habit completions
         const completionsResult = await habitRepo.getHabitCompletions(id);
         if (Result.isError(completionsResult)) {
-            logger.error('Error fetching habit completions', completionsResult.error);
-            res.status(500).json({
-                error: {
-                    code: 'INTERNAL_ERROR',
-                    message: 'Failed to fetch habit completions'
-                }
-            });
+            requestLogger.error('Error fetching habit completions', { error: completionsResult.error, habitId: id });
+            const { response, status, headers } = handleExpressError(
+                createAppError(ErrorCode.DATABASE_ERROR, 'Failed to fetch habit completions'),
+                traceId
+            );
+            res.status(status).set(headers).json(response);
             return;
         }
 
         const completions = completionsResult.value;
 
         // Calculate analytics based on period
-        const daysInPeriod = getPeriodDays(period as string);
+        const daysInPeriod = getPeriodDays(period);
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - daysInPeriod);
 
@@ -322,15 +356,12 @@ router.get('/:id/analytics', authMiddleware, async (req, res): Promise<void> => 
             }
         };
 
-        res.json({ analytics });
+        requestLogger.info('Habit analytics retrieved successfully', { habitId: id, period, completionRate: analytics.completionRate });
+        res.json(createSuccessResponse({ analytics }, traceId));
     } catch (error) {
-        logger.error('Error fetching habit analytics', error);
-        res.status(500).json({
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Failed to fetch analytics'
-            }
-        });
+        requestLogger.error('Error fetching habit analytics', { error: error instanceof Error ? error.message : String(error), habitId: req.params.id, period }, error instanceof Error ? error : undefined);
+        const { response, status, headers } = handleExpressError(error, traceId);
+        res.status(status).set(headers).json(response);
     }
 });
 

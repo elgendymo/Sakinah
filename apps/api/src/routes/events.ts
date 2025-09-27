@@ -5,7 +5,14 @@ import { EventProjectionManager } from '@/infrastructure/events/EventProjectionM
 import { HabitAnalyticsProjection } from '@/infrastructure/events/projections/HabitAnalyticsProjection';
 import { EventSourcedEventBus } from '@/infrastructure/events/EventSourcedEventBus';
 import { authMiddleware, AuthRequest } from '@/infrastructure/auth/middleware';
-import { logger } from '@/shared/logger';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 
 const router = express.Router();
 
@@ -45,15 +52,34 @@ router.use(authMiddleware);
  *                   type: string
  *                   format: date-time
  */
-router.get('/health', async (_req, res) => {
+router.get('/health', async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
+    requestLogger.info('Getting event store health');
+
     const eventStore = container.resolve<SQLiteEventStore>('IEventStore');
     const health = await eventStore.getHealthStatus();
 
-    res.json(health);
+    requestLogger.info('Event store health retrieved successfully', {
+      isHealthy: health.isHealthy,
+      eventCount: health.eventCount
+    });
+
+    const response = createSuccessResponse(health, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get event store health:', error);
-    res.status(500).json({ error: 'Failed to get event store health' });
+    requestLogger.error('Failed to get event store health', {
+      error: error instanceof Error ? error.message : String(error),
+      operation: 'get_event_store_health'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get event store health'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -83,15 +109,34 @@ router.get('/health', async (_req, res) => {
  *                 totalEventsProcessed:
  *                   type: number
  */
-router.get('/projections/status', async (_req, res) => {
+router.get('/projections/status', async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
+    requestLogger.info('Getting projection status');
+
     const projectionManager = container.resolve<EventProjectionManager>('IEventProjectionStore');
     const status = await projectionManager.getProjectionStatus();
 
-    res.json(status);
+    requestLogger.info('Projection status retrieved successfully', {
+      isRunning: status.isRunning,
+      registeredProjections: status.registeredProjections
+    });
+
+    const response = createSuccessResponse(status, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get projection status:', error);
-    res.status(500).json({ error: 'Failed to get projection status' });
+    requestLogger.error('Failed to get projection status', {
+      error: error instanceof Error ? error.message : String(error),
+      operation: 'get_projection_status'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get projection status'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -129,15 +174,33 @@ router.get('/projections/status', async (_req, res) => {
  *                     type: string
  *                     nullable: true
  */
-router.get('/projections', async (_req, res) => {
+router.get('/projections', async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
+    requestLogger.info('Getting all projections');
+
     const projectionManager = container.resolve<EventProjectionManager>('IEventProjectionStore');
     const projections = await projectionManager.getAllProjections();
 
-    res.json(projections);
+    requestLogger.info('Projections retrieved successfully', {
+      projectionsCount: projections.length
+    });
+
+    const response = createSuccessResponse(projections, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get projections:', error);
-    res.status(500).json({ error: 'Failed to get projections' });
+    requestLogger.error('Failed to get projections', {
+      error: error instanceof Error ? error.message : String(error),
+      operation: 'get_all_projections'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get projections'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -164,20 +227,44 @@ router.get('/projections', async (_req, res) => {
  *         description: Projection not found
  */
 router.post('/projections/:projectionName/reset', async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+  const { projectionName } = req.params;
+
   try {
-    const { projectionName } = req.params;
+    requestLogger.info('Resetting projection', { projectionName });
+
     const projectionManager = container.resolve<EventProjectionManager>('IEventProjectionStore');
 
     await projectionManager.resetProjection(projectionName);
 
-    res.json({ message: `Projection ${projectionName} reset successfully` });
+    requestLogger.info('Projection reset successfully', { projectionName });
+
+    const response = createSuccessResponse(
+      { message: `Projection ${projectionName} reset successfully` },
+      traceId
+    );
+    res.json(response);
   } catch (error) {
-    logger.error(`Failed to reset projection ${req.params.projectionName}:`, error);
-    if (error.message.includes('not found')) {
-      res.status(404).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Failed to reset projection' });
+    requestLogger.error('Failed to reset projection', {
+      error: error instanceof Error ? error.message : String(error),
+      projectionName,
+      operation: 'reset_projection'
+    }, error instanceof Error ? error : undefined);
+
+    let errorCode = ErrorCode.SERVER_ERROR;
+    let errorMessage = 'Failed to reset projection';
+
+    if (error instanceof Error && error.message.includes('not found')) {
+      errorCode = ErrorCode.NOT_FOUND;
+      errorMessage = error.message;
     }
+
+    const errorResponse = handleExpressError(
+      createAppError(errorCode, errorMessage),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -228,14 +315,33 @@ router.post('/projections/:projectionName/reset', async (req, res): Promise<void
  *                     type: string
  *                     format: date-time
  */
-router.get('/user-events', async (req: AuthRequest, res) => {
+router.get('/user-events', async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'User ID not found' });
+      requestLogger.error('Missing user ID in authenticated request', {
+        operation: 'get_user_events'
+      });
+
+      const errorResponse = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'User ID not found'),
+        traceId
+      );
+      res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
+      return;
     }
 
     const { fromDate, toDate, eventType } = req.query;
+
+    requestLogger.info('Getting user events', {
+      hasFromDate: !!fromDate,
+      hasToDate: !!toDate,
+      eventType: eventType as string
+    });
+
     const eventStore = container.resolve<SQLiteEventStore>('IEventStore');
 
     let events;
@@ -256,10 +362,23 @@ router.get('/user-events', async (req: AuthRequest, res) => {
       );
     }
 
-    return res.json(events);
+    requestLogger.info('User events retrieved successfully', {
+      eventsCount: events.length
+    });
+
+    const response = createSuccessResponse(events, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get user events:', error);
-    return res.status(500).json({ error: 'Failed to get user events' });
+    requestLogger.error('Failed to get user events', {
+      error: error instanceof Error ? error.message : String(error),
+      operation: 'get_user_events'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get user events'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -305,14 +424,31 @@ router.get('/user-events', async (req: AuthRequest, res) => {
  *                     format: date-time
  *                     nullable: true
  */
-router.get('/analytics/habits', async (req: AuthRequest, res) => {
+router.get('/analytics/habits', async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'User ID not found' });
+      requestLogger.error('Missing user ID in authenticated request', {
+        operation: 'get_habit_analytics'
+      });
+
+      const errorResponse = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'User ID not found'),
+        traceId
+      );
+      res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
+      return;
     }
 
     const { habitId } = req.query;
+
+    requestLogger.info('Getting habit analytics', {
+      habitId: habitId as string
+    });
+
     const habitAnalytics = container.resolve<HabitAnalyticsProjection>('HabitAnalyticsProjection');
 
     const analytics = await habitAnalytics.getHabitAnalytics(
@@ -320,10 +456,24 @@ router.get('/analytics/habits', async (req: AuthRequest, res) => {
       habitId as string | undefined
     );
 
-    return res.json(analytics);
+    requestLogger.info('Habit analytics retrieved successfully', {
+      analyticsCount: Array.isArray(analytics) ? analytics.length : 1
+    });
+
+    const response = createSuccessResponse(analytics, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get habit analytics:', error);
-    return res.status(500).json({ error: 'Failed to get habit analytics' });
+    requestLogger.error('Failed to get habit analytics', {
+      error: error instanceof Error ? error.message : String(error),
+      habitId: req.query.habitId,
+      operation: 'get_habit_analytics'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get habit analytics'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -364,24 +514,61 @@ router.get('/analytics/habits', async (req: AuthRequest, res) => {
  *                   type: string
  *                   format: date-time
  */
-router.get('/analytics/spiritual-journey', async (req: AuthRequest, res) => {
+router.get('/analytics/spiritual-journey', async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'User ID not found' });
+      requestLogger.error('Missing user ID in authenticated request', {
+        operation: 'get_spiritual_journey'
+      });
+
+      const errorResponse = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'User ID not found'),
+        traceId
+      );
+      res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
+      return;
     }
+
+    requestLogger.info('Getting spiritual journey analytics');
 
     const habitAnalytics = container.resolve<HabitAnalyticsProjection>('HabitAnalyticsProjection');
     const journey = await habitAnalytics.getUserSpiritalJourney(userId);
 
     if (!journey) {
-      return res.status(404).json({ error: 'Spiritual journey not found' });
+      requestLogger.error('Spiritual journey not found for user', {
+        operation: 'get_spiritual_journey'
+      });
+
+      const errorResponse = handleExpressError(
+        createAppError(ErrorCode.NOT_FOUND, 'Spiritual journey not found'),
+        traceId
+      );
+      res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
+      return;
     }
 
-    return res.json(journey);
+    requestLogger.info('Spiritual journey retrieved successfully', {
+      totalDaysActive: journey.totalDaysActive,
+      currentActiveStreak: journey.currentActiveStreak
+    });
+
+    const response = createSuccessResponse(journey, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get spiritual journey:', error);
-    return res.status(500).json({ error: 'Failed to get spiritual journey' });
+    requestLogger.error('Failed to get spiritual journey', {
+      error: error instanceof Error ? error.message : String(error),
+      operation: 'get_spiritual_journey'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get spiritual journey'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -428,14 +615,32 @@ router.get('/analytics/spiritual-journey', async (req: AuthRequest, res) => {
  *                   spiritualMoments:
  *                     type: number
  */
-router.get('/analytics/daily-stats', async (req: AuthRequest, res) => {
+router.get('/analytics/daily-stats', async (req: AuthRequest, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.userId);
+
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'User ID not found' });
+      requestLogger.error('Missing user ID in authenticated request', {
+        operation: 'get_daily_stats'
+      });
+
+      const errorResponse = handleExpressError(
+        createAppError(ErrorCode.UNAUTHORIZED, 'User ID not found'),
+        traceId
+      );
+      res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
+      return;
     }
 
     const { fromDate, toDate } = req.query;
+
+    requestLogger.info('Getting daily stats', {
+      hasFromDate: !!fromDate,
+      hasToDate: !!toDate
+    });
+
     const habitAnalytics = container.resolve<HabitAnalyticsProjection>('HabitAnalyticsProjection');
 
     const stats = await habitAnalytics.getDailyStats(
@@ -444,10 +649,25 @@ router.get('/analytics/daily-stats', async (req: AuthRequest, res) => {
       toDate ? new Date(toDate as string) : undefined
     );
 
-    return res.json(stats);
+    requestLogger.info('Daily stats retrieved successfully', {
+      statsCount: Array.isArray(stats) ? stats.length : 1
+    });
+
+    const response = createSuccessResponse(stats, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get daily stats:', error);
-    return res.status(500).json({ error: 'Failed to get daily stats' });
+    requestLogger.error('Failed to get daily stats', {
+      error: error instanceof Error ? error.message : String(error),
+      fromDate: req.query.fromDate,
+      toDate: req.query.toDate,
+      operation: 'get_daily_stats'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get daily stats'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 
@@ -470,18 +690,36 @@ router.get('/analytics/daily-stats', async (req: AuthRequest, res) => {
  *               additionalProperties:
  *                 type: number
  */
-router.get('/bus/handlers', async (_req, res) => {
+router.get('/bus/handlers', async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId);
+
   try {
+    requestLogger.info('Getting event bus handlers');
+
     const eventBus = container.resolve<EventSourcedEventBus>('IEventBus');
     const handlers = eventBus.getRegisteredHandlers();
 
     // Convert Map to object for JSON serialization
     const handlersObj = Object.fromEntries(handlers);
 
-    res.json(handlersObj);
+    requestLogger.info('Event handlers retrieved successfully', {
+      handlerTypes: Object.keys(handlersObj).length
+    });
+
+    const response = createSuccessResponse(handlersObj, traceId);
+    res.json(response);
   } catch (error) {
-    logger.error('Failed to get event handlers:', error);
-    res.status(500).json({ error: 'Failed to get event handlers' });
+    requestLogger.error('Failed to get event handlers', {
+      error: error instanceof Error ? error.message : String(error),
+      operation: 'get_event_handlers'
+    }, error instanceof Error ? error : undefined);
+
+    const errorResponse = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get event handlers'),
+      traceId
+    );
+    res.status(errorResponse.status).set(errorResponse.headers).json(errorResponse.response);
   }
 });
 

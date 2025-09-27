@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { StructuredLogger } from '../observability/StructuredLogger';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId
+} from '@/shared/errors';
 
 const logger = StructuredLogger.getInstance();
 
@@ -136,21 +142,32 @@ export class RateLimiter {
 
           res.set('Retry-After', retryAfter.toString());
 
+          const traceId = getExpressTraceId(req);
+
           logger.warn('Rate limit exceeded', {
             key,
             limit: result.limit,
             used: result.used,
             resetTime: result.resetTime,
             ip: req.ip,
-            userAgent: req.get('User-Agent')
+            userAgent: req.get('User-Agent'),
+            traceId
           });
 
-          res.status(429).json({
-            error: this.config.message || 'Too Many Requests',
-            retryAfter,
-            limit: result.limit,
-            resetTime: result.resetTime,
-          });
+          const rateLimitError = createAppError(
+            ErrorCode.RATE_LIMIT_EXCEEDED,
+            this.config.message || 'Too Many Requests',
+            undefined,
+            {
+              retryAfter,
+              limit: result.limit,
+              resetTime: result.resetTime
+            }
+          );
+
+          const { response, status } = handleExpressError(rateLimitError, traceId);
+          res.set('Retry-After', retryAfter.toString());
+          res.status(status).json(response);
           return;
         }
 
@@ -214,11 +231,9 @@ export class RateLimiter {
       return true;
     }
 
-    if (this.config.skipFailedRequests && res.statusCode >= 400) {
-      return true;
-    }
+    return this.config.skipFailedRequests && res.statusCode >= 400;
 
-    return false;
+
   }
 
   private async decrementCounter(key: string): Promise<void> {

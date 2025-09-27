@@ -13,6 +13,14 @@ import {
   GetIntentionStatsUseCase
 } from '@/application/usecases/intentions';
 import { container } from 'tsyringe';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 
 const router = express.Router();
 
@@ -144,9 +152,20 @@ router.post('/',
   authMiddleware,
   validateRequest(createIntentionSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { text, description, priority, targetDate, reminder, tags } = req.body;
+
+      requestLogger.info('Creating new intention', {
+        operation: 'createIntention',
+        text: text?.substring(0, 50) + (text?.length > 50 ? '...' : ''),
+        priority,
+        hasReminder: !!reminder,
+        tagCount: tags?.length || 0
+      });
 
       const createIntentionUseCase = container.resolve<CreateIntentionUseCase>('CreateIntentionUseCase');
       const result = await createIntentionUseCase.execute({
@@ -160,22 +179,26 @@ router.post('/',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'CREATION_FAILED',
-          message: result.error?.message || 'Failed to create intention'
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          result.error?.message || 'Failed to create intention'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.status(201).json({
-        data: result.value.toDTO()
+      requestLogger.info('Intention created successfully', {
+        operation: 'createIntention',
+        intentionId: result.value.id
       });
+
+      const successResponse = createSuccessResponse(result.value.toDTO(), traceId);
+      res.status(201).set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      console.error('Error creating intention:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create intention'
-      });
+      requestLogger.error('Error creating intention', { operation: 'createIntention' }, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to create intention');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -279,8 +302,11 @@ router.get('/',
   authMiddleware,
   validateQuery(getIntentionsSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const {
         status,
         priority,
@@ -294,6 +320,19 @@ router.get('/',
         sortBy,
         sortOrder
       } = req.query;
+
+      requestLogger.info('Retrieving intentions with filters', {
+        operation: 'getIntentions',
+        filters: {
+          status,
+          priority,
+          tagCount: tags?.length || 0,
+          hasSearch: !!search,
+          overdueOnly,
+          page: page || 1,
+          limit: limit || 20
+        }
+      });
 
       const getIntentionsUseCase = container.resolve<GetIntentionsUseCase>('GetIntentionsUseCase');
       const result = await getIntentionsUseCase.execute({
@@ -312,16 +351,25 @@ router.get('/',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'RETRIEVAL_FAILED',
-          message: result.error?.message || 'Failed to retrieve intentions'
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          result.error?.message || 'Failed to retrieve intentions'
+        );
+        const { response, status: errorStatus, headers } = handleExpressError(appError, traceId);
+        res.status(errorStatus).set(headers).json(response);
         return;
       }
 
       const { items, totalCount, page: currentPage, totalPages, hasNext, hasPrevious } = result.value;
 
-      res.json({
+      requestLogger.info('Intentions retrieved successfully', {
+        operation: 'getIntentions',
+        resultCount: items.length,
+        totalCount,
+        currentPage
+      });
+
+      const responseData = {
         data: items.map(intention => intention.toDTO()),
         pagination: {
           currentPage,
@@ -331,13 +379,14 @@ router.get('/',
           hasNext,
           hasPrevious
         }
-      });
+      };
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      console.error('Error getting intentions:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve intentions'
-      });
+      requestLogger.error('Error getting intentions', { operation: 'getIntentions' }, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve intentions');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -415,10 +464,26 @@ router.put('/:id',
   authMiddleware,
   validateRequest(updateIntentionSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const { id } = req.params;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
-      const { id } = req.params;
       const { text, description, priority, targetDate, reminder, tags } = req.body;
+
+      requestLogger.info('Updating intention', {
+        operation: 'updateIntention',
+        intentionId: id,
+        fieldsUpdated: {
+          text: !!text,
+          description: !!description,
+          priority: !!priority,
+          targetDate: targetDate !== undefined,
+          reminder: !!reminder,
+          tags: !!tags
+        }
+      });
 
       const updateIntentionUseCase = container.resolve<UpdateIntentionUseCase>('UpdateIntentionUseCase');
       const result = await updateIntentionUseCase.execute({
@@ -433,22 +498,29 @@ router.put('/:id',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'UPDATE_FAILED',
-          message: result.error?.message || 'Failed to update intention'
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          result.error?.message || 'Failed to update intention'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.json({
-        data: result.value.toDTO()
+      requestLogger.info('Intention updated successfully', {
+        operation: 'updateIntention',
+        intentionId: id
       });
+
+      const successResponse = createSuccessResponse(result.value.toDTO(), traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      console.error('Error updating intention:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to update intention'
-      });
+      requestLogger.error('Error updating intention', {
+        operation: 'updateIntention',
+        intentionId: id
+      }, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to update intention');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -487,9 +559,16 @@ router.put('/:id',
 router.post('/:id/complete',
   authMiddleware,
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const { id } = req.params;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
-      const { id } = req.params;
+      requestLogger.info('Completing intention', {
+        operation: 'completeIntention',
+        intentionId: id
+      });
 
       const completeIntentionUseCase = container.resolve<CompleteIntentionUseCase>('CompleteIntentionUseCase');
       const result = await completeIntentionUseCase.execute({
@@ -498,23 +577,34 @@ router.post('/:id/complete',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'COMPLETION_FAILED',
-          message: result.error?.message || 'Failed to complete intention'
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          result.error?.message || 'Failed to complete intention'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.json({
+      requestLogger.info('Intention completed successfully', {
+        operation: 'completeIntention',
+        intentionId: id
+      });
+
+      const responseData = {
         data: result.value.toDTO(),
         message: 'Intention completed successfully'
-      });
+      };
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      console.error('Error completing intention:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to complete intention'
-      });
+      requestLogger.error('Error completing intention', {
+        operation: 'completeIntention',
+        intentionId: id
+      }, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to complete intention');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -543,9 +633,16 @@ router.post('/:id/complete',
 router.post('/:id/archive',
   authMiddleware,
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const { id } = req.params;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
-      const { id } = req.params;
+      requestLogger.info('Archiving intention', {
+        operation: 'archiveIntention',
+        intentionId: id
+      });
 
       const archiveIntentionUseCase = container.resolve<ArchiveIntentionUseCase>('ArchiveIntentionUseCase');
       const result = await archiveIntentionUseCase.execute({
@@ -554,23 +651,34 @@ router.post('/:id/archive',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'ARCHIVE_FAILED',
-          message: result.error?.message || 'Failed to archive intention'
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          result.error?.message || 'Failed to archive intention'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.json({
+      requestLogger.info('Intention archived successfully', {
+        operation: 'archiveIntention',
+        intentionId: id
+      });
+
+      const responseData = {
         data: result.value.toDTO(),
         message: 'Intention archived successfully'
-      });
+      };
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      console.error('Error archiving intention:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to archive intention'
-      });
+      requestLogger.error('Error archiving intention', {
+        operation: 'archiveIntention',
+        intentionId: id
+      }, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to archive intention');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -607,9 +715,16 @@ router.post('/:id/archive',
 router.delete('/:id',
   authMiddleware,
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const { id } = req.params;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
-      const { id } = req.params;
+      requestLogger.info('Deleting intention', {
+        operation: 'deleteIntention',
+        intentionId: id
+      });
 
       const deleteIntentionUseCase = container.resolve<DeleteIntentionUseCase>('DeleteIntentionUseCase');
       const result = await deleteIntentionUseCase.execute({
@@ -618,22 +733,33 @@ router.delete('/:id',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'DELETION_FAILED',
-          message: result.error?.message || 'Failed to delete intention'
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          result.error?.message || 'Failed to delete intention'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.json({
+      requestLogger.info('Intention deleted successfully', {
+        operation: 'deleteIntention',
+        intentionId: id
+      });
+
+      const responseData = {
         message: 'Intention deleted successfully'
-      });
+      };
+
+      const successResponse = createSuccessResponse(responseData, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      console.error('Error deleting intention:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to delete intention'
-      });
+      requestLogger.error('Error deleting intention', {
+        operation: 'deleteIntention',
+        intentionId: id
+      }, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to delete intention');
+      res.status(status).set(headers).json(response);
     }
   }
 );
@@ -670,9 +796,17 @@ router.delete('/:id',
 router.get('/stats',
   authMiddleware,
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const userId = req.userId;
+    const requestLogger = createRequestLogger(traceId, userId);
+
     try {
-      const userId = req.userId;
       const { daysAheadForDueSoon } = req.query;
+
+      requestLogger.info('Retrieving intention statistics', {
+        operation: 'getIntentionStats',
+        daysAheadForDueSoon: daysAheadForDueSoon || 'default'
+      });
 
       const getStatsUseCase = container.resolve<GetIntentionStatsUseCase>('GetIntentionStatsUseCase');
       const result = await getStatsUseCase.execute({
@@ -681,22 +815,26 @@ router.get('/stats',
       });
 
       if (Result.isError(result)) {
-        res.status(400).json({
-          error: 'STATS_RETRIEVAL_FAILED',
-          message: result.error?.message || 'Failed to retrieve intention statistics'
-        });
+        const appError = createAppError(
+          ErrorCode.VALIDATION_ERROR,
+          result.error?.message || 'Failed to retrieve intention statistics'
+        );
+        const { response, status, headers } = handleExpressError(appError, traceId);
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.json({
-        data: result.value
+      requestLogger.info('Intention statistics retrieved successfully', {
+        operation: 'getIntentionStats',
+        statsRetrieved: true
       });
+
+      const successResponse = createSuccessResponse(result.value, traceId);
+      res.set('X-Trace-Id', traceId).json(successResponse);
     } catch (error) {
-      console.error('Error getting intention stats:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to retrieve intention statistics'
-      });
+      requestLogger.error('Error getting intention stats', { operation: 'getIntentionStats' }, error as Error);
+      const { response, status, headers } = handleExpressError(error, traceId, 'Failed to retrieve intention statistics');
+      res.status(status).set(headers).json(response);
     }
   }
 );

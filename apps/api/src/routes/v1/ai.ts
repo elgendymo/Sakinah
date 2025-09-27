@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { container } from 'tsyringe';
 import { authMiddleware } from '@/infrastructure/auth/middleware';
-import { logger } from '../../shared/logger';
 import { SuggestPlanUseCase } from '@/application/usecases/SuggestPlanUseCase';
 import { Result } from '@/shared/result';
-import { ValidationError } from '@/shared/errors';
+import { ErrorCode, createAppError, handleExpressError, getExpressTraceId, createSuccessResponse, ValidationError, createRequestLogger } from '@/shared/errors';
+import { validateBody } from '@/infrastructure/middleware/validation';
 import { z } from 'zod';
 
 const router = Router();
@@ -38,23 +38,13 @@ const ExplainSchema = z.object({
  * @apiName SuggestPlan
  * @apiGroup AI
  */
-router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => {
+router.post('/suggest-plan', authMiddleware, validateBody(SuggestPlanSchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const userId = (req as any).userId;
-    const parseResult = SuggestPlanSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request data',
-          details: parseResult.error.errors
-        }
-      });
-      return;
-    }
-
-    const { mode, input, context = {} } = parseResult.data;
+    const { mode, input, context = {} } = req.body;
 
     // Enhanced request structure for v1 API
     const suggestPlanRequest = {
@@ -76,32 +66,30 @@ router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => 
     const result = await useCase.execute(suggestPlanRequest);
 
     if (Result.isError(result)) {
-      logger.error('Error suggesting plan v1', result.error);
+      requestLogger.error('Error suggesting plan v1', { error: result.error, traceId });
 
       // Handle specific error types
       if (result.error instanceof ValidationError) {
-        res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: result.error.message
-          }
-        });
+        const { response, status, headers } = handleExpressError(
+          createAppError(ErrorCode.VALIDATION_ERROR, result.error.message),
+          traceId
+        );
+        res.status(status).set(headers).json(response);
         return;
       }
 
-      res.status(500).json({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to generate plan suggestion'
-        }
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.AI_PROVIDER_ERROR, 'Failed to generate plan suggestion'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
       return;
     }
 
     const suggestedPlan = result.value.toDTO();
 
     // Enhanced response format for v1 API
-    res.json({
+    const responseData = {
       suggestion: {
         plan: suggestedPlan,
         confidence: 0.85, // AI confidence score
@@ -129,15 +117,14 @@ router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => 
         aiProvider: process.env.AI_PROVIDER || 'rules',
         processingTime: Date.now() // Could be enhanced with actual timing
       }
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error in suggest-plan v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to generate plan suggestion'
-      }
-    });
+    requestLogger.error('Error in suggest-plan v1', { error, traceId });
+    const { response, status, headers } = handleExpressError(error, traceId, 'Failed to generate plan suggestion');
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -147,22 +134,12 @@ router.post('/suggest-plan', authMiddleware, async (req, res): Promise<void> => 
  * @apiName ExplainConcept
  * @apiGroup AI
  */
-router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
+router.post('/explain', authMiddleware, validateBody(ExplainSchema), async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
-    const parseResult = ExplainSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request data',
-          details: parseResult.error.errors
-        }
-      });
-      return;
-    }
-
-    const { struggle, context = '' } = parseResult.data;
+    const { struggle, context = '' } = req.body;
 
     // Import AI provider dynamically to avoid circular dependencies
     const { getAIProvider } = await import('@/infrastructure/ai/factory');
@@ -171,7 +148,7 @@ router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
     const response = await ai.explain(struggle);
 
     // Enhanced response format for v1 API
-    res.json({
+    const responseData = {
       explanation: {
         concept: struggle,
         guidance: (response as any).explanation || (response as any).guidance || 'Islamic guidance provided',
@@ -187,15 +164,14 @@ router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
         aiProvider: process.env.AI_PROVIDER || 'rules',
         contextUsed: !!context
       }
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error in explain v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to provide explanation'
-      }
-    });
+    requestLogger.error('Error in explain v1', { error, traceId });
+    const { response, status, headers } = handleExpressError(error, traceId, 'Failed to provide explanation');
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -206,10 +182,12 @@ router.post('/explain', authMiddleware, async (req, res): Promise<void> => {
  * @apiGroup AI
  */
 router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
-    const userId = (req as any).userId;
-    const {
-      planId,
+      const {
+          planId,
       completedHabits = [],
       challenges = [],
       reflections = '',
@@ -218,12 +196,11 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
 
     // Validation
     if (!planId) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Plan ID is required for progress analysis'
-        }
-      });
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.VALIDATION_ERROR, 'Plan ID is required for progress analysis'),
+        traceId
+      );
+      res.status(status).set(headers).json(response);
       return;
     }
 
@@ -258,7 +235,7 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
       ]
     };
 
-    res.json({
+    const responseData = {
       analysis,
       metadata: {
         analyzedAt: new Date().toISOString(),
@@ -266,15 +243,14 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
         dataPoints: completedHabits.length + challenges.length,
         version: '1.0'
       }
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error in analyze-progress v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to analyze progress'
-      }
-    });
+    requestLogger.error('Error in analyze-progress v1', { error, traceId });
+    const { response, status, headers } = handleExpressError(error, traceId, 'Failed to analyze progress');
+    res.status(status).set(headers).json(response);
   }
 });
 
@@ -285,6 +261,9 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
  * @apiGroup AI
  */
 router.get('/capabilities', authMiddleware, async (req, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, (req as any).userId);
+
   try {
     const capabilities = {
       features: {
@@ -324,21 +303,20 @@ router.get('/capabilities', authMiddleware, async (req, res): Promise<void> => {
       }
     };
 
-    res.json({
+    const responseData = {
       capabilities,
       metadata: {
         retrievedAt: new Date().toISOString(),
         version: '1.0'
       }
-    });
+    };
+
+    const successResponse = createSuccessResponse(responseData, traceId);
+    res.json(successResponse);
   } catch (error) {
-    logger.error('Error fetching AI capabilities v1', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch AI capabilities'
-      }
-    });
+    requestLogger.error('Error fetching AI capabilities v1', { error, traceId });
+    const { response, status, headers } = handleExpressError(error, traceId, 'Failed to fetch AI capabilities');
+    res.status(status).set(headers).json(response);
   }
 });
 

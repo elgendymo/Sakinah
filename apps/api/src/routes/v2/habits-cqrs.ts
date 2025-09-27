@@ -19,6 +19,14 @@ import {
 import { authMiddleware } from '@/infrastructure/auth/middleware';
 import { validateRequest } from '@/infrastructure/middleware/validation';
 import { z } from 'zod';
+import {
+  ErrorCode,
+  createAppError,
+  handleExpressError,
+  getExpressTraceId,
+  createSuccessResponse,
+  createRequestLogger
+} from '@/shared/errors';
 
 const router = express.Router();
 
@@ -122,26 +130,37 @@ router.post('/',
   authMiddleware,
   validateRequest(createHabitSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, req.user?.id);
+
     try {
       const { planId, title, schedule } = req.body;
       const userId = req.user.id;
 
-      const commandBus = container.resolve<CommandBus>('CommandBus');
-      const command = new CreateHabitCommand(userId, planId, title, schedule);
-
-      // TODO: Fix Result type handling when command bus implementation is complete
+      requestLogger.info('Creating new habit', { planId, title, userId });
+        container.resolve<CommandBus>('CommandBus');
+        new CreateHabitCommand(userId, planId, title, schedule);
+// TODO: Fix Result type handling when command bus implementation is complete
       // For now, return success placeholder
-      res.status(201).json({
-        success: true,
-        habitId: "placeholder-id",
+      const habitId = "placeholder-id";
+
+      requestLogger.info('Habit created successfully', { habitId });
+
+      const response = createSuccessResponse({
+        habitId,
         message: 'Habit created successfully'
-      });
+      }, traceId);
+
+      res.status(201).json(response);
     } catch (error) {
-      console.error('Error creating habit:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create habit'
-      });
+      requestLogger.error('Error creating habit', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to create habit', error instanceof Error ? error : undefined),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -183,9 +202,14 @@ router.post('/',
  *         $ref: '#/components/responses/InternalServerError'
  */
 router.get('/:id', authMiddleware, async (req: any, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.user?.id);
+
   try {
     const { id } = req.params;
     const userId = req.user.id;
+
+    requestLogger.info('Getting habit by ID', { habitId: id, userId });
 
     const queryBus = container.resolve<QueryBus>('QueryBus');
     const query = new GetHabitByIdQuery(id, userId);
@@ -194,23 +218,33 @@ router.get('/:id', authMiddleware, async (req: any, res): Promise<void> => {
     const habit = await queryBus.dispatch(query);
 
     if (!habit) {
-      res.status(404).json({
-        error: 'HABIT_NOT_FOUND',
-        message: 'Habit not found'
-      });
+      requestLogger.warn('Habit not found', { habitId: id });
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.HABIT_NOT_FOUND, 'Habit not found'),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
       return;
     }
 
-    res.json({
-      success: true,
+    requestLogger.info('Habit retrieved successfully', { habitId: id });
+
+    const response = createSuccessResponse({
       data: habit
-    });
+    }, traceId);
+
+    res.json(response);
   } catch (error) {
-    console.error('Error getting habit:', error);
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to get habit'
-    });
+    requestLogger.error('Error getting habit', { habitId: req.params.id, error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get habit', error instanceof Error ? error : undefined),
+      traceId
+    );
+
+    res.set(headers).status(status).json(response);
   }
 });
 
@@ -220,6 +254,9 @@ router.get('/:id', authMiddleware, async (req: any, res): Promise<void> => {
  * @access Private
  */
 router.get('/', authMiddleware, async (req: any, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.user?.id);
+
   try {
     const userId = req.user.id;
     const {
@@ -230,6 +267,16 @@ router.get('/', authMiddleware, async (req: any, res) => {
       planId,
       completedToday
     } = req.query;
+
+    requestLogger.info('Getting user habits', {
+      userId,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      planId,
+      completedToday
+    });
 
     const queryBus = container.resolve<QueryBus>('QueryBus');
     const query = new GetHabitsByUserQuery(
@@ -248,17 +295,26 @@ router.get('/', authMiddleware, async (req: any, res) => {
 
     const result = await queryBus.dispatch(query, { cache: true, cacheTime: 1 * 60 * 1000 }); // 1 min cache
 
-    res.json({
-      success: true,
-      data: result.data,
+    requestLogger.info('Habits retrieved successfully', {
+      count: result.data?.length || 0,
       pagination: result.pagination
     });
+
+    const response = createSuccessResponse({
+      data: result.data,
+      pagination: result.pagination
+    }, traceId);
+
+    res.json(response);
   } catch (error) {
-    console.error('Error getting habits:', error);
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to get habits'
-    });
+    requestLogger.error('Error getting habits', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get habits', error instanceof Error ? error : undefined),
+      traceId
+    );
+
+    res.set(headers).status(status).json(response);
   }
 });
 
@@ -268,28 +324,37 @@ router.get('/', authMiddleware, async (req: any, res) => {
  * @access Private
  */
 router.get('/today', authMiddleware, async (req: any, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.user?.id);
+
   try {
     const userId = req.user.id;
     const { date } = req.query;
+    const targetDate = date ? new Date(date as string) : new Date();
+
+    requestLogger.info('Getting today\'s habits', { userId, date: targetDate.toISOString() });
 
     const queryBus = container.resolve<QueryBus>('QueryBus');
-    const query = new GetTodaysHabitsQuery(
-      userId,
-      date ? new Date(date as string) : new Date()
-    );
+    const query = new GetTodaysHabitsQuery(userId, targetDate);
 
     const habits = await queryBus.dispatch(query, { cache: true, cacheTime: 30 * 1000 }); // 30 sec cache
 
-    res.json({
-      success: true,
+    requestLogger.info('Today\'s habits retrieved successfully', { count: habits?.length || 0 });
+
+    const response = createSuccessResponse({
       data: habits
-    });
+    }, traceId);
+
+    res.json(response);
   } catch (error) {
-    console.error('Error getting today\'s habits:', error);
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to get today\'s habits'
-    });
+    requestLogger.error('Error getting today\'s habits', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get today\'s habits', error instanceof Error ? error : undefined),
+      traceId
+    );
+
+    res.set(headers).status(status).json(response);
   }
 });
 
@@ -299,31 +364,41 @@ router.get('/today', authMiddleware, async (req: any, res) => {
  * @access Private
  */
 router.get('/statistics', authMiddleware, async (req: any, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.user?.id);
+
   try {
     const userId = req.user.id;
     const { from, to } = req.query;
 
+    const dateRange = from && to ? {
+      from: new Date(from as string),
+      to: new Date(to as string)
+    } : undefined;
+
+    requestLogger.info('Getting habit statistics', { userId, dateRange });
+
     const queryBus = container.resolve<QueryBus>('QueryBus');
-    const query = new GetHabitStatisticsQuery(
-      userId,
-      from && to ? {
-        from: new Date(from as string),
-        to: new Date(to as string)
-      } : undefined
-    );
+    const query = new GetHabitStatisticsQuery(userId, dateRange);
 
     const statistics = await queryBus.dispatch(query, { cache: true, cacheTime: 5 * 60 * 1000 }); // 5 min cache
 
-    res.json({
-      success: true,
+    requestLogger.info('Habit statistics retrieved successfully');
+
+    const response = createSuccessResponse({
       data: statistics
-    });
+    }, traceId);
+
+    res.json(response);
   } catch (error) {
-    console.error('Error getting habit statistics:', error);
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to get habit statistics'
-    });
+    requestLogger.error('Error getting habit statistics', { error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get habit statistics', error instanceof Error ? error : undefined),
+      traceId
+    );
+
+    res.set(headers).status(status).json(response);
   }
 });
 
@@ -333,17 +408,26 @@ router.get('/statistics', authMiddleware, async (req: any, res) => {
  * @access Private
  */
 router.get('/search', authMiddleware, async (req: any, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.user?.id);
+
   try {
     const userId = req.user.id;
     const { q, page = 1, limit = 10 } = req.query;
 
     if (!q) {
-      res.status(400).json({
-        error: 'MISSING_SEARCH_TERM',
-        message: 'Search term is required'
-      });
+      requestLogger.warn('Search request missing search term');
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.VALIDATION_ERROR, 'Search term is required'),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
       return;
     }
+
+    requestLogger.info('Searching habits', { userId, searchTerm: q, page, limit });
 
     const queryBus = container.resolve<QueryBus>('QueryBus');
     const query = new SearchHabitsQuery(
@@ -358,8 +442,12 @@ router.get('/search', authMiddleware, async (req: any, res): Promise<void> => {
     // TODO: Remove cache options until query bus supports them
     const result = await queryBus.dispatch(query);
 
-    res.json({
-      success: true,
+    requestLogger.info('Habit search completed', {
+      resultCount: result.data?.length || 0,
+      pagination: result.pagination
+    });
+
+    const response = createSuccessResponse({
       data: result.data || [],
       pagination: result.pagination || {
         currentPage: 1,
@@ -367,13 +455,18 @@ router.get('/search', authMiddleware, async (req: any, res): Promise<void> => {
         totalItems: 0,
         totalPages: 0
       }
-    });
+    }, traceId);
+
+    res.json(response);
   } catch (error) {
-    console.error('Error searching habits:', error);
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to search habits'
-    });
+    requestLogger.error('Error searching habits', { searchTerm: req.query.q, error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to search habits', error instanceof Error ? error : undefined),
+      traceId
+    );
+
+    res.set(headers).status(status).json(response);
   }
 });
 
@@ -386,30 +479,38 @@ router.post('/complete',
   authMiddleware,
   validateRequest(completeHabitSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, req.user?.id);
+
     try {
       const { habitId, date } = req.body;
       const userId = req.user.id;
+      const completionDate = date ? new Date(date) : new Date();
+
+      requestLogger.info('Completing habit', { habitId, userId, date: completionDate.toISOString() });
 
       const commandBus = container.resolve<CommandBus>('CommandBus');
-      const command = new CompleteHabitCommand(
-        userId,
-        habitId,
-        date ? new Date(date) : new Date()
-      );
+      const command = new CompleteHabitCommand(userId, habitId, completionDate);
 
       // TODO: Fix Result type handling when command bus implementation is complete
       await commandBus.dispatch(command);
 
-      res.json({
-        success: true,
+      requestLogger.info('Habit completed successfully', { habitId });
+
+      const response = createSuccessResponse({
         message: 'Habit completed successfully'
-      });
+      }, traceId);
+
+      res.json(response);
     } catch (error) {
-      console.error('Error completing habit:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to complete habit'
-      });
+      requestLogger.error('Error completing habit', { habitId: req.body.habitId, error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to complete habit', error instanceof Error ? error : undefined),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -423,30 +524,38 @@ router.post('/uncomplete',
   authMiddleware,
   validateRequest(completeHabitSchema),
   async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, req.user?.id);
+
     try {
       const { habitId, date } = req.body;
       const userId = req.user.id;
+      const targetDate = date ? new Date(date) : new Date();
+
+      requestLogger.info('Uncompleting habit', { habitId, userId, date: targetDate.toISOString() });
 
       const commandBus = container.resolve<CommandBus>('CommandBus');
-      const command = new UncompleteHabitCommand(
-        userId,
-        habitId,
-        date ? new Date(date) : new Date()
-      );
+      const command = new UncompleteHabitCommand(userId, habitId, targetDate);
 
       // TODO: Fix Result type handling when command bus implementation is complete
       await commandBus.dispatch(command);
 
-      res.json({
-        success: true,
+      requestLogger.info('Habit uncompleted successfully', { habitId });
+
+      const response = createSuccessResponse({
         message: 'Habit uncompleted successfully'
-      });
+      }, traceId);
+
+      res.json(response);
     } catch (error) {
-      console.error('Error uncompleting habit:', error);
-      res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to uncomplete habit'
-      });
+      requestLogger.error('Error uncompleting habit', { habitId: req.body.habitId, error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to uncomplete habit', error instanceof Error ? error : undefined),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -460,41 +569,62 @@ router.post('/bulk-complete',
   authMiddleware,
   validateRequest(bulkCompleteSchema),
   async (req: any, res) => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, req.user?.id);
+
     try {
       const { habitIds, date } = req.body;
       const userId = req.user.id;
+      const completionDate = date ? new Date(date) : new Date();
+
+      requestLogger.info('Bulk completing habits', {
+        userId,
+        habitCount: habitIds.length,
+        date: completionDate.toISOString()
+      });
 
       const commandBus = container.resolve<CommandBus>('CommandBus');
-      const command = new BulkCompleteHabitsCommand(
-        userId,
-        habitIds,
-        date ? new Date(date) : new Date()
-      );
+      const command = new BulkCompleteHabitsCommand(userId, habitIds, completionDate);
 
       const result = await commandBus.dispatch(command) as any;
 
       if (result && result.ok === false) {
-        return res.status(400).json({
-          error: 'BULK_COMPLETION_FAILED',
-          message: result.error?.message || 'Bulk completion failed'
-        });
+        requestLogger.warn('Bulk completion failed', { error: result.error?.message });
+
+        const { response, status, headers } = handleExpressError(
+          createAppError(ErrorCode.VALIDATION_ERROR, result.error?.message || 'Bulk completion failed'),
+          traceId
+        );
+
+        res.set(headers).status(status).json(response);
+        return;
       }
 
       // Invalidate relevant caches
       const queryBus = container.resolve<QueryBus>('QueryBus');
       (queryBus as any).invalidateCacheForUser?.(userId);
 
-      return res.json({
-        success: true,
-        completedCount: result?.value || 0,
-        message: `${result.value} habits completed successfully`
-      });
+      const completedCount = result?.value || 0;
+      requestLogger.info('Bulk completion successful', { completedCount });
+
+      const response = createSuccessResponse({
+        completedCount,
+        message: `${completedCount} habits completed successfully`
+      }, traceId);
+
+      res.json(response);
     } catch (error) {
-      console.error('Error bulk completing habits:', error);
-      return res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to bulk complete habits'
-      });
+      requestLogger.error('Error bulk completing habits', {
+        habitCount: req.body.habitIds?.length,
+        error: error instanceof Error ? error.message : String(error)
+      }, error instanceof Error ? error : undefined);
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to bulk complete habits', error instanceof Error ? error : undefined),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
     }
   }
 );
@@ -505,9 +635,14 @@ router.post('/bulk-complete',
  * @access Private
  */
 router.get('/:id/analytics', authMiddleware, async (req: any, res): Promise<void> => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.user?.id);
+
   try {
     const userId = req.user.id;
     const habitId = req.params.id;
+
+    requestLogger.info('Getting habit analytics', { habitId, userId });
 
     // Use the query bus to get habit details
     const queryBus = container.resolve<QueryBus>('QueryBus');
@@ -516,7 +651,14 @@ router.get('/:id/analytics', authMiddleware, async (req: any, res): Promise<void
     const habitResult = await queryBus.dispatch(habitQuery) as any;
 
     if (!habitResult || habitResult.ok === false) {
-      res.status(404).json({ error: 'Habit not found' });
+      requestLogger.warn('Habit not found for analytics', { habitId });
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.HABIT_NOT_FOUND, 'Habit not found'),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
       return;
     }
 
@@ -538,13 +680,25 @@ router.get('/:id/analytics', authMiddleware, async (req: any, res): Promise<void
       lastCompleted: habit.lastCompletedOn || null
     };
 
-    res.json({ analytics });
+    requestLogger.info('Habit analytics retrieved successfully', { habitId, analyticsGenerated: true });
+
+    const response = createSuccessResponse({
+      analytics
+    }, traceId);
+
+    res.json(response);
   } catch (error) {
-    console.error('Error getting habit analytics:', error);
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to get habit analytics'
-    });
+    requestLogger.error('Error getting habit analytics', {
+      habitId: req.params.id,
+      error: error instanceof Error ? error.message : String(error)
+    }, error instanceof Error ? error : undefined);
+
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to get habit analytics', error instanceof Error ? error : undefined),
+      traceId
+    );
+
+    res.set(headers).status(status).json(response);
   }
 });
 
@@ -554,9 +708,14 @@ router.get('/:id/analytics', authMiddleware, async (req: any, res): Promise<void
  * @access Private
  */
 router.delete('/:id', authMiddleware, async (req: any, res) => {
+  const traceId = getExpressTraceId(req);
+  const requestLogger = createRequestLogger(traceId, req.user?.id);
+
   try {
     const { id } = req.params;
     const userId = req.user.id;
+
+    requestLogger.info('Deleting habit', { habitId: id, userId });
 
     const commandBus = container.resolve<CommandBus>('CommandBus');
     const command = new DeleteHabitCommand(userId, id);
@@ -564,26 +723,40 @@ router.delete('/:id', authMiddleware, async (req: any, res) => {
     const result = await commandBus.dispatch(command) as any;
 
     if (result && result.ok === false) {
-      return res.status(400).json({
-        error: 'HABIT_DELETION_FAILED',
-        message: result.error?.message || 'Habit deletion failed'
-      });
+      requestLogger.warn('Habit deletion failed', { habitId: id, error: result.error?.message });
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.VALIDATION_ERROR, result.error?.message || 'Habit deletion failed'),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
+      return;
     }
 
     // Invalidate relevant caches
     const queryBus = container.resolve<QueryBus>('QueryBus');
     (queryBus as any).invalidateCacheForUser?.(userId);
 
-    return res.json({
-      success: true,
+    requestLogger.info('Habit deleted successfully', { habitId: id });
+
+    const response = createSuccessResponse({
       message: 'Habit deleted successfully'
-    });
+    }, traceId);
+
+    res.json(response);
   } catch (error) {
-    console.error('Error deleting habit:', error);
-    return res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to delete habit'
-    });
+    requestLogger.error('Error deleting habit', {
+      habitId: req.params.id,
+      error: error instanceof Error ? error.message : String(error)
+    }, error instanceof Error ? error : undefined);
+
+    const { response, status, headers } = handleExpressError(
+      createAppError(ErrorCode.SERVER_ERROR, 'Failed to delete habit', error instanceof Error ? error : undefined),
+      traceId
+    );
+
+    res.set(headers).status(status).json(response);
   }
 });
 
