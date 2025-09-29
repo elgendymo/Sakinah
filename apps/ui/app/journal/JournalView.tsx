@@ -50,7 +50,6 @@ export default function JournalView() {
     pagination,
     currentPage,
     itemsPerPage,
-    sortBy,
     sortOrder,
     newEntry,
     newTags,
@@ -65,7 +64,6 @@ export default function JournalView() {
     removeSelectedTag,
     setCurrentPage,
     setItemsPerPage,
-    setSortBy,
     setSortOrder,
     setNewEntry,
     setNewTags,
@@ -161,7 +159,7 @@ export default function JournalView() {
       loadEntriesWithAuth();
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedTags, currentPage, itemsPerPage, sortBy, sortOrder]);
+  }, [searchQuery, selectedTags, currentPage, itemsPerPage, sortOrder]);
 
   // Edit functionality handlers
   const handleEditEntry = useCallback((entry: any) => {
@@ -247,7 +245,7 @@ export default function JournalView() {
       tags: selectedTags.length > 0 ? selectedTags : undefined,
       page: currentPage,
       limit: itemsPerPage,
-      sortBy,
+      sortBy: 'createdAt',  // Always sort by date
       sortOrder
     });
   };
@@ -384,42 +382,51 @@ export default function JournalView() {
         </div>
 
         {/* Sort and Display Options */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-sage-700">Sort by:</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'content')}
-              className="px-3 py-1 text-sm border border-sage-200 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {/* Order Toggle */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-sage-600">Order:</span>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
+                sortOrder === 'desc'
+                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  : 'bg-sage-50 text-sage-700 hover:bg-sage-100'
+              }`}
+              title={sortOrder === 'desc' ? 'Showing newest first' : 'Showing oldest first'}
             >
-              <option value="createdAt">Date</option>
-              <option value="content">Content</option>
-            </select>
+              {sortOrder === 'desc' ? (
+                <>
+                  <TimeIcon sx={{ fontSize: 18 }} />
+                  <span className="text-sm font-medium">Newest</span>
+                </>
+              ) : (
+                <>
+                  <TimeIcon sx={{ fontSize: 18, transform: 'rotate(180deg)' }} />
+                  <span className="text-sm font-medium">Oldest</span>
+                </>
+              )}
+            </button>
           </div>
 
+          {/* Items Per Page */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-sage-700">Order:</label>
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className="px-3 py-1 text-sm border border-sage-200 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value="desc">Newest first</option>
-              <option value="asc">Oldest first</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-sage-700">Per page:</label>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="px-3 py-1 text-sm border border-sage-200 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+            <span className="text-sm text-sage-600">Show:</span>
+            <div className="flex gap-1 bg-sage-50 p-1 rounded-lg">
+              {[10, 20, 50].map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setItemsPerPage(num)}
+                  className={`px-3 py-1 text-sm rounded-md transition-all ${
+                    itemsPerPage === num
+                      ? 'bg-white text-emerald-700 font-medium shadow-sm'
+                      : 'text-sage-600 hover:text-sage-800'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
