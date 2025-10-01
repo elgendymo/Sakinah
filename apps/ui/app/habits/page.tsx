@@ -77,43 +77,19 @@ export default function HabitsPage() {
   }, [habits.length]); // Only trigger when number of habits changes
 
   const loadHabits = async () => {
+    console.log('🔥 LOADING HABITS STARTED');
     try {
       setLoading(true);
       clearError();
 
+      console.log('🔥 Getting auth token...');
       // Get authentication token
       const token = await AuthUtils.getAuthTokenWithFallback();
+      console.log('🔥 Auth token obtained:', token);
 
-      // Check if we're in development mode with mock auth
-      if (token === 'mock-token-for-dev') {
-        // Show sample data for development
-        const sampleHabits: Habit[] = [
-          {
-            id: '1',
-            title: t('sampleHabits.morningDhikr'),
-            streakCount: 7,
-            lastCompletedOn: undefined,
-            plan: { target: t('sampleHabits.patience'), kind: 'tahliyah' }
-          },
-          {
-            id: '2',
-            title: t('sampleHabits.readQuran'),
-            streakCount: 3,
-            lastCompletedOn: undefined,
-            plan: { target: t('sampleHabits.knowledge'), kind: 'tahliyah' }
-          },
-          {
-            id: '3',
-            title: t('sampleHabits.eveningDua'),
-            streakCount: 12,
-            lastCompletedOn: undefined,
-            plan: { target: t('sampleHabits.gratitude'), kind: 'tahliyah' }
-          },
-        ];
-        setHabits(sampleHabits);
-        setCompletedToday(new Set());
-        return;
-      }
+      console.log('🔥 Making API call...');
+      // Even in development mode with mock auth, fetch real habit data from API
+      // This ensures analytics work properly with real habit IDs
 
       // Use v2 API endpoint with stats and history query parameters
       const habitsData = await api.getHabits({
@@ -121,17 +97,38 @@ export default function HabitsPage() {
         includeHistory: true
       }, token);
 
+      console.log('🔥 API response received:', habitsData);
+      console.log('🔥 API response type:', typeof habitsData);
+      console.log('🔥 API response keys:', Object.keys(habitsData || {}));
+
       // Handle both array response and object with habits property
       const habitsList = Array.isArray(habitsData) ? habitsData : (habitsData as any)?.habits || (habitsData as any)?.data || [];
 
+      console.log('Parsed habits list:', habitsList);
+
       if (habitsList && habitsList.length > 0) {
-        setHabits(habitsList);
+        // Map the API habit data to the UI expected format
+        const formattedHabits = habitsList.map((habit: any) => ({
+          id: habit.id,
+          title: habit.title,
+          streakCount: habit.streakCount || 0,
+          lastCompletedOn: habit.lastCompletedOn,
+          plan: {
+            target: 'Spiritual Development', // Default since we don't have plan details
+            kind: 'tahliyah' as const // Default to building virtues
+          },
+          stats: habit.stats,
+          analytics: habit.analytics
+        }));
+
+        console.log('Formatted habits for UI:', formattedHabits);
+        setHabits(formattedHabits);
 
         // Determine which habits are completed today
         const today = new Date().toISOString().split('T')[0];
         const completedTodaySet = new Set<string>();
 
-        habitsList.forEach((habit: Habit) => {
+        formattedHabits.forEach((habit: Habit) => {
           if (habit.lastCompletedOn === today) {
             completedTodaySet.add(habit.id);
           }
@@ -139,16 +136,25 @@ export default function HabitsPage() {
 
         setCompletedToday(completedTodaySet);
       } else {
+        console.log('No habits found, setting empty array');
         setHabits([]);
         setCompletedToday(new Set());
       }
     } catch (error) {
+      console.error('🔥 ERROR loading habits:', error);
+      console.error('🔥 ERROR details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack',
+        type: typeof error,
+        errorObject: error
+      });
       handleError(error, 'Loading Habits');
 
       // Fallback to empty state on error
       setHabits([]);
       setCompletedToday(new Set());
     } finally {
+      console.log('🔥 LOADING HABITS COMPLETED');
       setLoading(false);
     }
   };
@@ -388,6 +394,16 @@ export default function HabitsPage() {
               <GrowthIcon sx={{ fontSize: 64, color: '#9ca3af' }} className="mx-auto" />
             </div>
             <p className="text-sage-600 mb-4">{t('noHabitsYet')}</p>
+            {/* Debug button - temporary */}
+            <button
+              onClick={() => {
+                console.log('Debug: Forcing habit reload...');
+                loadHabits();
+              }}
+              className="bg-red-500 text-white px-4 py-2 rounded mb-4 mr-4"
+            >
+              DEBUG: Force Load Habits
+            </button>
             <a href="/tazkiyah" className="btn-primary">
               {t('createFirstPlan')}
             </a>

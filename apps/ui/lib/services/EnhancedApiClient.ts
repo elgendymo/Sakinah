@@ -113,7 +113,10 @@ export class EnhancedApiClient {
     }
   ): Promise<T> {
     const { url, options: requestOptions, traceId } = metadata;
-    const { timeout, maxRetries, useErrorService, offlineQueueable } = options;
+    const { timeout } = options;
+    // useErrorService and offlineQueueable are used in handleRequestError
+    void options.useErrorService;
+    void options.offlineQueueable;
 
     try {
       // Create timeout promise

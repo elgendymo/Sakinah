@@ -10,8 +10,10 @@ import {
   AutoAwesome,
   Build,
   Warning,
-  CheckCircle
+  CheckCircle,
+  ArrowBack
 } from '@mui/icons-material';
+import AnimatedButton from '@/components/ui/AnimatedButton';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -101,6 +103,20 @@ function LoginForm() {
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-gold-400 to-emerald-400"></div>
 
             <div className="p-8">
+              {/* Back Button */}
+              <div className="mb-6">
+                <AnimatedButton
+                  onClick={() => router.push('/')}
+                  variant="outline"
+                  size="sm"
+                  icon={<ArrowBack sx={{ fontSize: 16 }} />}
+                  iconPosition="left"
+                  className="border-sage-300 text-sage-600 hover:bg-sage-50"
+                >
+                  Back to Home
+                </AnimatedButton>
+              </div>
+
               {/* Header */}
               <div className="text-center mb-8">
                 {/* Logo placeholder */}
@@ -117,7 +133,7 @@ function LoginForm() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-6">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-sage-700 mb-2">
                     Email Address
@@ -138,24 +154,18 @@ function LoginForm() {
                   </div>
                 </div>
 
-                <button
-                  type="submit"
+                <AnimatedButton
+                  onClick={() => handleLogin({ preventDefault: () => {} } as React.FormEvent)}
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 px-6 rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                  loading={loading}
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  icon={<AutoAwesome sx={{ fontSize: 18 }} />}
                 >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      <span>{isDevelopment ? 'Logging in...' : 'Sending...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{isDevelopment ? 'Enter App (Dev Mode)' : 'Send Magic Link'}</span>
-                      <AutoAwesome sx={{ fontSize: 18 }} />
-                    </>
-                  )}
-                </button>
-              </form>
+                  {isDevelopment ? 'Enter App (Dev Mode)' : 'Send Magic Link'}
+                </AnimatedButton>
+              </div>
 
               {/* Development Mode Notice */}
               {isDevelopment && (

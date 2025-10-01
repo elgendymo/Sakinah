@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   SectionHeader,
@@ -25,6 +26,7 @@ import {
 
 export default function HomePage() {
     const t = useTranslations('homepage');
+    const router = useRouter();
     const [scrollY, setScrollY] = useState(0);
     const [isVisible, setIsVisible] = useState({
     hero: false,
@@ -133,13 +135,13 @@ export default function HomePage() {
           {/* CTA Buttons - Islamic Terminology */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <button
-              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => router.push('/auth/signup')}
               className="px-8 py-4 bg-emerald-600 text-white font-semibold rounded-xl text-lg transition-all hover:bg-emerald-700 hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-300"
             >
               {t('discoverPath')}
             </button>
             <button
-              onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => router.push('/auth/signup')}
               className="px-8 py-4 border-2 border-emerald-600 text-emerald-700 font-semibold rounded-xl text-lg transition-all hover:bg-emerald-50 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-200"
             >
               {t('beginTazkiyah')}
@@ -732,19 +734,19 @@ export default function HomePage() {
 
             <div className="max-w-md mx-auto">
               <div className="space-y-4 mb-6">
-                <Link
-                  href="/login"
+                <button
+                  onClick={() => router.push('/auth/login')}
                   className="block w-full px-6 py-4 bg-emerald-600 text-white font-semibold rounded-xl text-center text-lg transition-all hover:bg-emerald-700 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-emerald-300"
                 >
                   {t('signInContinue')}
-                </Link>
+                </button>
 
-                <Link
-                  href="/signup"
+                <button
+                  onClick={() => router.push('/auth/signup')}
                   className="block w-full px-6 py-4 border-2 border-emerald-600 text-emerald-700 font-semibold rounded-xl text-center text-lg transition-all hover:bg-emerald-50 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-200"
                 >
                   {t('createAccount')}
-                </Link>
+                </button>
               </div>
 
               <div className="text-center">
@@ -791,6 +793,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
 
     </div>
   );

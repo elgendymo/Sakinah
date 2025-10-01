@@ -1,5 +1,6 @@
 import { injectable, inject } from 'tsyringe';
 import { Result } from '@/shared/result';
+import { createAppError, ErrorCode } from '@/shared/errors';
 import { IHabitRepository } from '@/domain/repositories';
 import { Habit } from '@/domain/entities/Habit';
 import { UserId } from '@/domain/value-objects/UserId';
@@ -23,7 +24,10 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       });
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       const created = Habit.create({
@@ -39,7 +43,11 @@ export class HabitRepositoryAdapter implements IHabitRepository {
 
       return Result.ok(created);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 
@@ -48,7 +56,10 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       const result = await this.db.getHabitById(id.toString());
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       if (!result.data) {
@@ -68,7 +79,11 @@ export class HabitRepositoryAdapter implements IHabitRepository {
 
       return Result.ok(habit);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 
@@ -77,7 +92,10 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       const result = await this.db.getHabitsByUserId(userId.toString());
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       const habits = (result.data || []).map(h =>
@@ -95,7 +113,11 @@ export class HabitRepositoryAdapter implements IHabitRepository {
 
       return Result.ok(habits);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 
@@ -105,7 +127,10 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       const result = await this.db.getHabitsByUserId('*'); // This won't work, need to refactor
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       const habits = (result.data || [])
@@ -125,7 +150,11 @@ export class HabitRepositoryAdapter implements IHabitRepository {
 
       return Result.ok(habits);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 
@@ -138,7 +167,10 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       );
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       const updated = Habit.create({
@@ -154,7 +186,11 @@ export class HabitRepositoryAdapter implements IHabitRepository {
 
       return Result.ok(updated);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 
@@ -167,12 +203,19 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       });
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       return Result.ok(undefined);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 
@@ -185,18 +228,28 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       );
 
       if (completion.error || !completion.data) {
-        return Result.error(new Error('Completion not found'));
+        return Result.error(createAppError(
+          ErrorCode.NOT_FOUND,
+          'Completion not found'
+        ));
       }
 
       const result = await this.db.deleteHabitCompletion(completion.data.id);
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       return Result.ok(undefined);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 
@@ -209,12 +262,19 @@ export class HabitRepositoryAdapter implements IHabitRepository {
       );
 
       if (result.error) {
-        return Result.error(new Error(result.error.message));
+        return Result.error(createAppError(
+          ErrorCode.DATABASE_ERROR,
+          result.error.message
+        ));
       }
 
       return Result.ok(!!result.data);
     } catch (error) {
-      return Result.error(error as Error);
+      return Result.error(createAppError(
+        ErrorCode.DATABASE_ERROR,
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        error instanceof Error ? error : undefined
+      ));
     }
   }
 }

@@ -64,20 +64,72 @@ export class UserPreferencesService extends BaseService {
    */
   async getPreferences(): Promise<EnhancedServiceResult<UserPreferences>> {
     return this.executeOperation(async () => {
-      const response = await fetch('/api/v2/users/preferences', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+      // Check if we're in development mode without a backend API
+      const isDevelopmentMode = process.env.NODE_ENV === 'development';
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch preferences: ${response.statusText}`);
+      try {
+        const response = await fetch('/api/v2/users/preferences', {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          if (isDevelopmentMode && (response.status === 404 || response.status === 500)) {
+            // Return mock preferences in development mode if API is not available
+            return this.getMockPreferences();
+          }
+          throw new Error(`Failed to fetch preferences: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        // If fetch fails (e.g., network error, CORS), return mock data in development
+        if (isDevelopmentMode) {
+          console.warn('[UserPreferencesService] API not available, using mock preferences:', error);
+          return this.getMockPreferences();
+        }
+        throw error;
       }
-
-      const data = await response.json();
-      return data.data;
     }, 'getPreferences');
+  }
+
+  /**
+   * Get mock preferences for development mode
+   */
+  private getMockPreferences(): UserPreferences {
+    return {
+      userId: 'dev-user-123',
+      language: 'en',
+      location: {
+        lat: 51.5074,
+        lng: -0.1278,
+        city: 'London',
+        country: 'UK'
+      },
+      prayerCalculationMethod: 'ISNA',
+      notificationSettings: {
+        fajrReminder: true,
+        dailyReminder: true,
+        habitStreak: false,
+        prayerTimes: true,
+        reminderTime: '06:00'
+      },
+      privacySettings: {
+        dataSharing: false,
+        analytics: false,
+        publicProfile: false
+      },
+      displaySettings: {
+        theme: 'light',
+        fontSize: 'medium',
+        showArabicWithTranslation: true
+      },
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
   }
 
   /**
@@ -85,21 +137,37 @@ export class UserPreferencesService extends BaseService {
    */
   async updatePreferences(updates: UpdatePreferencesDto): Promise<EnhancedServiceResult<UserPreferences>> {
     return this.executeOperation(async () => {
-      const response = await fetch('/api/v2/users/preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(updates),
-      });
+      const isDevelopmentMode = process.env.NODE_ENV === 'development';
 
-      if (!response.ok) {
-        throw new Error(`Failed to update preferences: ${response.statusText}`);
+      try {
+        const response = await fetch('/api/v2/users/preferences', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          if (isDevelopmentMode && (response.status === 404 || response.status === 500)) {
+            // Return mock updated preferences in development mode
+            const mockPrefs = this.getMockPreferences();
+            return { ...mockPrefs, ...updates };
+          }
+          throw new Error(`Failed to update preferences: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        if (isDevelopmentMode) {
+          console.warn('[UserPreferencesService] Update API not available, using mock response:', error);
+          const mockPrefs = this.getMockPreferences();
+          return { ...mockPrefs, ...updates };
+        }
+        throw error;
       }
-
-      const data = await response.json();
-      return data.data;
     }, 'updatePreferences');
   }
 

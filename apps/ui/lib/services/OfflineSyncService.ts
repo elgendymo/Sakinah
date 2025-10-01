@@ -533,8 +533,8 @@ export class OfflineSyncService {
 
   private async loadPendingConflicts(): Promise<void> {
     try {
-      const response = await this.apiService.get('/sync/status');
-      this.pendingConflicts = response.data.pendingConflicts || [];
+      const response = await this.apiService.get<{ pendingConflicts?: ConflictData[] }>('/sync/status');
+      this.pendingConflicts = response.data?.pendingConflicts || [];
       this.emitConflicts();
     } catch (error) {
       console.error('Failed to load pending conflicts:', error);

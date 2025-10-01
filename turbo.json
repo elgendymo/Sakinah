@@ -3,19 +3,25 @@
   "globalDependencies": ["**/.env.*local"],
   "pipeline": {
     "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"],
       "inputs": ["src/**", "public/**", "package.json", "tsconfig.json", "next.config.js", ".env.*local"]
     },
     "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
       "inputs": ["src/**", "public/**", "package.json", "tsconfig.json", "next.config.js", ".env.*local"]
     },
     "lint": {
       "inputs": ["src/**", "package.json", "tsconfig.json", ".eslintrc.json"]
     },
     "type-check": {
+      "dependsOn": ["^build"],
       "inputs": ["src/**", "package.json", "tsconfig.json"]
     },
     "clean": {
-      "inputs": []
+      "cache": false
     }
   }
 }

@@ -131,11 +131,11 @@ router.post('/',
   validateRequest(createHabitSchema),
   async (req: any, res): Promise<void> => {
     const traceId = getExpressTraceId(req);
-    const requestLogger = createRequestLogger(traceId, req.user?.id);
+    const requestLogger = createRequestLogger(traceId, req.userId);
 
     try {
       const { planId, title, schedule } = req.body;
-      const userId = req.user.id;
+      const userId = req.userId;
 
       requestLogger.info('Creating new habit', { planId, title, userId });
         container.resolve<CommandBus>('CommandBus');
@@ -203,11 +203,11 @@ router.post('/',
  */
 router.get('/:id', authMiddleware, async (req: any, res): Promise<void> => {
   const traceId = getExpressTraceId(req);
-  const requestLogger = createRequestLogger(traceId, req.user?.id);
+  const requestLogger = createRequestLogger(traceId, req.userId);
 
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     requestLogger.info('Getting habit by ID', { habitId: id, userId });
 
@@ -255,10 +255,10 @@ router.get('/:id', authMiddleware, async (req: any, res): Promise<void> => {
  */
 router.get('/', authMiddleware, async (req: any, res) => {
   const traceId = getExpressTraceId(req);
-  const requestLogger = createRequestLogger(traceId, req.user?.id);
+  const requestLogger = createRequestLogger(traceId, req.userId);
 
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const {
       page = 1,
       limit = 10,
@@ -325,10 +325,10 @@ router.get('/', authMiddleware, async (req: any, res) => {
  */
 router.get('/today', authMiddleware, async (req: any, res) => {
   const traceId = getExpressTraceId(req);
-  const requestLogger = createRequestLogger(traceId, req.user?.id);
+  const requestLogger = createRequestLogger(traceId, req.userId);
 
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const { date } = req.query;
     const targetDate = date ? new Date(date as string) : new Date();
 
@@ -365,10 +365,10 @@ router.get('/today', authMiddleware, async (req: any, res) => {
  */
 router.get('/statistics', authMiddleware, async (req: any, res) => {
   const traceId = getExpressTraceId(req);
-  const requestLogger = createRequestLogger(traceId, req.user?.id);
+  const requestLogger = createRequestLogger(traceId, req.userId);
 
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const { from, to } = req.query;
 
     const dateRange = from && to ? {
@@ -409,10 +409,10 @@ router.get('/statistics', authMiddleware, async (req: any, res) => {
  */
 router.get('/search', authMiddleware, async (req: any, res): Promise<void> => {
   const traceId = getExpressTraceId(req);
-  const requestLogger = createRequestLogger(traceId, req.user?.id);
+  const requestLogger = createRequestLogger(traceId, req.userId);
 
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const { q, page = 1, limit = 10 } = req.query;
 
     if (!q) {
@@ -471,20 +471,20 @@ router.get('/search', authMiddleware, async (req: any, res): Promise<void> => {
 });
 
 /**
- * @route POST /api/v1/habits/complete
+ * @route POST /api/v1/habits/:id/complete
  * @desc Complete a habit
  * @access Private
  */
-router.post('/complete',
+router.post('/:id/complete',
   authMiddleware,
-  validateRequest(completeHabitSchema),
   async (req: any, res): Promise<void> => {
     const traceId = getExpressTraceId(req);
-    const requestLogger = createRequestLogger(traceId, req.user?.id);
+    const requestLogger = createRequestLogger(traceId, req.userId);
 
     try {
-      const { habitId, date } = req.body;
-      const userId = req.user.id;
+      const { id: habitId } = req.params;
+      const { date } = req.body || {};
+      const userId = req.userId;
       const completionDate = date ? new Date(date) : new Date();
 
       requestLogger.info('Completing habit', { habitId, userId, date: completionDate.toISOString() });
@@ -516,20 +516,20 @@ router.post('/complete',
 );
 
 /**
- * @route POST /api/v1/habits/uncomplete
+ * @route POST /api/v1/habits/:id/incomplete
  * @desc Uncomplete a habit
  * @access Private
  */
-router.post('/uncomplete',
+router.post('/:id/incomplete',
   authMiddleware,
-  validateRequest(completeHabitSchema),
   async (req: any, res): Promise<void> => {
     const traceId = getExpressTraceId(req);
-    const requestLogger = createRequestLogger(traceId, req.user?.id);
+    const requestLogger = createRequestLogger(traceId, req.userId);
 
     try {
-      const { habitId, date } = req.body;
-      const userId = req.user.id;
+      const { id: habitId } = req.params;
+      const { date } = req.body || {};
+      const userId = req.userId;
       const targetDate = date ? new Date(date) : new Date();
 
       requestLogger.info('Uncompleting habit', { habitId, userId, date: targetDate.toISOString() });
@@ -538,6 +538,92 @@ router.post('/uncomplete',
       const command = new UncompleteHabitCommand(userId, habitId, targetDate);
 
       // TODO: Fix Result type handling when command bus implementation is complete
+      await commandBus.dispatch(command);
+
+      requestLogger.info('Habit uncompleted successfully', { habitId });
+
+      const response = createSuccessResponse({
+        message: 'Habit uncompleted successfully'
+      }, traceId);
+
+      res.json(response);
+    } catch (error) {
+      requestLogger.error('Error uncompleting habit', { habitId: req.body.habitId, error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to uncomplete habit', error instanceof Error ? error : undefined),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
+    }
+  }
+);
+
+/**
+ * @route POST /api/v1/habits/complete
+ * @desc Complete a habit (backward compatibility)
+ * @access Private
+ */
+router.post('/complete',
+  authMiddleware,
+  async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, req.userId);
+
+    try {
+      const { habitId, date } = req.body;
+      const userId = req.userId;
+      const completionDate = date ? new Date(date) : new Date();
+
+      requestLogger.info('Completing habit (legacy endpoint)', { habitId, userId, date: completionDate.toISOString() });
+
+      const commandBus = container.resolve<CommandBus>('CommandBus');
+      const command = new CompleteHabitCommand(userId, habitId, completionDate);
+
+      await commandBus.dispatch(command);
+
+      requestLogger.info('Habit completed successfully', { habitId });
+
+      const response = createSuccessResponse({
+        message: 'Habit completed successfully'
+      }, traceId);
+
+      res.json(response);
+    } catch (error) {
+      requestLogger.error('Error completing habit', { habitId: req.body.habitId, error: error instanceof Error ? error.message : String(error) }, error instanceof Error ? error : undefined);
+
+      const { response, status, headers } = handleExpressError(
+        createAppError(ErrorCode.SERVER_ERROR, 'Failed to complete habit', error instanceof Error ? error : undefined),
+        traceId
+      );
+
+      res.set(headers).status(status).json(response);
+    }
+  }
+);
+
+/**
+ * @route POST /api/v1/habits/uncomplete
+ * @desc Uncomplete a habit (backward compatibility)
+ * @access Private
+ */
+router.post('/uncomplete',
+  authMiddleware,
+  async (req: any, res): Promise<void> => {
+    const traceId = getExpressTraceId(req);
+    const requestLogger = createRequestLogger(traceId, req.userId);
+
+    try {
+      const { habitId, date } = req.body;
+      const userId = req.userId;
+      const targetDate = date ? new Date(date) : new Date();
+
+      requestLogger.info('Uncompleting habit (legacy endpoint)', { habitId, userId, date: targetDate.toISOString() });
+
+      const commandBus = container.resolve<CommandBus>('CommandBus');
+      const command = new UncompleteHabitCommand(userId, habitId, targetDate);
+
       await commandBus.dispatch(command);
 
       requestLogger.info('Habit uncompleted successfully', { habitId });
@@ -570,11 +656,11 @@ router.post('/bulk-complete',
   validateRequest(bulkCompleteSchema),
   async (req: any, res) => {
     const traceId = getExpressTraceId(req);
-    const requestLogger = createRequestLogger(traceId, req.user?.id);
+    const requestLogger = createRequestLogger(traceId, req.userId);
 
     try {
       const { habitIds, date } = req.body;
-      const userId = req.user.id;
+      const userId = req.userId;
       const completionDate = date ? new Date(date) : new Date();
 
       requestLogger.info('Bulk completing habits', {
@@ -636,17 +722,17 @@ router.post('/bulk-complete',
  */
 router.get('/:id/analytics', authMiddleware, async (req: any, res): Promise<void> => {
   const traceId = getExpressTraceId(req);
-  const requestLogger = createRequestLogger(traceId, req.user?.id);
+  const requestLogger = createRequestLogger(traceId, req.userId);
 
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const habitId = req.params.id;
 
     requestLogger.info('Getting habit analytics', { habitId, userId });
 
     // Use the query bus to get habit details
     const queryBus = container.resolve<QueryBus>('QueryBus');
-    const habitQuery = new GetHabitByIdQuery(userId, habitId);
+    const habitQuery = new GetHabitByIdQuery(habitId, userId);
 
     const habitResult = await queryBus.dispatch(habitQuery) as any;
 
@@ -709,11 +795,11 @@ router.get('/:id/analytics', authMiddleware, async (req: any, res): Promise<void
  */
 router.delete('/:id', authMiddleware, async (req: any, res) => {
   const traceId = getExpressTraceId(req);
-  const requestLogger = createRequestLogger(traceId, req.user?.id);
+  const requestLogger = createRequestLogger(traceId, req.userId);
 
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     requestLogger.info('Deleting habit', { habitId: id, userId });
 

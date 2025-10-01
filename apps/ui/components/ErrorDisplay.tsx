@@ -32,7 +32,7 @@ export function ErrorDisplay({
 }: ErrorDisplayProps) {
   if (!error) return null;
 
-  const uiError: UIError = error instanceof Error || typeof error === 'object'
+  const uiError: UIError = (error && (error instanceof Error || typeof error === 'object'))
     ? toUIError(error)
     : error as UIError;
 

@@ -1,5 +1,4 @@
-import { ErrorCode, ErrorSeverity, ERROR_METADATA } from '../constants/errorCodes';
-import { ApiRequestError } from '../net/apiFetch.client';
+import { ErrorCode } from '../constants/errorCodes';
 import { toUIError, UIError } from '../ui/errorUtils';
 
 /**
@@ -81,7 +80,7 @@ export class NetworkErrorStrategy implements ErrorRecoveryStrategy {
     ].includes(error.code);
   }
 
-  async handle(error: UIError, context?: ErrorContext): Promise<RecoveryResult> {
+  async handle(_error: UIError, context?: ErrorContext): Promise<RecoveryResult> {
     const retryCount = context?.retryCount || 0;
 
     // Check if we've exceeded retry limit
@@ -296,7 +295,7 @@ export class ServerErrorStrategy implements ErrorRecoveryStrategy {
     ].includes(error.code);
   }
 
-  async handle(error: UIError, context?: ErrorContext): Promise<RecoveryResult> {
+  async handle(_error: UIError, context?: ErrorContext): Promise<RecoveryResult> {
     const retryCount = context?.retryCount || 0;
 
     // Only retry server errors a limited number of times

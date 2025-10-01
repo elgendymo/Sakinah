@@ -8,8 +8,4 @@ export class OnboardingId extends BaseId {
   static create(): OnboardingId {
     return new OnboardingId(crypto.randomUUID());
   }
-
-  static fromString(value: string): OnboardingId {
-    return new OnboardingId(value);
-  }
 }
