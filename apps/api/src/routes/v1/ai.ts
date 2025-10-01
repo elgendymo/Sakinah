@@ -190,8 +190,7 @@ router.post('/analyze-progress', authMiddleware, async (req, res): Promise<void>
           planId,
       completedHabits = [],
       challenges = [],
-      reflections = '',
-      timeframe = '30d'
+          timeframe = '30d'
     } = req.body;
 
     // Validation
