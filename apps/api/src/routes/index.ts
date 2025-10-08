@@ -14,6 +14,9 @@ import aiRoutes from './v2/ai';
 import plansRoutes from './v2/plans';
 import journalRoutes from './journal';
 
+// V1 Legacy routes
+import v1Routes from './v1';
+
 // Auth routes
 import authRoutes from './auth';
 
@@ -30,6 +33,9 @@ router.use(requestLoggingMiddleware);
 
 // Auth routes (no authentication required)
 router.use('/auth', authRoutes);
+
+// V1 Legacy routes (with versioning)
+router.use('/v1', v1Routes);
 
 // Application routes - using latest functionality without versioning
 router.use('/habits', habitsRoutes);

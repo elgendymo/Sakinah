@@ -1210,4 +1210,540 @@ export class DevelopmentDatabaseClient extends BaseDatabaseClient {
       this.sqliteDb = null;
     }
   }
+
+  // Survey operations
+  async createSurveyResponse(data: {
+    userId: string;
+    phaseNumber: number;
+    questionId: string;
+    score: number;
+    note?: string;
+  }): Promise<DatabaseResult<any>> {
+    try {
+      const id = this.generateId();
+      const createdAt = this.getCurrentTimestamp();
+
+      this.db.prepare(`
+        INSERT INTO survey_responses (id, user_id, phase_number, question_id, score, note, completed_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(id, data.userId, data.phaseNumber, data.questionId, data.score, data.note || null, createdAt, createdAt);
+
+      const response = this.db.prepare('SELECT * FROM survey_responses WHERE id = ?').get(id) as any;
+      return this.formatSuccessResult(response);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getSurveyResponsesByPhase(userId: string, phaseNumber: number): Promise<DatabaseResult<any[]>> {
+    try {
+      const rows = this.db.prepare('SELECT * FROM survey_responses WHERE user_id = ? AND phase_number = ? ORDER BY created_at').all(userId, phaseNumber) as any[];
+      return this.formatSuccessResult(rows);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getAllSurveyResponses(userId: string): Promise<DatabaseResult<any[]>> {
+    try {
+      const rows = this.db.prepare('SELECT * FROM survey_responses WHERE user_id = ? ORDER BY phase_number, created_at').all(userId) as any[];
+      // Convert snake_case to camelCase
+      const mappedRows = rows.map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        phaseNumber: row.phase_number,
+        questionId: row.question_id,
+        score: row.score,
+        note: row.note,
+        completedAt: row.completed_at,
+        createdAt: row.created_at
+      }));
+      return this.formatSuccessResult(mappedRows);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getSurveyResponseById(id: string): Promise<DatabaseResult<any | null>> {
+    try {
+      const row = this.db.prepare('SELECT * FROM survey_responses WHERE id = ?').get(id) as any;
+      return this.formatSuccessResult(row);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async updateSurveyResponse(id: string, userId: string, updates: {
+    score?: number;
+    note?: string;
+  }): Promise<DatabaseResult<any>> {
+    try {
+      const setParts: string[] = [];
+      const values: any[] = [];
+
+      if (updates.score !== undefined) {
+        setParts.push('score = ?');
+        values.push(updates.score);
+      }
+      if (updates.note !== undefined) {
+        setParts.push('note = ?');
+        values.push(updates.note);
+      }
+
+      if (setParts.length === 0) {
+        return this.getSurveyResponseById(id);
+      }
+
+      values.push(id, userId);
+      this.db.prepare(`UPDATE survey_responses SET ${setParts.join(', ')} WHERE id = ? AND user_id = ?`).run(...values);
+
+      return this.getSurveyResponseById(id);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async deleteSurveyResponse(id: string, userId: string): Promise<DatabaseResult<void>> {
+    try {
+      this.db.prepare('DELETE FROM survey_responses WHERE id = ? AND user_id = ?').run(id, userId);
+      return this.formatSuccessResult(undefined as any);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async savePhaseResponses(responses: {
+    userId: string;
+    phaseNumber: number;
+    questionId: string;
+    score: number;
+    note?: string;
+  }[]): Promise<DatabaseResult<any[]>> {
+    try {
+      console.log('Database savePhaseResponses - Input:', JSON.stringify(responses, null, 2));
+      const savedResponses: any[] = [];
+      const now = this.getCurrentTimestamp();
+
+      // Use a transaction for bulk upsert
+      const transaction = this.db.transaction(() => {
+        for (const response of responses) {
+          console.log('Database savePhaseResponses - Processing response:', JSON.stringify(response, null, 2));
+          // Check if response already exists
+          const existing = this.db.prepare(`
+            SELECT id FROM survey_responses
+            WHERE user_id = ? AND phase_number = ? AND question_id = ?
+          `).get(response.userId, response.phaseNumber, response.questionId) as any;
+
+          if (existing) {
+            // Update existing response
+            this.db.prepare(`
+              UPDATE survey_responses
+              SET score = ?, note = ?, completed_at = ?
+              WHERE id = ?
+            `).run(response.score, response.note || null, now, existing.id);
+
+            const updated = this.db.prepare('SELECT * FROM survey_responses WHERE id = ?').get(existing.id) as any;
+            savedResponses.push(this.mapSurveyResponseRow(updated));
+          } else {
+            // Insert new response
+            const id = this.generateId();
+            this.db.prepare(`
+              INSERT INTO survey_responses (id, user_id, phase_number, question_id, score, note, completed_at, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              id,
+              response.userId,
+              response.phaseNumber,
+              response.questionId,
+              response.score,
+              response.note || null,
+              now,
+              now
+            );
+
+            const saved = this.db.prepare('SELECT * FROM survey_responses WHERE id = ?').get(id) as any;
+            savedResponses.push(this.mapSurveyResponseRow(saved));
+          }
+        }
+      });
+
+      transaction();
+      return this.formatSuccessResult(savedResponses);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async createSurveyResult(data: {
+    userId: string;
+    diseaseScores: any;
+    criticalDiseases: any;
+    reflectionAnswers: any;
+    personalizedHabits: any;
+    tazkiyahPlan: any;
+    radarChartData?: any;
+  }): Promise<DatabaseResult<any>> {
+    return this.saveSurveyResult(data);
+  }
+
+  async saveSurveyResult(data: {
+    userId: string;
+    diseaseScores: any;
+    criticalDiseases: any;
+    reflectionAnswers: any;
+    personalizedHabits: any;
+    tazkiyahPlan: any;
+    radarChartData?: any;
+  }): Promise<DatabaseResult<any>> {
+    try {
+      const id = this.generateId();
+      const createdAt = this.getCurrentTimestamp();
+
+      this.db.prepare(`
+        INSERT INTO survey_results (
+          id, user_id, disease_scores, critical_diseases, reflection_answers,
+          personalized_habits, tazkiyah_plan, radar_chart_data, generated_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id, data.userId,
+        JSON.stringify(data.diseaseScores),
+        JSON.stringify(data.criticalDiseases),
+        JSON.stringify(data.reflectionAnswers),
+        JSON.stringify(data.personalizedHabits),
+        JSON.stringify(data.tazkiyahPlan),
+        data.radarChartData ? JSON.stringify(data.radarChartData) : null,
+        createdAt, createdAt
+      );
+
+      const result = this.db.prepare('SELECT * FROM survey_results WHERE id = ?').get(id) as any;
+      if (result) {
+        result.disease_scores = JSON.parse(result.disease_scores);
+        result.critical_diseases = JSON.parse(result.critical_diseases);
+        result.reflection_answers = JSON.parse(result.reflection_answers);
+        result.personalized_habits = JSON.parse(result.personalized_habits);
+        result.tazkiyah_plan = JSON.parse(result.tazkiyah_plan);
+        result.radar_chart_data = result.radar_chart_data ? JSON.parse(result.radar_chart_data) : null;
+      }
+      return this.formatSuccessResult(result);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getSurveyResult(userId: string): Promise<DatabaseResult<any | null>> {
+    try {
+      const row = this.db.prepare('SELECT * FROM survey_results WHERE user_id = ?').get(userId) as any;
+      if (row) {
+        // Parse JSON fields and convert snake_case to camelCase
+        const mappedRow = {
+          id: row.id,
+          userId: row.user_id,
+          diseaseScores: JSON.parse(row.disease_scores),
+          criticalDiseases: JSON.parse(row.critical_diseases),
+          reflectionAnswers: JSON.parse(row.reflection_answers),
+          personalizedHabits: JSON.parse(row.personalized_habits),
+          tazkiyahPlan: JSON.parse(row.tazkiyah_plan),
+          radarChartData: row.radar_chart_data ? JSON.parse(row.radar_chart_data) : null,
+          generatedAt: row.generated_at,
+          updatedAt: row.updated_at
+        };
+        return this.formatSuccessResult(mappedRow);
+      }
+      return this.formatSuccessResult(row);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getSurveyResultByUserId(userId: string): Promise<DatabaseResult<any | null>> {
+    return this.getSurveyResult(userId);
+  }
+
+  async getSurveyResultById(id: string): Promise<DatabaseResult<any | null>> {
+    try {
+      const row = this.db.prepare('SELECT * FROM survey_results WHERE id = ?').get(id) as any;
+      if (row) {
+        row.disease_scores = JSON.parse(row.disease_scores);
+        row.critical_diseases = JSON.parse(row.critical_diseases);
+        row.reflection_answers = JSON.parse(row.reflection_answers);
+        row.personalized_habits = JSON.parse(row.personalized_habits);
+        row.tazkiyah_plan = JSON.parse(row.tazkiyah_plan);
+        row.radar_chart_data = row.radar_chart_data ? JSON.parse(row.radar_chart_data) : null;
+      }
+      return this.formatSuccessResult(row);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async updateSurveyResult(userId: string, updates: {
+    diseaseScores?: any;
+    criticalDiseases?: any;
+    reflectionAnswers?: any;
+    personalizedHabits?: any;
+    tazkiyahPlan?: any;
+    radarChartData?: any;
+  }): Promise<DatabaseResult<any>> {
+    try {
+      const setParts: string[] = [];
+      const values: any[] = [];
+
+      if (updates.diseaseScores !== undefined) {
+        setParts.push('disease_scores = ?');
+        values.push(JSON.stringify(updates.diseaseScores));
+      }
+      if (updates.criticalDiseases !== undefined) {
+        setParts.push('critical_diseases = ?');
+        values.push(JSON.stringify(updates.criticalDiseases));
+      }
+      if (updates.reflectionAnswers !== undefined) {
+        setParts.push('reflection_answers = ?');
+        values.push(JSON.stringify(updates.reflectionAnswers));
+      }
+      if (updates.personalizedHabits !== undefined) {
+        setParts.push('personalized_habits = ?');
+        values.push(JSON.stringify(updates.personalizedHabits));
+      }
+      if (updates.tazkiyahPlan !== undefined) {
+        setParts.push('tazkiyah_plan = ?');
+        values.push(JSON.stringify(updates.tazkiyahPlan));
+      }
+      if (updates.radarChartData !== undefined) {
+        setParts.push('radar_chart_data = ?');
+        values.push(updates.radarChartData ? JSON.stringify(updates.radarChartData) : null);
+      }
+
+      if (setParts.length === 0) {
+        return this.getSurveyResult(userId);
+      }
+
+      setParts.push('updated_at = ?');
+      values.push(this.getCurrentTimestamp());
+      values.push(userId);
+
+      this.db.prepare(`UPDATE survey_results SET ${setParts.join(', ')} WHERE user_id = ?`).run(...values);
+
+      return this.getSurveyResult(userId);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async deleteSurveyResult(userId: string): Promise<DatabaseResult<void>> {
+    try {
+      this.db.prepare('DELETE FROM survey_results WHERE user_id = ?').run(userId);
+      return this.formatSuccessResult(undefined as any);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getSurveyProgressByUserId(userId: string): Promise<DatabaseResult<any | null>> {
+    try {
+      const row = this.db.prepare('SELECT * FROM survey_progress WHERE user_id = ?').get(userId) as any;
+      if (row) {
+        // Convert SQLite format to expected format
+        const mapped = {
+          userId: row.user_id,
+          currentPhase: row.current_phase,
+          phase1Completed: Boolean(row.phase_1_completed),
+          phase2Completed: Boolean(row.phase_2_completed),
+          reflectionCompleted: Boolean(row.reflection_completed),
+          resultsGenerated: Boolean(row.results_generated),
+          startedAt: row.started_at,
+          lastUpdated: row.last_updated
+        };
+        return this.formatSuccessResult(mapped);
+      }
+      return this.formatSuccessResult(null);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async updateSurveyProgress(userId: string, updates: any): Promise<DatabaseResult<any>> {
+    try {
+      // First check if record exists
+      const existing = this.db.prepare('SELECT * FROM survey_progress WHERE user_id = ?').get(userId);
+
+      if (!existing) {
+        // Create new record
+        this.db.prepare(`
+          INSERT INTO survey_progress (
+            user_id, current_phase, phase_1_completed, phase_2_completed,
+            reflection_completed, results_generated, started_at, last_updated
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          userId,
+          updates.currentPhase || 0,
+          updates.phase1Completed ? 1 : 0,
+          updates.phase2Completed ? 1 : 0,
+          updates.reflectionCompleted ? 1 : 0,
+          updates.resultsGenerated ? 1 : 0,
+          this.getCurrentTimestamp(),
+          this.getCurrentTimestamp()
+        );
+      } else {
+        // Update existing record
+        const setParts: string[] = [];
+        const values: any[] = [];
+
+        if (updates.currentPhase !== undefined) {
+          setParts.push('current_phase = ?');
+          values.push(updates.currentPhase);
+        }
+        if (updates.phase1Completed !== undefined) {
+          setParts.push('phase_1_completed = ?');
+          values.push(updates.phase1Completed ? 1 : 0);
+        }
+        if (updates.phase2Completed !== undefined) {
+          setParts.push('phase_2_completed = ?');
+          values.push(updates.phase2Completed ? 1 : 0);
+        }
+        if (updates.reflectionCompleted !== undefined) {
+          setParts.push('reflection_completed = ?');
+          values.push(updates.reflectionCompleted ? 1 : 0);
+        }
+        if (updates.resultsGenerated !== undefined) {
+          setParts.push('results_generated = ?');
+          values.push(updates.resultsGenerated ? 1 : 0);
+        }
+
+        if (setParts.length > 0) {
+          setParts.push('last_updated = ?');
+          values.push(this.getCurrentTimestamp());
+          values.push(userId);
+
+          this.db.prepare(`UPDATE survey_progress SET ${setParts.join(', ')} WHERE user_id = ?`).run(...values);
+        }
+      }
+
+      return this.getSurveyProgressByUserId(userId);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async deleteSurveyProgress(userId: string): Promise<DatabaseResult<void>> {
+    try {
+      this.db.prepare('DELETE FROM survey_progress WHERE user_id = ?').run(userId);
+      return this.formatSuccessResult(undefined as any);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async hasUserCompletedSurvey(userId: string): Promise<DatabaseResult<boolean>> {
+    try {
+      const row = this.db.prepare('SELECT results_generated FROM survey_progress WHERE user_id = ?').get(userId) as any;
+      const hasCompleted = row ? Boolean(row.results_generated) : false;
+      return this.formatSuccessResult(hasCompleted);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getPhaseCompletionStatus(userId: string): Promise<DatabaseResult<any>> {
+    try {
+      const row = this.db.prepare(`
+        SELECT current_phase, phase_1_completed, phase_2_completed,
+               reflection_completed, results_generated
+        FROM survey_progress
+        WHERE user_id = ?
+      `).get(userId) as any;
+
+      if (row) {
+        row.phase_1_completed = Boolean(row.phase_1_completed);
+        row.phase_2_completed = Boolean(row.phase_2_completed);
+        row.reflection_completed = Boolean(row.reflection_completed);
+        row.results_generated = Boolean(row.results_generated);
+      }
+
+      return this.formatSuccessResult(row);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async createSurveyProgress(data: {
+    userId: string;
+    currentPhase?: number;
+    phase1Completed?: boolean;
+    phase2Completed?: boolean;
+    reflectionCompleted?: boolean;
+    resultsGenerated?: boolean;
+  }): Promise<DatabaseResult<any>> {
+    try {
+      const now = this.getCurrentTimestamp();
+
+      this.db.prepare(`
+        INSERT INTO survey_progress (
+          user_id, current_phase, phase_1_completed, phase_2_completed,
+          reflection_completed, results_generated, started_at, last_updated
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        data.userId,
+        data.currentPhase || 0,
+        data.phase1Completed ? 1 : 0,
+        data.phase2Completed ? 1 : 0,
+        data.reflectionCompleted ? 1 : 0,
+        data.resultsGenerated ? 1 : 0,
+        now,
+        now
+      );
+
+      return this.getSurveyProgressByUserId(data.userId);
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  async getUserSurveyData(userId: string): Promise<DatabaseResult<any>> {
+    try {
+      const progress = this.db.prepare('SELECT * FROM survey_progress WHERE user_id = ?').get(userId) as any;
+      const responses = this.db.prepare('SELECT * FROM survey_responses WHERE user_id = ? ORDER BY phase_number, created_at').all(userId) as any[];
+      const result = this.db.prepare('SELECT * FROM survey_results WHERE user_id = ?').get(userId) as any;
+
+      if (progress) {
+        progress.phase_1_completed = Boolean(progress.phase_1_completed);
+        progress.phase_2_completed = Boolean(progress.phase_2_completed);
+        progress.reflection_completed = Boolean(progress.reflection_completed);
+        progress.results_generated = Boolean(progress.results_generated);
+      }
+
+      if (result) {
+        result.disease_scores = JSON.parse(result.disease_scores);
+        result.critical_diseases = JSON.parse(result.critical_diseases);
+        result.reflection_answers = JSON.parse(result.reflection_answers);
+        result.personalized_habits = JSON.parse(result.personalized_habits);
+        result.tazkiyah_plan = JSON.parse(result.tazkiyah_plan);
+        result.radar_chart_data = result.radar_chart_data ? JSON.parse(result.radar_chart_data) : null;
+      }
+
+      return this.formatSuccessResult({
+        progress,
+        responses,
+        result
+      });
+    } catch (error) {
+      return this.formatResult(null, error as Error);
+    }
+  }
+
+  private mapSurveyResponseRow(row: any): any {
+    if (!row) return null;
+    return {
+      id: row.id,
+      userId: row.user_id,
+      phaseNumber: row.phase_number,
+      questionId: row.question_id,
+      score: row.score,
+      note: row.note,
+      completedAt: row.completed_at,
+      createdAt: row.created_at
+    };
+  }
 }

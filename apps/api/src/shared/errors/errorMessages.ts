@@ -41,6 +41,39 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   // Network Errors
   [ErrorCode.NETWORK_ERROR]: 'Network connection failed. Please check your internet connection and try again.',
   [ErrorCode.TIMEOUT_ERROR]: 'The request took too long to complete. Please try again.',
+
+  // Survey Progress Errors
+  [ErrorCode.SURVEY_PROGRESS_ERROR]: 'There was an issue with your survey progress. Please try refreshing the page.',
+  [ErrorCode.SURVEY_PHASE_ACCESS_DENIED]: 'You need to complete the previous phase before continuing.',
+  [ErrorCode.SURVEY_NOT_FOUND]: 'Your survey was not found. Please start a new assessment.',
+  [ErrorCode.SURVEY_ALREADY_COMPLETED]: 'You have already completed this survey. Check your results page.',
+  [ErrorCode.INVALID_PHASE_PROGRESSION]: 'Please complete the phases in order. You cannot skip ahead.',
+
+  // Survey Validation Errors
+  [ErrorCode.INVALID_LIKERT_SCORE]: 'Please select a rating between 1 and 5 for your response.',
+  [ErrorCode.REFLECTION_TOO_SHORT]: 'Your reflection is too brief. Please write at least 10 characters to help us understand your spiritual journey.',
+  [ErrorCode.REFLECTION_TOO_LONG]: 'Your reflection is too long. Please keep it under 500 characters for the best experience.',
+  [ErrorCode.SURVEY_RESPONSE_INVALID]: 'Some of your responses are invalid. Please check your answers and try again.',
+  [ErrorCode.SURVEY_NOTE_TOO_LONG]: 'Your note is too long. Please keep it under 1000 characters.',
+  [ErrorCode.PHASE_INCOMPLETE]: 'Please answer all questions in this phase before continuing.',
+  [ErrorCode.REQUIRED_QUESTIONS_MISSING]: 'Some required questions are missing answers. Please complete all questions.',
+
+  // Survey Results Errors
+  [ErrorCode.RESULTS_GENERATION_FAILED]: 'We encountered an issue generating your spiritual assessment results. Please try again.',
+  [ErrorCode.RESULTS_NOT_FOUND]: 'Your assessment results are not available yet. Please complete all survey phases first.',
+  [ErrorCode.AI_ANALYSIS_FAILED]: 'Our spiritual guidance analysis is temporarily unavailable. Your responses have been saved.',
+  [ErrorCode.PERSONALIZED_HABITS_FAILED]: 'We could not generate personalized habit recommendations at this time. Please try again later.',
+  [ErrorCode.TAZKIYAH_PLAN_FAILED]: 'We could not create your Tazkiyah plan at this time. Please try again later.',
+
+  // Survey Auto-save Errors
+  [ErrorCode.AUTO_SAVE_FAILED]: 'Your responses could not be saved automatically. Please try submitting manually.',
+  [ErrorCode.STATE_SYNC_ERROR]: 'There was an issue syncing your progress. Your responses may not be saved.',
+  [ErrorCode.PROGRESS_UPDATE_FAILED]: 'Your progress could not be updated. Please refresh and try again.',
+
+  // Survey Export Errors
+  [ErrorCode.EXPORT_NOT_AVAILABLE]: 'Export is not available for this assessment. Please complete all phases first.',
+  [ErrorCode.PDF_GENERATION_FAILED]: 'We could not generate your PDF report. Please try the JSON export instead.',
+  [ErrorCode.JSON_EXPORT_FAILED]: 'We could not generate your export file. Please try again later.',
 };
 
 // Aliases for common error variations and legacy codes
@@ -95,6 +128,30 @@ const ERROR_ALIASES: Record<string, ErrorCode> = {
   'openai': ErrorCode.OPENAI_ERROR,
   'rate_limit': ErrorCode.RATE_LIMIT_EXCEEDED,
   'quota_exceeded': ErrorCode.RATE_LIMIT_EXCEEDED,
+
+  // Survey-specific aliases
+  'survey_error': ErrorCode.SURVEY_PROGRESS_ERROR,
+  'survey_not_found': ErrorCode.SURVEY_NOT_FOUND,
+  'survey_completed': ErrorCode.SURVEY_ALREADY_COMPLETED,
+  'phase_access_denied': ErrorCode.SURVEY_PHASE_ACCESS_DENIED,
+  'invalid_progression': ErrorCode.INVALID_PHASE_PROGRESSION,
+  'likert_invalid': ErrorCode.INVALID_LIKERT_SCORE,
+  'reflection_short': ErrorCode.REFLECTION_TOO_SHORT,
+  'reflection_long': ErrorCode.REFLECTION_TOO_LONG,
+  'note_too_long': ErrorCode.SURVEY_NOTE_TOO_LONG,
+  'phase_incomplete': ErrorCode.PHASE_INCOMPLETE,
+  'questions_missing': ErrorCode.REQUIRED_QUESTIONS_MISSING,
+  'results_failed': ErrorCode.RESULTS_GENERATION_FAILED,
+  'results_not_found': ErrorCode.RESULTS_NOT_FOUND,
+  'ai_analysis_failed': ErrorCode.AI_ANALYSIS_FAILED,
+  'habits_failed': ErrorCode.PERSONALIZED_HABITS_FAILED,
+  'tazkiyah_failed': ErrorCode.TAZKIYAH_PLAN_FAILED,
+  'auto_save_failed': ErrorCode.AUTO_SAVE_FAILED,
+  'state_sync_error': ErrorCode.STATE_SYNC_ERROR,
+  'progress_failed': ErrorCode.PROGRESS_UPDATE_FAILED,
+  'export_failed': ErrorCode.EXPORT_NOT_AVAILABLE,
+  'pdf_failed': ErrorCode.PDF_GENERATION_FAILED,
+  'json_failed': ErrorCode.JSON_EXPORT_FAILED,
 };
 
 export function normalizeErrorCode(input?: unknown): ErrorCode {

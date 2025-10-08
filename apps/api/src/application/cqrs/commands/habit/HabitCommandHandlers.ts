@@ -14,6 +14,7 @@ import { Habit } from '@/domain/entities/Habit';
 import { PlanId } from '@/domain/value-objects/PlanId';
 import { Result } from '@/shared/result';
 import { IEventBus } from '@/domain/events/IEventBus';
+import { HabitId } from '@/domain/value-objects/HabitId';
 
 @injectable()
 export class CreateHabitCommandHandler implements CommandHandler<CreateHabitCommand, Result<string>> {
@@ -68,7 +69,7 @@ export class CompleteHabitCommandHandler implements CommandHandler<CompleteHabit
 
   async handle(command: CompleteHabitCommand): Promise<Result<void>> {
     try {
-      const habitResult = await this.habitRepo.findById(command.habitId as any);
+      const habitResult = await this.habitRepo.findById(new HabitId(command.habitId));
       if (!habitResult.ok || !habitResult.value) {
         return Result.error(new Error('Habit not found'));
       }
@@ -107,7 +108,7 @@ export class UncompleteHabitCommandHandler implements CommandHandler<UncompleteH
 
   async handle(command: UncompleteHabitCommand): Promise<Result<void>> {
     try {
-      const habitResult = await this.habitRepo.findById(command.habitId as any);
+      const habitResult = await this.habitRepo.findById(new HabitId(command.habitId));
       if (!habitResult.ok || !habitResult.value) {
         return Result.error(new Error('Habit not found'));
       }
@@ -146,7 +147,7 @@ export class ResetHabitStreakCommandHandler implements CommandHandler<ResetHabit
 
   async handle(command: ResetHabitStreakCommand): Promise<Result<void>> {
     try {
-      const habitResult = await this.habitRepo.findById(command.habitId as any);
+      const habitResult = await this.habitRepo.findById(new HabitId(command.habitId));
       if (!habitResult.ok || !habitResult.value) {
         return Result.error(new Error('Habit not found'));
       }
@@ -189,7 +190,7 @@ export class BulkCompleteHabitsCommandHandler implements CommandHandler<BulkComp
       const allEvents: any[] = [];
 
       for (const habitId of command.habitIds) {
-        const habitResult = await this.habitRepo.findById(habitId as any);
+        const habitResult = await this.habitRepo.findById(new HabitId(habitId));
         if (!habitResult.ok || !habitResult.value) {
           continue; // Skip non-existent habits
         }
@@ -236,7 +237,7 @@ export class DeleteHabitCommandHandler implements CommandHandler<DeleteHabitComm
 
   async handle(command: DeleteHabitCommand): Promise<Result<void>> {
     try {
-      const habitResult = await this.habitRepo.findById(command.habitId as any);
+      const habitResult = await this.habitRepo.findById(new HabitId(command.habitId));
       if (!habitResult.ok || !habitResult.value) {
         return Result.error(new Error('Habit not found'));
       }

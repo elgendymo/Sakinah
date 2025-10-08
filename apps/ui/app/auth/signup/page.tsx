@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase-browser';
 import {
   Email,
   AutoAwesome,
@@ -12,24 +11,30 @@ import {
   PersonAdd
 } from '@mui/icons-material';
 import Link from 'next/link';
+import { setMockAuthCookie, setAuthTokens, isDevMode } from '@/lib/auth-helpers';
+// import { createClient } from '@/lib/supabase-browser';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isDevelopment, setIsDevelopment] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  // const supabase = createClient();
 
   useEffect(() => {
-    const isDev = process.env.NODE_ENV === 'development' &&
-                  process.env.NEXT_PUBLIC_USE_SUPABASE !== 'true';
+    const isDev = isDevMode();
     setIsDevelopment(isDev);
 
     if (isDev) {
       setEmail('dev@sakinah.app');
+      setFirstName('Dev User');
+      setGender('male');
     }
 
     const error = searchParams.get('error');
@@ -51,27 +56,71 @@ function SignupForm() {
     setLoading(true);
     setMessage('');
 
+    // Validation
+    if (!firstName.trim()) {
+      setMessage('Please enter your first name');
+      setLoading(false);
+      return;
+    }
+
+    if (!email.trim()) {
+      setMessage('Please enter your email');
+      setLoading(false);
+      return;
+    }
+
+    if (!password || password.length < 8) {
+      setMessage('Password must be at least 8 characters long');
+      setLoading(false);
+      return;
+    }
+
+    if (!gender) {
+      setMessage('Please select your gender');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isDevelopment) {
         setMessage('Development mode: Creating account...');
+
+        // Set mock authentication cookie for middleware
+        setMockAuthCookie();
+
         await new Promise(resolve => setTimeout(resolve, 1000));
-        router.push('/dashboard');
+
+        console.log('Development signup: redirecting to /onboarding/welcome');
+        router.push('/onboarding/welcome');
         return;
       }
 
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            isNewUser: true
-          }
+      // Call the new signup API endpoint
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email,
+          password,
+          firstName,
+          gender
+        }),
       });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      setMessage('Check your email for the signup link! Click it to complete your registration.');
+      if (!response.ok) {
+        throw new Error(result.error?.message || 'Signup failed');
+      }
+
+      // Success - redirect to onboarding
+      setMessage('Account created successfully! Redirecting...');
+      setTimeout(() => {
+        router.push('/onboarding/welcome');
+      }, 1000);
+
     } catch (error: any) {
       setMessage(error.message || 'An error occurred');
     } finally {
@@ -123,8 +172,49 @@ function SignupForm() {
               </div>
 
               {/* Form with staggered animation */}
-              <form onSubmit={handleSignup} className="space-y-6">
+              <form onSubmit={handleSignup} className="space-y-5">
+                {/* First Name Field */}
                 <div className={`transition-all duration-700 delay-300 transform ${
+                  isFormVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-sage-700 mb-2">
+                    First Name
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="firstName"
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800 placeholder-sage-400 focus:scale-[1.02]"
+                      placeholder="Enter your first name"
+                    />
+                  </div>
+                </div>
+
+                {/* Gender Field */}
+                <div className={`transition-all duration-700 delay-350 transform ${
+                  isFormVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}>
+                  <label htmlFor="gender" className="block text-sm font-medium text-sage-700 mb-2">
+                    Gender
+                  </label>
+                  <select
+                    id="gender"
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value as 'male' | 'female')}
+                    required
+                    className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800 focus:scale-[1.02]"
+                  >
+                    <option value="">Select your gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+
+                {/* Email Field */}
+                <div className={`transition-all duration-700 delay-400 transform ${
                   isFormVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}>
                   <label htmlFor="email" className="block text-sm font-medium text-sage-700 mb-2">
@@ -146,7 +236,28 @@ function SignupForm() {
                   </div>
                 </div>
 
-                <div className={`transition-all duration-700 delay-400 transform ${
+                {/* Password Field */}
+                <div className={`transition-all duration-700 delay-450 transform ${
+                  isFormVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}>
+                  <label htmlFor="password" className="block text-sm font-medium text-sage-700 mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800 placeholder-sage-400 focus:scale-[1.02]"
+                      placeholder="Enter your password (min 8 characters)"
+                    />
+                  </div>
+                </div>
+
+                <div className={`transition-all duration-700 delay-500 transform ${
                   isFormVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}>
                   <button
@@ -219,7 +330,7 @@ function SignupForm() {
                 {!isDevelopment ? (
                   <div className="space-y-2">
                     <p className="text-xs text-sage-500">
-                      No password needed | Secure passwordless authentication
+                      Secure email and password authentication | Privacy-focused platform
                     </p>
                   </div>
                 ) : (

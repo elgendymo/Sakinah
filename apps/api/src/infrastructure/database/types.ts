@@ -349,6 +349,81 @@ export interface OnboardingData {
   updatedAt: string;
 }
 
+// Database row types for Survey
+export interface SurveyResponseRow {
+  id: string;
+  user_id: string;
+  phase_number: number;
+  question_id: string;
+  score: number;
+  note: string | null;
+  completed_at: string;
+  created_at: string;
+}
+
+export interface SurveyResultRow {
+  id: string;
+  user_id: string;
+  disease_scores: string; // JSONB stored as string
+  critical_diseases: string; // JSONB stored as string
+  reflection_answers: string; // JSONB stored as string
+  personalized_habits: string; // JSONB stored as string
+  tazkiyah_plan: string; // JSONB stored as string
+  radar_chart_data: string | null; // JSONB stored as string
+  generated_at: string;
+  updated_at: string;
+}
+
+export interface SurveyProgressRow {
+  user_id: string;
+  current_phase: number;
+  phase_1_completed: number; // BOOLEAN as INTEGER
+  phase_2_completed: number; // BOOLEAN as INTEGER
+  reflection_completed: number; // BOOLEAN as INTEGER
+  results_generated: number; // BOOLEAN as INTEGER
+  started_at: string;
+  last_updated: string;
+}
+
+// Domain types for Survey
+export interface SurveyResponseData {
+  id: string;
+  userId: string;
+  phaseNumber: number;
+  questionId: string;
+  score: number;
+  note?: string;
+  completedAt: string;
+  createdAt: string;
+}
+
+export interface SurveyResultData {
+  id: string;
+  userId: string;
+  diseaseScores: Record<string, number>;
+  criticalDiseases: string[];
+  reflectionAnswers: {
+    strongestStruggle?: string;
+    dailyHabit?: string;
+  };
+  personalizedHabits: any[];
+  tazkiyahPlan: any;
+  radarChartData?: any;
+  generatedAt: string;
+  updatedAt: string;
+}
+
+export interface SurveyProgressData {
+  userId: string;
+  currentPhase: number;
+  phase1Completed: boolean;
+  phase2Completed: boolean;
+  reflectionCompleted: boolean;
+  resultsGenerated: boolean;
+  startedAt: string;
+  lastUpdated: string;
+}
+
 // Unified interface for all database operations
 export interface IDatabaseClient {
   // User operations
@@ -738,6 +813,99 @@ export interface IDatabaseClient {
   ): Promise<DatabaseResult<OnboardingData>>;
   upsertOnboarding(data: OnboardingData): Promise<DatabaseResult<OnboardingData>>;
   deleteOnboarding(userId: string): Promise<DatabaseResult<void>>;
+
+  // Survey operations
+  createSurveyResponse(data: {
+    userId: string;
+    phaseNumber: number;
+    questionId: string;
+    score: number;
+    note?: string;
+  }): Promise<DatabaseResult<SurveyResponseData>>;
+  getSurveyResponseById(id: string): Promise<DatabaseResult<SurveyResponseData | null>>;
+  getSurveyResponsesByPhase(userId: string, phaseNumber: number): Promise<DatabaseResult<SurveyResponseData[]>>;
+  getAllSurveyResponses(userId: string): Promise<DatabaseResult<SurveyResponseData[]>>;
+  updateSurveyResponse(
+    id: string,
+    userId: string,
+    updates: {
+      score?: number;
+      note?: string;
+    }
+  ): Promise<DatabaseResult<SurveyResponseData>>;
+  deleteSurveyResponse(id: string, userId: string): Promise<DatabaseResult<void>>;
+  savePhaseResponses(responses: {
+    userId: string;
+    phaseNumber: number;
+    questionId: string;
+    score: number;
+    note?: string;
+  }[]): Promise<DatabaseResult<SurveyResponseData[]>>;
+
+  // Survey results operations
+  createSurveyResult(data: {
+    userId: string;
+    diseaseScores: Record<string, number>;
+    criticalDiseases: string[];
+    reflectionAnswers: {
+      strongestStruggle?: string;
+      dailyHabit?: string;
+    };
+    personalizedHabits: any[];
+    tazkiyahPlan: any;
+    radarChartData?: any;
+  }): Promise<DatabaseResult<SurveyResultData>>;
+  getSurveyResultByUserId(userId: string): Promise<DatabaseResult<SurveyResultData | null>>;
+  getSurveyResultById(id: string): Promise<DatabaseResult<SurveyResultData | null>>;
+  updateSurveyResult(
+    userId: string,
+    updates: {
+      diseaseScores?: Record<string, number>;
+      criticalDiseases?: string[];
+      reflectionAnswers?: {
+        strongestStruggle?: string;
+        dailyHabit?: string;
+      };
+      personalizedHabits?: any[];
+      tazkiyahPlan?: any;
+      radarChartData?: any;
+    }
+  ): Promise<DatabaseResult<SurveyResultData>>;
+  deleteSurveyResult(userId: string): Promise<DatabaseResult<void>>;
+
+  // Survey progress operations
+  createSurveyProgress(data: {
+    userId: string;
+    currentPhase?: number;
+    phase1Completed?: boolean;
+    phase2Completed?: boolean;
+    reflectionCompleted?: boolean;
+    resultsGenerated?: boolean;
+  }): Promise<DatabaseResult<SurveyProgressData>>;
+  getSurveyProgressByUserId(userId: string): Promise<DatabaseResult<SurveyProgressData | null>>;
+  updateSurveyProgress(
+    userId: string,
+    updates: {
+      currentPhase?: number;
+      phase1Completed?: boolean;
+      phase2Completed?: boolean;
+      reflectionCompleted?: boolean;
+      resultsGenerated?: boolean;
+    }
+  ): Promise<DatabaseResult<SurveyProgressData>>;
+  deleteSurveyProgress(userId: string): Promise<DatabaseResult<void>>;
+  hasUserCompletedSurvey(userId: string): Promise<DatabaseResult<boolean>>;
+  getPhaseCompletionStatus(userId: string): Promise<DatabaseResult<{
+    phase1Completed: boolean;
+    phase2Completed: boolean;
+    reflectionCompleted: boolean;
+    resultsGenerated: boolean;
+  }>>;
+  getUserSurveyData(userId: string): Promise<DatabaseResult<{
+    responses: SurveyResponseData[];
+    result: SurveyResultData | null;
+    progress: SurveyProgressData | null;
+  }>>;
 
   // Health & cleanup
   healthCheck(): Promise<{

@@ -13,6 +13,7 @@ import {
 } from '@/domain/repositories';
 import { IOnboardingRepository } from '@/domain/repositories/IOnboardingRepository';
 import { IDhikrRepository } from '@/domain/repositories/IDhikrRepository';
+import { ISurveyRepository } from '@/domain/repositories/ISurveyRepository';
 import { ContentRepositoryAdapter } from '../repos/ContentRepositoryAdapter';
 import { PlanRepository } from '../repos/PlanRepository';
 import { HabitRepositoryAdapter } from '../repos/HabitRepositoryAdapter';
@@ -22,6 +23,7 @@ import { PrayerTimesRepositoryAdapter } from '../repos/PrayerTimesRepositoryAdap
 import { IntentionRepositoryAdapter } from '../repos/IntentionRepositoryAdapter';
 import { DhikrRepositoryAdapter } from '../repos/DhikrRepositoryAdapter';
 import { OnboardingRepositoryAdapter } from '../repos/OnboardingRepositoryAdapter';
+import { SurveyRepositoryAdapter } from '../repos/SurveyRepositoryAdapter';
 import { IAiProvider } from '@/domain/providers/IAiProvider';
 import { getAIProvider } from '../ai/factory';
 import { SuggestPlanUseCase } from '@/application/usecases/SuggestPlanUseCase';
@@ -47,6 +49,14 @@ import {
   GetDhikrStatsUseCase,
   GetDhikrTypesUseCase
 } from '@/application/usecases/dhikr';
+import { ValidateSurveyProgressUseCase } from '@/application/usecases/ValidateSurveyProgressUseCase';
+import { SubmitPhase1UseCase } from '@/application/usecases/SubmitPhase1UseCase';
+import { SubmitPhase2UseCase } from '@/application/usecases/SubmitPhase2UseCase';
+import { SubmitReflectionUseCase } from '@/application/usecases/SubmitReflectionUseCase';
+import { GenerateResultsUseCase } from '@/application/usecases/GenerateResultsUseCase';
+import { CreateHabitsFromSurveyUseCase } from '@/application/usecases/CreateHabitsFromSurveyUseCase';
+import { ISurveyAiProvider } from '@/domain/providers/ISurveyAiProvider';
+import { getSurveyAIProvider } from '../ai/surveyFactory';
 // Cache service imports removed - not used in this file
 import { CqrsModule } from '@/infrastructure/cqrs/CqrsModule';
 import { IEventStore, IEventProjectionStore } from '@/domain/events/EventStore';
@@ -70,6 +80,11 @@ export async function configureDependencies(): Promise<void> {
     useFactory: () => getAIProvider()
   });
 
+  // Infrastructure - Survey AI Provider
+  container.register<ISurveyAiProvider>('ISurveyAiProvider', {
+    useFactory: () => getSurveyAIProvider()
+  });
+
   // Infrastructure - Cache Service
   // TODO: Fix CacheService registration
   // container.register<ICacheService>('ICacheService', {
@@ -86,6 +101,7 @@ export async function configureDependencies(): Promise<void> {
   container.register<IIntentionRepository>('IIntentionRepository', IntentionRepositoryAdapter);
   container.register<IDhikrRepository>('IDhikrRepository', DhikrRepositoryAdapter);
   container.register<IOnboardingRepository>('IOnboardingRepository', OnboardingRepositoryAdapter);
+  container.register<ISurveyRepository>('ISurveyRepository', SurveyRepositoryAdapter);
   container.register('IUserPreferencesRepository', {
     useClass: (await import('../repos/UserPreferencesRepository')).UserPreferencesRepository
   });
@@ -114,6 +130,14 @@ export async function configureDependencies(): Promise<void> {
   container.register<CompleteDhikrSessionUseCase>('CompleteDhikrSessionUseCase', CompleteDhikrSessionUseCase);
   container.register<GetDhikrStatsUseCase>('GetDhikrStatsUseCase', GetDhikrStatsUseCase);
   container.register<GetDhikrTypesUseCase>('GetDhikrTypesUseCase', GetDhikrTypesUseCase);
+
+  // Survey Use Cases
+  container.register<ValidateSurveyProgressUseCase>('ValidateSurveyProgressUseCase', ValidateSurveyProgressUseCase);
+  container.register<SubmitPhase1UseCase>('SubmitPhase1UseCase', SubmitPhase1UseCase);
+  container.register<SubmitPhase2UseCase>('SubmitPhase2UseCase', SubmitPhase2UseCase);
+  container.register<SubmitReflectionUseCase>('SubmitReflectionUseCase', SubmitReflectionUseCase);
+  container.register<GenerateResultsUseCase>('GenerateResultsUseCase', GenerateResultsUseCase);
+  container.register<CreateHabitsFromSurveyUseCase>('CreateHabitsFromSurveyUseCase', CreateHabitsFromSurveyUseCase);
 
   // Event Sourcing
   container.register<IEventStore>('IEventStore', SQLiteEventStore);

@@ -39,6 +39,39 @@ export enum ErrorCode {
   // Network Errors
   NETWORK_ERROR = 'network_error',
   TIMEOUT_ERROR = 'timeout_error',
+
+  // Survey Progress Errors
+  SURVEY_PROGRESS_ERROR = 'survey_progress_error',
+  SURVEY_PHASE_ACCESS_DENIED = 'survey_phase_access_denied',
+  SURVEY_NOT_FOUND = 'survey_not_found',
+  SURVEY_ALREADY_COMPLETED = 'survey_already_completed',
+  INVALID_PHASE_PROGRESSION = 'invalid_phase_progression',
+
+  // Survey Validation Errors
+  INVALID_LIKERT_SCORE = 'invalid_likert_score',
+  REFLECTION_TOO_SHORT = 'reflection_too_short',
+  REFLECTION_TOO_LONG = 'reflection_too_long',
+  SURVEY_RESPONSE_INVALID = 'survey_response_invalid',
+  SURVEY_NOTE_TOO_LONG = 'survey_note_too_long',
+  PHASE_INCOMPLETE = 'phase_incomplete',
+  REQUIRED_QUESTIONS_MISSING = 'required_questions_missing',
+
+  // Survey Results Errors
+  RESULTS_GENERATION_FAILED = 'results_generation_failed',
+  RESULTS_NOT_FOUND = 'results_not_found',
+  AI_ANALYSIS_FAILED = 'ai_analysis_failed',
+  PERSONALIZED_HABITS_FAILED = 'personalized_habits_failed',
+  TAZKIYAH_PLAN_FAILED = 'tazkiyah_plan_failed',
+
+  // Survey Auto-save Errors
+  AUTO_SAVE_FAILED = 'auto_save_failed',
+  STATE_SYNC_ERROR = 'state_sync_error',
+  PROGRESS_UPDATE_FAILED = 'progress_update_failed',
+
+  // Survey Export Errors
+  EXPORT_NOT_AVAILABLE = 'export_not_available',
+  PDF_GENERATION_FAILED = 'pdf_generation_failed',
+  JSON_EXPORT_FAILED = 'json_export_failed',
 }
 
 export enum DatabaseErrorCode {
@@ -102,6 +135,39 @@ export const ErrorCodeToStatus: Record<ErrorCode, number> = {
   [ErrorCode.RATE_LIMIT_EXCEEDED]: 429,
   [ErrorCode.NETWORK_ERROR]: 500,
   [ErrorCode.TIMEOUT_ERROR]: 408,
+
+  // Survey Progress Errors
+  [ErrorCode.SURVEY_PROGRESS_ERROR]: 500,
+  [ErrorCode.SURVEY_PHASE_ACCESS_DENIED]: 403,
+  [ErrorCode.SURVEY_NOT_FOUND]: 404,
+  [ErrorCode.SURVEY_ALREADY_COMPLETED]: 409,
+  [ErrorCode.INVALID_PHASE_PROGRESSION]: 400,
+
+  // Survey Validation Errors
+  [ErrorCode.INVALID_LIKERT_SCORE]: 400,
+  [ErrorCode.REFLECTION_TOO_SHORT]: 400,
+  [ErrorCode.REFLECTION_TOO_LONG]: 400,
+  [ErrorCode.SURVEY_RESPONSE_INVALID]: 400,
+  [ErrorCode.SURVEY_NOTE_TOO_LONG]: 400,
+  [ErrorCode.PHASE_INCOMPLETE]: 400,
+  [ErrorCode.REQUIRED_QUESTIONS_MISSING]: 400,
+
+  // Survey Results Errors
+  [ErrorCode.RESULTS_GENERATION_FAILED]: 500,
+  [ErrorCode.RESULTS_NOT_FOUND]: 404,
+  [ErrorCode.AI_ANALYSIS_FAILED]: 500,
+  [ErrorCode.PERSONALIZED_HABITS_FAILED]: 500,
+  [ErrorCode.TAZKIYAH_PLAN_FAILED]: 500,
+
+  // Survey Auto-save Errors
+  [ErrorCode.AUTO_SAVE_FAILED]: 500,
+  [ErrorCode.STATE_SYNC_ERROR]: 500,
+  [ErrorCode.PROGRESS_UPDATE_FAILED]: 500,
+
+  // Survey Export Errors
+  [ErrorCode.EXPORT_NOT_AVAILABLE]: 404,
+  [ErrorCode.PDF_GENERATION_FAILED]: 500,
+  [ErrorCode.JSON_EXPORT_FAILED]: 500,
 };
 
 // Map database error codes to API error codes

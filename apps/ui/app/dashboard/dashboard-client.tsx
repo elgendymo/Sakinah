@@ -37,6 +37,7 @@ import {
 } from '@sakinah/ui';
 import { apiService } from '@/lib/services/api';
 import { ApiError } from '@/lib/services/api/ApiService';
+import SurveyResultsCard from '@/components/dashboard/SurveyResultsCard';
 
 interface DashboardClientProps {
   userId: string;
@@ -80,7 +81,7 @@ interface PlanData {
   updatedAt: string;
 }
 
-export default function DashboardClient({ }: DashboardClientProps) {
+export default function DashboardClient({ userId }: DashboardClientProps) {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const tPrayers = useTranslations('prayers');
@@ -1080,8 +1081,17 @@ export default function DashboardClient({ }: DashboardClientProps) {
                 </div>
               </div>
 
-              {/* Sidebar - Intentions & Dhikr */}
+              {/* Sidebar - Survey Results, Intentions & Dhikr */}
               <div className="lg:col-span-4 space-y-6">
+
+                {/* Survey Results Integration */}
+                <SurveyResultsCard
+                  userId={userId}
+                  onHabitsIntegration={() => {
+                    // Refresh habits data when habits are integrated
+                    initializeDashboard();
+                  }}
+                />
 
                 {/* Daily Intention */}
                 <div className="relative">
