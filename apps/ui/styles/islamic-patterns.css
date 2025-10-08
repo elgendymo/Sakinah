@@ -1,0 +1,279 @@
+/* Islamic Patterns and Visual Design Elements */
+
+/* Geometric Islamic Patterns */
+.islamic-pattern-stars {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgb(var(--emerald-500) / 0.03) 10px,
+      rgb(var(--emerald-500) / 0.03) 20px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 10px,
+      rgb(var(--gold-500) / 0.03) 10px,
+      rgb(var(--gold-500) / 0.03) 20px
+    );
+}
+
+.islamic-pattern-tessellation {
+  background:
+    radial-gradient(circle at 100% 50%, transparent 20%, rgb(var(--emerald-500) / 0.05) 21%, rgb(var(--emerald-500) / 0.05) 34%, transparent 35%, transparent),
+    linear-gradient(0deg, transparent 24%, rgb(var(--gold-500) / 0.03) 25%, rgb(var(--gold-500) / 0.03) 26%, transparent 27%, transparent 74%, rgb(var(--gold-500) / 0.03) 75%, rgb(var(--gold-500) / 0.03) 76%, transparent 77%, transparent);
+  background-size: 50px 50px;
+}
+
+.islamic-border-ornament {
+  position: relative;
+  overflow: hidden;
+}
+
+.islamic-border-ornament::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--gold-500) / 0.5) 20%,
+    rgb(var(--emerald-600)) 50%,
+    rgb(var(--gold-500) / 0.5) 80%,
+    transparent
+  );
+}
+
+.islamic-border-ornament::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--gold-500) / 0.5) 20%,
+    rgb(var(--emerald-600)) 50%,
+    rgb(var(--gold-500) / 0.5) 80%,
+    transparent
+  );
+}
+
+/* Calligraphy-inspired decorations */
+.calligraphy-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.calligraphy-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--gold-600)) 25%,
+    rgb(var(--gold-600)) 75%,
+    transparent
+  );
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s ease-out;
+}
+
+.calligraphy-underline:hover::after {
+  transform: scaleX(1);
+}
+
+/* Mihrab-inspired arch shape */
+.mihrab-arch {
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  position: relative;
+}
+
+.mihrab-arch::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--gold-500) / 0.3),
+    rgb(var(--emerald-500) / 0.3)
+  );
+  z-index: -1;
+}
+
+/* Crescent moon decoration */
+.crescent-decoration {
+  position: relative;
+}
+
+.crescent-decoration::before {
+  content: '☪';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  font-size: 1.5rem;
+  color: rgb(var(--gold-500) / 0.3);
+  animation: gentle-float 6s ease-in-out infinite;
+}
+
+/* Star and crescent pattern */
+.star-pattern {
+  background-image:
+    radial-gradient(circle at 20% 80%, transparent 30%, rgb(var(--gold-500) / 0.05) 30.5%),
+    radial-gradient(circle at 80% 20%, transparent 30%, rgb(var(--emerald-500) / 0.05) 30.5%),
+    radial-gradient(circle at 80% 80%, transparent 30%, rgb(var(--gold-500) / 0.05) 30.5%),
+    radial-gradient(circle at 20% 20%, transparent 30%, rgb(var(--emerald-500) / 0.05) 30.5%);
+  background-size: 100px 100px;
+}
+
+/* Gradient overlays */
+.islamic-gradient-overlay {
+  position: relative;
+}
+
+.islamic-gradient-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--emerald-500) / 0.1),
+    transparent 40%,
+    transparent 60%,
+    rgb(var(--gold-500) / 0.1)
+  );
+  pointer-events: none;
+}
+
+/* Shimmer effect for loading states */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.3),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Gentle floating animation */
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-5px) rotate(-5deg);
+  }
+  75% {
+    transform: translateY(5px) rotate(5deg);
+  }
+}
+
+/* Pulse animation for important elements */
+@keyframes islamic-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(var(--emerald-500) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgb(var(--emerald-500) / 0);
+  }
+}
+
+.islamic-pulse {
+  animation: islamic-pulse 2s infinite;
+}
+
+/* Card hover effects */
+.islamic-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.islamic-card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow:
+    0 20px 25px -5px rgb(var(--emerald-500) / 0.1),
+    0 10px 10px -5px rgb(var(--emerald-500) / 0.04);
+}
+
+/* Focus states with Islamic colors */
+.islamic-focus:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgb(var(--emerald-500) / 0.1),
+    0 0 0 1px rgb(var(--emerald-600));
+}
+
+.islamic-focus-gold:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgb(var(--gold-500) / 0.1),
+    0 0 0 1px rgb(var(--gold-600));
+}
+
+/* Loading skeleton styles */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--sage-200)),
+    rgb(var(--sage-100)),
+    rgb(var(--sage-200))
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Smooth scroll behavior */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Backdrop blur for modals and overlays */
+.islamic-backdrop {
+  backdrop-filter: blur(8px) saturate(150%);
+  background-color: rgb(255 255 255 / 0.9);
+}
+
+@supports not (backdrop-filter: blur(8px)) {
+  .islamic-backdrop {
+    background-color: rgb(255 255 255 / 0.95);
+  }
+}

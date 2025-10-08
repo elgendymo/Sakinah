@@ -4,14 +4,6 @@
 -- Clear existing data
 DELETE FROM content_snippets;
 
--- Create mock user for development (if not exists)
-INSERT OR IGNORE INTO users (id, handle, created_at) VALUES
-  ('12345678-1234-4123-8123-123456789012', 'dev-user', datetime('now'));
-
--- Create profile for mock user (if not exists)
-INSERT OR IGNORE INTO profiles (user_id, display_name, timezone, created_at) VALUES
-  ('12345678-1234-4123-8123-123456789012', 'Development User', 'UTC', datetime('now'));
-
 -- Ayat for Envy
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
   ('ayah', 'And do not wish for that by which Allah has made some of you exceed others. For men is a share of what they have earned, and for women is a share of what they have earned. And ask Allah of His bounty.', 'Surah An-Nisa 4:32', '["envy", "contentment", "gratitude"]'),
@@ -44,69 +36,31 @@ INSERT INTO content_snippets (type, text, ref, tags) VALUES
 
 -- Hadith for Pride
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('hadith', 'No one who has an atoms weight of pride in his heart will enter Paradise.', 'Muslim', '["pride", "humility", "paradise"]'),
+  ('hadith', 'No one who has an atom''s weight of pride in his heart will enter Paradise.', 'Muslim', '["pride", "humility", "paradise"]'),
   ('hadith', 'Allah is Beautiful and loves beauty. Pride means denying the truth and looking down on people.', 'Muslim', '["pride", "beauty", "truth"]');
 
 -- Ayat for Patience
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('ayah', 'O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.', 'Surah Al-Baqarah 2:153', '["patience", "sabr", "prayer"]'),
-  ('ayah', 'And We will surely test you with something of fear and hunger and a loss of wealth and lives and fruits, but give good tidings to the patient.', 'Surah Al-Baqarah 2:155', '["patience", "test", "trials"]');
+  ('ayah', 'O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.', 'Surah Al-Baqarah 2:153', '["patience", "prayer", "sabr"]'),
+  ('ayah', 'And be patient, for indeed, Allah does not allow to be lost the reward of those who do good.', 'Surah Hud 11:115', '["patience", "reward", "good deeds"]');
 
 -- Hadith for Patience
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('hadith', 'Amazing is the affair of the believer, for all his affairs are good, and this is not for anyone except the believer.', 'Muslim', '["patience", "gratitude", "contentment"]'),
+  ('hadith', 'How wonderful is the affair of the believer! All of his affairs are good, and that is for no one except the believer.', 'Muslim', '["patience", "gratitude", "contentment"]'),
   ('hadith', 'Whoever remains patient, Allah will make him patient. Nobody can be given a blessing better and greater than patience.', 'Bukhari', '["patience", "blessing", "sabr"]');
 
 -- Ayat for Gratitude
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('ayah', 'If you are grateful, I will surely increase you in favor.', 'Surah Ibrahim 14:7', '["gratitude", "shukr", "increase"]'),
-  ('ayah', 'And when your Lord proclaimed, "If you are grateful, I will certainly give you more. But if you are ungrateful, My punishment is surely severe."', 'Surah Ibrahim 14:7', '["gratitude", "punishment", "blessing"]');
+  ('ayah', 'If you are grateful, I will surely increase you [in favor].', 'Surah Ibrahim 14:7', '["gratitude", "shukr", "increase"]'),
+  ('ayah', 'So remember Me; I will remember you. And be grateful to Me and do not deny Me.', 'Surah Al-Baqarah 2:152', '["gratitude", "remembrance", "dhikr"]');
 
 -- Hadith for Gratitude
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('hadith', 'He is not of us who does not thank Allah for His blessings, thank people for their favors, and is not thanked by people for his favors.', 'At-Tirmidhi', '["gratitude", "blessing", "thankfulness"]'),
-  ('hadith', 'Look at those who are beneath you and do not look at those who are above you, for it is more suitable that you should not consider as less the blessing of Allah.', 'Muslim', '["gratitude", "contentment", "comparison"]');
+  ('hadith', 'He who does not thank people, does not thank Allah.', 'Ahmad, Tirmidhi', '["gratitude", "thankfulness", "people"]'),
+  ('hadith', 'Look at those below you and do not look at those above you, for it is more suitable that you should not consider as less the blessing of Allah.', 'Muslim', '["gratitude", "contentment", "perspective"]');
 
--- Ayat for Tawakkul (Trust in Allah)
+-- Duas for General Spiritual Growth
 INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('ayah', 'And whoever relies upon Allah - then He is sufficient for him. Indeed, Allah will accomplish His purpose.', 'Surah At-Talaq 65:3', '["tawakkul", "trust", "reliance"]'),
-  ('ayah', 'And upon Allah rely, if you should be believers.', 'Surah Al-Maidah 5:23', '["tawakkul", "belief", "faith"]');
-
--- Duas for Tawakkul
-INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('dua', 'O Allah, You are my Lord, there is no god but You. I put my trust in You and You are the Lord of the Great Throne.', 'Abu Dawud', '["tawakkul", "trust", "protection"]'),
-  ('dua', 'In the name of Allah, I place my trust in Allah. There is no might and no power except with Allah.', 'At-Tirmidhi', '["tawakkul", "trust", "might"]);
-
--- Ayat for Dhikr (Remembrance)
-INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('ayah', 'And remember your Lord much and exalt Him with praise in the evening and the morning.', 'Surah Ali Imran 3:41', '["dhikr", "remembrance", "praise"]'),
-  ('ayah', 'Those who believe and whose hearts are assured by the remembrance of Allah. Unquestionably, by the remembrance of Allah hearts are assured.', 'Surah Ar-Rad 13:28', '["dhikr", "hearts", "assurance"]');
-
--- Common Dhikr
-INSERT INTO content_snippets (type, text, ref, tags) VALUES
-  ('dua', 'SubhanAllah (Glory be to Allah)', 'General Dhikr', '["dhikr", "praise", "glory"]'),
-  ('dua', 'Alhamdulillah (All praise is due to Allah)', 'General Dhikr', '["dhikr", "praise", "gratitude"]'),
-  ('dua', 'Allahu Akbar (Allah is Greatest)', 'General Dhikr', '["dhikr", "greatness", "tasbih"]'),
-  ('dua', 'La hawla wa la quwwata illa billah (There is no might and no power except with Allah)', 'General Dhikr', '["dhikr", "power", "might"]');
-
--- Clear existing dhikr types
-DELETE FROM dhikr_types;
-
--- Popular Dhikr Types with Arabic text, transliteration and translation
-INSERT INTO dhikr_types (name, display_name, arabic_text, transliteration, translation, description, recommended_count, tags) VALUES
-  ('tasbih', 'Tasbih', 'سُبْحَانَ اللَّهِ', 'SubhanAllah', 'Glory be to Allah', 'Glorifying Allah by declaring His perfection and freedom from all imperfections', 33, '["praise", "glory", "morning", "evening"]'),
-  ('tahmid', 'Tahmid', 'الْحَمْدُ لِلَّهِ', 'Alhamdulillah', 'All praise is due to Allah', 'Praising Allah and acknowledging His countless blessings', 33, '["praise", "gratitude", "morning", "evening"]'),
-  ('takbir', 'Takbir', 'اللَّهُ أَكْبَرُ', 'Allahu Akbar', 'Allah is Greatest', 'Declaring the supreme greatness of Allah above all things', 34, '["greatness", "majesty", "morning", "evening"]'),
-  ('tahlil', 'Tahlil', 'لَا إِلَٰهَ إِلَّا اللَّهُ', 'La ilaha illa Allah', 'There is no god but Allah', 'The declaration of monotheism, affirming Allah as the only deity worthy of worship', 100, '["monotheism", "faith", "remembrance"]'),
-  ('istighfar', 'Istighfar', 'أَسْتَغْفِرُ اللَّهَ', 'Astaghfirullah', 'I seek forgiveness from Allah', 'Seeking Allah''s forgiveness for sins and shortcomings', 100, '["forgiveness", "repentance", "purification"]'),
-  ('hawqala', 'Hawqala', 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ', 'La hawla wa la quwwata illa billah', 'There is no might and no power except with Allah', 'Acknowledging that all strength and ability come from Allah alone', 10, '["power", "strength", "reliance", "difficulty"]'),
-  ('salawat', 'Salawat on Prophet', 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ', 'Allahumma salli ala Muhammad', 'O Allah, send blessings upon Muhammad', 'Sending blessings upon Prophet Muhammad (peace be upon him)', 10, '["prophet", "blessings", "love"]'),
-  ('dua_protection', 'Seeking Protection', 'أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ', 'A''udhu billahi min ash-shaytani''r-rajim', 'I seek refuge in Allah from Satan, the accursed', 'Seeking Allah''s protection from evil and harm', 3, '["protection", "refuge", "evil", "safety"]'),
-  ('morning_dhikr', 'Morning Remembrance', 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ', 'Asbahna wa asbahal-mulku lillah', 'We have reached the morning and the dominion belongs to Allah', 'Morning dhikr acknowledging Allah''s sovereignty', 1, '["morning", "sovereignty", "gratitude"]'),
-  ('evening_dhikr', 'Evening Remembrance', 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ', 'Amsayna wa amsal-mulku lillah', 'We have reached the evening and the dominion belongs to Allah', 'Evening dhikr acknowledging Allah''s sovereignty', 1, '["evening", "sovereignty", "gratitude"]');
-
--- Add some general dhikr types without specific Arabic text
-INSERT INTO dhikr_types (name, display_name, description, recommended_count, tags) VALUES
-  ('general', 'General Dhikr', 'Any form of remembrance of Allah including personal duas and supplications', NULL, '["general", "remembrance", "dua"]'),
-  ('quran_recitation', 'Quran Recitation', 'Reciting verses from the Holy Quran as a form of dhikr', NULL, '["quran", "recitation", "verses"]'),
-  ('durood', 'Durood Sharif', 'Various forms of sending blessings upon the Prophet Muhammad (PBUH)', 11, '["prophet", "blessings", "durood"]');
+  ('dua', 'Our Lord, do not let our hearts deviate after You have guided us and grant us from Yourself mercy.', 'Surah Ali Imran 3:8', '["guidance", "mercy", "steadfastness"]'),
+  ('dua', 'O Allah, I ask You for beneficial knowledge, good provision, and acceptable deeds.', 'Ibn Majah', '["knowledge", "provision", "deeds"]'),
+  ('dua', 'O Turner of hearts, keep my heart firm upon Your religion.', 'Tirmidhi', '["heart", "faith", "steadfastness"]');

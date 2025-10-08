@@ -236,3 +236,50 @@ CREATE INDEX IF NOT EXISTS idx_onboarding_user ON onboarding(user_id);
 CREATE INDEX IF NOT EXISTS idx_onboarding_step ON onboarding(current_step);
 CREATE INDEX IF NOT EXISTS idx_onboarding_completed ON onboarding(is_completed);
 CREATE INDEX IF NOT EXISTS idx_onboarding_completion_percentage ON onboarding(profile_completion_percentage);
+
+-- Survey system tables for Tazkiyah onboarding
+-- Survey responses table - stores individual question responses
+CREATE TABLE IF NOT EXISTS survey_responses (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    phase_number INTEGER NOT NULL CHECK (phase_number BETWEEN 1 AND 3),
+    question_id TEXT NOT NULL,
+    score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+    note TEXT,
+    completed_at TEXT DEFAULT (datetime('now')) NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')) NOT NULL,
+    UNIQUE(user_id, phase_number, question_id)
+);
+
+-- Survey results table - stores final analysis and recommendations
+CREATE TABLE IF NOT EXISTS survey_results (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+    disease_scores TEXT NOT NULL, -- JSON as TEXT in SQLite
+    critical_diseases TEXT NOT NULL, -- JSON as TEXT in SQLite
+    reflection_answers TEXT NOT NULL, -- JSON as TEXT in SQLite
+    personalized_habits TEXT NOT NULL, -- JSON as TEXT in SQLite
+    tazkiyah_plan TEXT NOT NULL, -- JSON as TEXT in SQLite
+    radar_chart_data TEXT, -- JSON as TEXT in SQLite
+    generated_at TEXT DEFAULT (datetime('now')) NOT NULL,
+    updated_at TEXT DEFAULT (datetime('now')) NOT NULL
+);
+
+-- Survey progress table - tracks user progression through survey phases
+CREATE TABLE IF NOT EXISTS survey_progress (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    current_phase INTEGER NOT NULL DEFAULT 0 CHECK (current_phase BETWEEN 0 AND 4),
+    phase_1_completed INTEGER DEFAULT 0, -- BOOLEAN as INTEGER in SQLite
+    phase_2_completed INTEGER DEFAULT 0, -- BOOLEAN as INTEGER in SQLite
+    reflection_completed INTEGER DEFAULT 0, -- BOOLEAN as INTEGER in SQLite
+    results_generated INTEGER DEFAULT 0, -- BOOLEAN as INTEGER in SQLite
+    started_at TEXT DEFAULT (datetime('now')) NOT NULL,
+    last_updated TEXT DEFAULT (datetime('now')) NOT NULL
+);
+
+-- Survey table indexes
+CREATE INDEX IF NOT EXISTS idx_survey_responses_user_phase ON survey_responses(user_id, phase_number);
+CREATE INDEX IF NOT EXISTS idx_survey_responses_user ON survey_responses(user_id);
+CREATE INDEX IF NOT EXISTS idx_survey_results_user ON survey_results(user_id);
+CREATE INDEX IF NOT EXISTS idx_survey_progress_user ON survey_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_survey_progress_phase ON survey_progress(current_phase);

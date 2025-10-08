@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
 import {
   AccountBalance,
@@ -14,20 +13,23 @@ import {
   ArrowBack
 } from '@mui/icons-material';
 import AnimatedButton from '@/components/ui/AnimatedButton';
+import { setMockAuthCookie, setAuthTokens, isDevMode, getRedirectUrl } from '@/lib/auth-helpers';
+import AuthDebugger from '@/components/AuthDebugger';
+// import { createClient } from '@/lib/supabase-browser';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isDevelopment, setIsDevelopment] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  // const supabase = createClient();
 
   useEffect(() => {
     // Check if we're in development mode
-    const isDev = process.env.NODE_ENV === 'development' &&
-                  process.env.NEXT_PUBLIC_USE_SUPABASE !== 'true';
+    const isDev = isDevMode();
     setIsDevelopment(isDev);
 
     // Pre-fill email for development
@@ -47,35 +49,77 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setLoading(true);
     setMessage('');
+
+    // Validation
+    if (!email.trim()) {
+      setMessage('Please enter your email');
+      setLoading(false);
+      return;
+    }
+
+    if (!password) {
+      setMessage('Please enter your password');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (isDevelopment) {
         // Development mode - simulate login and redirect
         setMessage('Development mode: Logging you in...');
 
+        // Set mock authentication cookie for middleware
+        setMockAuthCookie();
+
         // Simulate a brief loading period
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Redirect to dashboard
-        router.push('/dashboard');
+        // Get redirect URL from query params
+        const redirectTo = getRedirectUrl(searchParams, '/dashboard');
+
+        console.log('Development login: redirecting to', redirectTo);
+
+        // Redirect to the intended destination
+        router.push(redirectTo);
         return;
       }
 
-      // Production mode - use Supabase
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+      // Call the new login API endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email,
+          password
+        }),
       });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      setMessage('Check your email for the login link!');
+      if (!response.ok) {
+        throw new Error(result.error?.message || 'Login failed');
+      }
+
+      // Success - store tokens and redirect
+      if (result.data.accessToken) {
+        setAuthTokens(result.data.accessToken, result.data.refreshToken);
+      }
+
+      setMessage('Login successful! Redirecting...');
+
+      const redirectTo = getRedirectUrl(searchParams, '/dashboard');
+      console.log('Production login: redirecting to', redirectTo);
+
+      setTimeout(() => {
+        router.push(redirectTo);
+      }, 1000);
+
     } catch (error: any) {
       setMessage(error.message || 'An error occurred');
     } finally {
@@ -133,7 +177,7 @@ function LoginForm() {
               </div>
 
               {/* Form */}
-              <div className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-6">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-sage-700 mb-2">
                     Email Address
@@ -154,18 +198,37 @@ function LoginForm() {
                   </div>
                 </div>
 
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-sage-700 mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 bg-white border border-sage-200 rounded-xl focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300 transition-all duration-200 text-sage-800 placeholder-sage-400"
+                      placeholder="Enter your password"
+                    />
+                  </div>
+                </div>
+
                 <AnimatedButton
-                  onClick={() => handleLogin({ preventDefault: () => {} } as React.FormEvent)}
                   disabled={loading}
                   loading={loading}
                   variant="primary"
                   size="lg"
                   className="w-full"
                   icon={<AutoAwesome sx={{ fontSize: 18 }} />}
+                  onClick={() => {
+                    handleLogin();
+                  }}
                 >
-                  {isDevelopment ? 'Enter App (Dev Mode)' : 'Send Magic Link'}
+                  {isDevelopment ? 'Enter App (Dev Mode)' : 'Sign In'}
                 </AnimatedButton>
-              </div>
+              </form>
 
               {/* Development Mode Notice */}
               {isDevelopment && (
@@ -213,7 +276,7 @@ function LoginForm() {
                 {!isDevelopment ? (
                   <div className="space-y-2">
                     <p className="text-xs text-sage-500">
-                      No password needed | Secure authentication
+                      Secure email and password authentication | Privacy-focused platform
                     </p>
                   </div>
                 ) : (
@@ -268,6 +331,7 @@ export default function LoginPage() {
       </div>
     }>
       <LoginForm />
+      <AuthDebugger />
     </Suspense>
   );
 }

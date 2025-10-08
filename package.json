@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "1.16.10",
+    "@rollup/rollup-darwin-arm64": "^4.52.3",
     "adhan": "4.4.3",
     "framer-motion": "^12.23.22",
     "react-google-autocomplete": "2.7.5",

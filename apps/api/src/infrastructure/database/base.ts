@@ -397,6 +397,82 @@ export abstract class BaseDatabaseClient implements IDatabaseClient {
   ): Promise<DatabaseResult<JournalEntry>>;
   abstract deleteJournal(id: string, userId: string): Promise<DatabaseResult<void>>;
 
+  // Survey operations
+  createSurveyResponse(data: {
+    userId: string;
+    phaseNumber: number;
+    questionId: string;
+    score: number;
+    note?: string;
+  }): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+  getSurveyResponseById(id: string): Promise<DatabaseResult<any | null>> {
+    throw new Error("Method not implemented.");
+  }
+  getSurveyResponsesByPhase(userId: string, phaseNumber: number): Promise<DatabaseResult<any[]>> {
+    throw new Error("Method not implemented.");
+  }
+  getAllSurveyResponses(userId: string): Promise<DatabaseResult<any[]>> {
+    throw new Error("Method not implemented.");
+  }
+  updateSurveyResponse(
+    id: string,
+    userId: string,
+    updates: {
+      score?: number;
+      note?: string;
+    }
+  ): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+  deleteSurveyResponse(id: string, userId: string): Promise<DatabaseResult<void>> {
+    throw new Error("Method not implemented.");
+  }
+  savePhaseResponses(responses: any[]): Promise<DatabaseResult<any[]>> {
+    throw new Error("Method not implemented.");
+  }
+
+  // Survey results operations
+  createSurveyResult(data: any): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+  getSurveyResultByUserId(userId: string): Promise<DatabaseResult<any | null>> {
+    throw new Error("Method not implemented.");
+  }
+  getSurveyResultById(id: string): Promise<DatabaseResult<any | null>> {
+    throw new Error("Method not implemented.");
+  }
+  updateSurveyResult(userId: string, updates: any): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+  deleteSurveyResult(userId: string): Promise<DatabaseResult<void>> {
+    throw new Error("Method not implemented.");
+  }
+
+  // Survey progress operations
+  createSurveyProgress(data: any): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+  getSurveyProgressByUserId(userId: string): Promise<DatabaseResult<any | null>> {
+    throw new Error("Method not implemented.");
+  }
+  updateSurveyProgress(userId: string, updates: any): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+  deleteSurveyProgress(userId: string): Promise<DatabaseResult<void>> {
+    throw new Error("Method not implemented.");
+  }
+  hasUserCompletedSurvey(userId: string): Promise<DatabaseResult<boolean>> {
+    throw new Error("Method not implemented.");
+  }
+  getPhaseCompletionStatus(userId: string): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+  getUserSurveyData(userId: string): Promise<DatabaseResult<any>> {
+    throw new Error("Method not implemented.");
+  }
+
   abstract healthCheck(): Promise<{
     status: 'ok' | 'error';
     database: 'sqlite' | 'supabase';

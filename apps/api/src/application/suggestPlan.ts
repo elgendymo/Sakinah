@@ -15,7 +15,7 @@ export async function suggestPlan(input: SuggestPlanInput): Promise<Result<Plan>
   const result = await useCase.execute(input);
 
   if (!result.ok) {
-    return result as Result<any>;
+    return result as Result<Plan>;
   }
 
   // Convert domain entity to DTO for backward compatibility
