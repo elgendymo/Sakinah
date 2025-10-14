@@ -240,7 +240,7 @@ export function useSurveyProgress(): SurveyProgressHook {
 export function useSurveyProgressUpdater() {
   const { refreshProgress } = useSurveyProgress();
 
-  const updateProgress = useCallback(async (phaseCompleted: number) => {
+  const updateProgress = useCallback(async () => {
     try {
       // Auto-refresh progress after phase completion
       await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for API

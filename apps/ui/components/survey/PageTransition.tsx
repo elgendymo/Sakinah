@@ -38,21 +38,6 @@ export default function PageTransition({ children, className = '' }: PageTransit
     }
   };
 
-  const fadeInUpVariants = {
-    initial: {
-      opacity: 0,
-      y: 30
-    },
-    animate: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: 'easeOut',
-        staggerChildren: 0.1
-      }
-    }
-  };
 
   return (
     <AnimatePresence mode="wait">
