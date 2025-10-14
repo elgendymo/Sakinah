@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import type { LikertScore } from '@sakinah/types';
 import type { SurveyValidationState, PhaseValidation, SurveyNavigation } from '../types';
-import { getQuestionsByPhase, getTotalQuestions } from '../data/surveyQuestions';
+import { getQuestionsByPhase, getTotalQuestions } from '@/components/survey';
 
 interface SurveyValidationHookProps {
   currentPhase: number;
@@ -150,9 +150,6 @@ export function useSurveyValidation({
     }
 
     const previousPhase = canGoBack ? currentPhase - 1 : null;
-
-    // Calculate overall progress
-    const allRequiredQuestions = [...getQuestionsByPhase(1), ...getQuestionsByPhase(2)];
 
     let progressPercentage = 0;
     if (currentPhase === 1) {

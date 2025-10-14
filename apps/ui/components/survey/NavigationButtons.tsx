@@ -99,6 +99,21 @@ export default function NavigationButtons({
     );
   };
 
+  // Add click handlers with haptic feedback for mobile
+  const handleNextClick = () => {
+    if (navigator.vibrate) {
+      navigator.vibrate(50); // Light haptic feedback
+    }
+    onNext();
+  };
+
+  const handleBackClick = () => {
+    if (navigator.vibrate) {
+      navigator.vibrate(30); // Lighter feedback for back
+    }
+    if (onBack) onBack();
+  };
+
   const renderDefault = () => (
     <motion.div
       className={`
@@ -114,7 +129,7 @@ export default function NavigationButtons({
       {showBack && onBack ? (
         <motion.div variants={buttonVariants}>
           <AnimatedButton
-            onClick={onBack}
+            onClick={handleBackClick}
             variant="outline"
             size="lg"
             className="min-w-[120px]"
@@ -144,7 +159,7 @@ export default function NavigationButtons({
       {/* Next Button */}
       <motion.div variants={buttonVariants}>
         <AnimatedButton
-          onClick={onNext}
+          onClick={handleNextClick}
           variant="primary"
           size="lg"
           disabled={nextDisabled}
@@ -177,7 +192,7 @@ export default function NavigationButtons({
       {showBack && onBack ? (
         <motion.div variants={buttonVariants}>
           <AnimatedButton
-            onClick={onBack}
+            onClick={handleBackClick}
             variant="outline"
             size="md"
             icon={getBackIcon()}
@@ -224,7 +239,7 @@ export default function NavigationButtons({
       {/* Next Button */}
       <motion.div variants={buttonVariants}>
         <AnimatedButton
-          onClick={onNext}
+          onClick={handleNextClick}
           variant="primary"
           size="md"
           disabled={nextDisabled}
@@ -253,7 +268,7 @@ export default function NavigationButtons({
       {showBack && onBack && (
         <motion.button
           type="button"
-          onClick={onBack}
+          onClick={handleBackClick}
           className={`
             flex items-center gap-2 px-4 py-2 text-sage-600 hover:text-emerald-600
             transition-colors duration-200 font-medium
@@ -271,7 +286,7 @@ export default function NavigationButtons({
       {/* Next Button */}
       <motion.div variants={buttonVariants}>
         <AnimatedButton
-          onClick={onNext}
+          onClick={handleNextClick}
           variant="primary"
           size="md"
           disabled={nextDisabled}
@@ -285,20 +300,6 @@ export default function NavigationButtons({
     </motion.div>
   );
 
-  // Add click handlers with haptic feedback for mobile
-  const handleNextClick = () => {
-    if (navigator.vibrate) {
-      navigator.vibrate(50); // Light haptic feedback
-    }
-    onNext();
-  };
-
-  const handleBackClick = () => {
-    if (navigator.vibrate) {
-      navigator.vibrate(30); // Lighter feedback for back
-    }
-    if (onBack) onBack();
-  };
 
   // Click handlers with haptic feedback are defined above
 

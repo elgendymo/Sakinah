@@ -27,12 +27,10 @@ export default function MobileOptimizedSurvey({
   showBackButton = true,
   onBack
 }: MobileOptimizedSurveyProps) {
-  const [isPortrait, setIsPortrait] = useState(true);
   const [screenHeight, setScreenHeight] = useState(0);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth);
       setScreenHeight(window.innerHeight);
     };
 
