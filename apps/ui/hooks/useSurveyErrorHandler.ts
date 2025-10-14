@@ -230,7 +230,7 @@ export function useSurveyErrorHandler(): SurveyErrorState & SurveyErrorActions {
 export function useAutoSaveErrorHandler() {
   const baseHandler = useSurveyErrorHandler();
 
-  const handleAutoSaveError = useCallback((error: any) => {
+  const handleAutoSaveError = useCallback(() => {
     // Auto-save errors are less critical - don't block user flow
     baseHandler.setError({
       code: 'auto_save_failed',
@@ -259,8 +259,8 @@ export function useAutoSaveErrorHandler() {
 
       // Auto-dismiss success message
       setTimeout(baseHandler.clearError, 2000);
-    } catch (err) {
-      handleAutoSaveError(err);
+    } catch {
+      handleAutoSaveError();
     }
   }, [baseHandler, handleAutoSaveError]);
 

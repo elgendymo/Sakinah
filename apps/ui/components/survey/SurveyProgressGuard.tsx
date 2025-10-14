@@ -44,6 +44,8 @@ export default function SurveyProgressGuard({
         return () => clearTimeout(timer);
       }
     }
+    // Return cleanup function for all code paths
+    return () => {};
   }, [loading, progress, requiredPhase, canAccessPhase, getRedirectPath, router]);
 
   // Show loading state
