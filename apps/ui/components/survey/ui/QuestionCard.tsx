@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LikertScore } from '@sakinah/types';
 import type { SurveyQuestion } from '../types';
+import { useSurveyLanguage } from '@/components/survey';
 import LikertScale from './LikertScale';
 
 interface QuestionCardProps {
@@ -12,7 +13,6 @@ interface QuestionCardProps {
   note: string;
   onChange: (value: LikertScore) => void;
   onNoteChange: (note: string) => void;
-  language: 'en' | 'ar';
   disabled?: boolean;
   autoSave?: boolean;
   className?: string;
@@ -24,11 +24,11 @@ export default function QuestionCard({
   note,
   onChange,
   onNoteChange,
-  language,
   disabled = false,
   autoSave = true,
   className = ''
 }: QuestionCardProps) {
+  const { language, translations } = useSurveyLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showNote, setShowNote] = useState(!!note || value === 4 || value === 5);
 
@@ -97,8 +97,8 @@ export default function QuestionCard({
     }
   };
 
-  const title = language === 'ar' ? question.titleAr : question.titleEn;
-  const questionText = language === 'ar' ? question.questionAr : question.questionEn;
+  const title = translations.questions[question.questionId as keyof typeof translations.questions]?.title || question.questionId;
+  const questionText = translations.questions[question.questionId as keyof typeof translations.questions]?.question || '';
   const isAnswered = value !== null;
 
   return (
@@ -187,7 +187,7 @@ export default function QuestionCard({
                 <p className={`text-sage-600 text-sm leading-relaxed ${
                   language === 'en' ? 'arabic-text text-right' : ''
                 }`}>
-                  {language === 'en' ? question.questionAr : question.questionEn}
+                  {questionText}
                 </p>
               </motion.div>
             )}

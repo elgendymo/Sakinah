@@ -1,0 +1,242 @@
+{
+  "pages": {
+    "phase1": {
+      "title": "Inner Heart Assessment",
+      "subtitle": "Reflect honestly on your inner spiritual state. These questions help identify areas for spiritual purification."
+    },
+    "phase2": {
+      "title": "Behavioral Manifestations",
+      "subtitle": "Reflect on how inner spiritual conditions manifest in your daily behavior and interactions with others."
+    },
+    "reflection": {
+      "title": "Personal Reflection",
+      "subtitle": "Share your deepest reflections to help us create a personalized spiritual growth plan for you."
+    },
+    "results": {
+      "title": "Your Spiritual Journey Insights",
+      "subtitle": "Complete analysis of your spiritual assessment"
+    }
+  },
+  "status": {
+    "saving": "Saving responses...",
+    "saved": "All responses saved",
+    "error": "Failed to save - will retry"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "back": "Back",
+    "characters": "characters",
+    "complete": "Complete",
+    "inProgress": "In Progress",
+    "minimumCharacters": "Minimum 10 characters"
+  },
+  "reflection": {
+    "strongestStruggle": {
+      "label": "What is your strongest spiritual struggle?",
+      "placeholder": "Describe the spiritual challenge you find most difficult to overcome...",
+      "description": "Be honest and specific. This will help us provide the most relevant guidance for your journey."
+    },
+    "dailyHabit": {
+      "label": "2. What daily spiritual habit would you like to develop?",
+      "description": "Describe a specific practice or habit that would help strengthen your relationship with Allah.",
+      "placeholder": "Describe the habit you want to cultivate..."
+    },
+    "preview": {
+      "generateAI": "✨ Generate AI Preview",
+      "personalizedPlan": "Your Personalized Spiritual Plan Preview",
+      "habitRecommendations": "📋 Personalized Habit Recommendations",
+      "takhliyahFocus": "🧹 Takhliyah Focus (Purification)",
+      "tahliyahFocus": "🌱 Tahliyah Focus (Virtue Cultivation)",
+      "previewNote": "This is a preview. Your complete results will include detailed guidance and Islamic content."
+    },
+    "navigation": {
+      "viewResults": "View Results",
+      "reflectionPhase": "Reflection Phase:",
+      "readyToView": "Ready to view results!"
+    },
+    "validation": {
+      "completeQuestions": "Please complete all questions",
+      "strongestStruggleRequired": "Please describe your strongest struggle",
+      "strongestStruggleTooShort": "Strongest struggle description must be at least 10 characters",
+      "strongestStruggleTooLong": "Strongest struggle description must be less than 500 characters",
+      "dailyHabitRequired": "Please describe your desired daily habit",
+      "dailyHabitTooShort": "Daily habit description must be at least 10 characters",
+      "dailyHabitTooLong": "Daily habit description must be less than 300 characters"
+    }
+  },
+  "results": {
+    "title": "Your Spiritual Journey Insights",
+    "subtitle": "Allah has guided you through this reflection. These insights are a gift to help you grow closer to Him.",
+    "tabs": {
+      "overview": "Your Heart's Reflection",
+      "habits": "Gentle Practices",
+      "plan": "Growth Journey"
+    },
+    "actions": {
+      "saveJourney": "Save My Journey",
+      "exportData": "Export Data",
+      "beginPractice": "Begin My Practice"
+    },
+    "overview": {
+      "mirrorOfHeart": "The Mirror of Your Heart",
+      "soulJourneyDesc": "Every soul is on a unique journey towards Allah. These reflections show not weaknesses, but opportunities for beautiful growth and closeness to the Divine.",
+      "spiritualInsights": "Spiritual Insights for Your Journey",
+      "gentleWisdom": "Gentle wisdom to guide your spiritual growth",
+      "mastery": "Mastery",
+      "growing": "Growing",
+      "emerging": "Emerging",
+      "keepGrowing": "Keep Growing",
+      "quotation": "\"And whoever relies upon Allah - then He is sufficient for him. Indeed, Allah will accomplish His purpose.\" - Quran 65:3"
+    },
+    "habits": {
+      "gentlePath": "Your Gentle Path Forward",
+      "practicesDesc": "These practices are lovingly chosen for you. Start small, be consistent, and trust that Allah will bless every sincere effort.",
+      "gentleStart": "Gentle Start",
+      "steadyGrowth": "Steady Growth",
+      "deeperJourney": "Deeper Journey",
+      "howOften": "How often:",
+      "timeNeeded": "Time needed:",
+      "nurtures": "Nurtures:",
+      "startWhereYouAre": "Start Where You Are",
+      "startWhereDesc": "Remember, every great Muslim started with small steps. Don't compare yourself to others - your journey is unique, and every small step is beloved to Allah."
+    },
+    "plan": {
+      "tazkiyahJourney": "Your Tazkiyah Journey",
+      "journeyDesc": "Tazkiyah is a lifelong journey. This plan offers you a structured, gentle path toward spiritual growth, tailored to your individual needs.",
+      "estimatedJourney": "Estimated Journey:",
+      "specialAttention": "Areas Deserving Special Attention",
+      "growthPhases": "Your Growth Phases",
+      "gentlePractices": "Gentle Practices for This Phase:",
+      "growthMilestones": "Growth Milestones:",
+      "journeyMilestones": "Journey Milestones",
+      "trustProcess": "Trust the Process",
+      "trustProcessDesc": "Remember that spiritual growth is like the growth of a tree - it requires time, patience, and consistent care. Trust that Allah sees your efforts and blesses them.",
+      "beautifulBeginning": "A Beautiful Beginning",
+      "beginningDesc": "You have taken a profound step in understanding your heart. This is not an ending, but the gentle beginning of a lifelong journey towards Allah.",
+      "quotationRef": "- Quran 65:3"
+    },
+    "completion": {
+      "reflectOnInsights": "Take your time to reflect on these insights. When you're ready, your dashboard awaits to help you put these practices into your daily life.",
+      "blessing": "May Allah bless your efforts and guide every step of your journey. Remember, He loves those who strive to purify their hearts."
+    }
+  },
+  "questions": {
+    "envy": {
+      "title": "Envy and Jealousy",
+      "question": "How often do you feel envious or jealous when you see others succeed or have things you want?"
+    },
+    "arrogance": {
+      "title": "Pride and Arrogance",
+      "question": "How often do you feel superior to others or look down on people you consider beneath you?"
+    },
+    "selfDeception": {
+      "title": "Self-Deception",
+      "question": "How often do you justify your mistakes or wrongdoings instead of acknowledging them honestly?"
+    },
+    "lust": {
+      "title": "Inappropriate Desires",
+      "question": "How often do you struggle with controlling inappropriate desires or sexual thoughts?"
+    },
+    "anger": {
+      "title": "Anger and Irritability",
+      "question": "How often do you lose your temper or become angry in your daily interactions?"
+    },
+    "malice": {
+      "title": "Hatred and Resentment",
+      "question": "How often do you hold grudges or feel lasting resentment toward people who have wronged you?"
+    },
+    "backbiting": {
+      "title": "Gossip and Backbiting",
+      "question": "How often do you speak negatively about people behind their backs or engage in gossip?"
+    },
+    "suspicion": {
+      "title": "Suspicion and Doubt",
+      "question": "How often do you assume the worst about others' intentions or motives without evidence?"
+    },
+    "loveOfDunya": {
+      "title": "Attachment to Worldly Things",
+      "question": "How often do you find yourself overly focused on material possessions or worldly status?"
+    },
+    "laziness": {
+      "title": "Spiritual Laziness",
+      "question": "How often do you delay or avoid acts of worship, good deeds, or spiritual practices?"
+    },
+    "despair": {
+      "title": "Hopelessness and Despair",
+      "question": "How often do you feel hopeless about your spiritual progress or Allah's mercy?"
+    }
+  },
+  "mockPreview": {
+    "personalizedHabits": {
+      "morningDhikr": "Morning dhikr (5 minutes daily)",
+      "eveningReflection": "Evening reflection and istighfar",
+      "dailyGratitude": "Daily gratitude practice"
+    },
+    "takhliyahFocus": {
+      "purificationFromEnvy": "Purification from envy through gratitude",
+      "overcomingArrogance": "Overcoming arrogance through humility"
+    },
+    "tahliyahFocus": {
+      "cultivatingPatience": "Cultivating patience in daily interactions",
+      "developingTawakkul": "Developing tawakkul (trust in Allah)"
+    }
+  },
+  "virtues": {
+    "envy": {
+      "name": "Contentment",
+      "description": "Growing in gratitude and appreciation",
+      "insight": "Your heart seeks contentment and gratitude for Allah's blessings"
+    },
+    "arrogance": {
+      "name": "Humility",
+      "description": "Cultivating modesty and humbleness",
+      "insight": "Growing in humility brings you closer to Allah's mercy"
+    },
+    "selfDeception": {
+      "name": "Self-Awareness",
+      "description": "Developing honest self-reflection",
+      "insight": "Honest self-reflection is a gift from Allah for growth"
+    },
+    "lust": {
+      "name": "Purity",
+      "description": "Strengthening spiritual discipline",
+      "insight": "Seeking purity of heart leads to spiritual clarity"
+    },
+    "anger": {
+      "name": "Patience",
+      "description": "Building forbearance and calm",
+      "insight": "Patience is a strength that brings inner peace"
+    },
+    "malice": {
+      "name": "Compassion",
+      "description": "Growing in forgiveness and kindness",
+      "insight": "Forgiveness frees your heart and brings Allah's blessings"
+    },
+    "backbiting": {
+      "name": "Good Speech",
+      "description": "Practicing mindful and positive words",
+      "insight": "Kind words are charity that purifies the soul"
+    },
+    "suspicion": {
+      "name": "Trust",
+      "description": "Building positive thinking and trust",
+      "insight": "Thinking well of others reflects your pure heart"
+    },
+    "loveOfDunya": {
+      "name": "Spiritual Focus",
+      "description": "Growing focus on the Hereafter",
+      "insight": "Your heart yearns for the eternal beauty of the Hereafter"
+    },
+    "laziness": {
+      "name": "Diligence",
+      "description": "Developing consistency and action",
+      "insight": "Every small step towards Allah is beloved to Him"
+    },
+    "despair": {
+      "name": "Hope",
+      "description": "Strengthening faith and optimism",
+      "insight": "Allah's mercy is infinite, and hope in Him never disappoints"
+    }
+  }
+}

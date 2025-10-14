@@ -5,10 +5,6 @@ export type SurveyLanguage = 'en' | 'ar';
 export interface SurveyQuestion {
   id: string;
   questionId: string;
-  titleEn: string;
-  titleAr: string;
-  questionEn: string;
-  questionAr: string;
   disease: Disease;
   phase: 1 | 2;
   category: 'inner' | 'behavioral';
