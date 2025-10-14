@@ -11,8 +11,7 @@ import {
   PersonAdd
 } from '@mui/icons-material';
 import Link from 'next/link';
-import { setMockAuthCookie, setAuthTokens, isDevMode } from '@/lib/auth-helpers';
-// import { createClient } from '@/lib/supabase-browser';
+import { setMockAuthCookie, isDevMode } from '@/lib/auth-helpers';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
@@ -25,7 +24,6 @@ function SignupForm() {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // const supabase = createClient();
 
   useEffect(() => {
     const isDev = isDevMode();
@@ -371,32 +369,6 @@ function SignupForm() {
           100% { transform: scale(1); opacity: 1; }
         }
 
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-
-        .animate-float-delayed {
-          animation: float 6s ease-in-out infinite;
-          animation-delay: 2s;
-        }
-
-        .animate-float-slow {
-          animation: float 8s ease-in-out infinite;
-          animation-delay: 4s;
-        }
-
-        .animate-bounce-in {
-          animation: bounce-in 0.5s ease-out;
-        }
-
-        .animate-spin-slow {
-          animation: spin 3s linear infinite;
-        }
-
-        .animate-pulse-slow {
-          animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
@@ -437,10 +409,6 @@ export default function SignupPage() {
         </div>
 
         <style jsx>{`
-          .animate-spin-slow {
-            animation: spin 3s linear infinite;
-          }
-
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }

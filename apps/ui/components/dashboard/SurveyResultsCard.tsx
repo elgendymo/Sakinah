@@ -76,7 +76,7 @@ export default function SurveyResultsCard({ userId, onHabitsIntegration }: Surve
 
         // Check if habits have already been integrated
         const integratedHabits = responseData.data.results.personalizedHabits?.some(
-          (habit: any) => habit.integrated === true
+          (habit: any) => habit.integrated
         );
         setHabitsIntegrated(integratedHabits || false);
       }
@@ -239,7 +239,7 @@ export default function SurveyResultsCard({ userId, onHabitsIntegration }: Surve
               </span>
             </div>
             <div className="text-xs text-emerald-700 space-y-1">
-              {surveyResults.personalizedHabits.slice(0, 3).map((habit, index) => (
+              {surveyResults.personalizedHabits.slice(0, 3).map((habit) => (
                 <div key={habit.id} className="flex items-center gap-2">
                   <span className="w-1 h-1 bg-emerald-400 rounded-full"></span>
                   <span>{habit.title}</span>
