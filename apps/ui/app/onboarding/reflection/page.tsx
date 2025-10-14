@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageContainer from '@/components/PageContainer';
@@ -12,7 +12,7 @@ import type { ReflectionPreview } from '@sakinah/types';
 
 export default function ReflectionPage() {
   const router = useRouter();
-  const { language, toggleLanguage, getLocalizedText } = useSurveyLanguage();
+  const { language, translations, t } = useSurveyLanguage();
   const {
     state,
     updateReflection,
@@ -32,53 +32,40 @@ export default function ReflectionPage() {
     setCurrentPhase(3);
   }, [setCurrentPhase]);
 
-  // Validation logic
-  const validateReflection = () => {
+  // Validation logic - memoized to prevent infinite re-renders
+  const validateReflection = useCallback(() => {
     const errors: string[] = [];
 
     if (!state.reflectionAnswers.strongestStruggle.trim()) {
-      errors.push(getLocalizedText(
-        'Please describe your strongest struggle',
-        'يرجى وصف أكبر تحدي تواجهه'
-      ));
+      errors.push('Please describe your strongest struggle');
     } else if (state.reflectionAnswers.strongestStruggle.trim().length < 10) {
-      errors.push(getLocalizedText(
-        'Strongest struggle description must be at least 10 characters',
-        'وصف أكبر تحدي يجب أن يكون على الأقل 10 أحرف'
-      ));
+      errors.push('Description must be at least 10 characters');
     } else if (state.reflectionAnswers.strongestStruggle.trim().length > 500) {
-      errors.push(getLocalizedText(
-        'Strongest struggle description must be less than 500 characters',
-        'وصف أكبر تحدي يجب أن يكون أقل من 500 حرف'
-      ));
+      errors.push('Description cannot exceed 500 characters');
     }
 
     if (!state.reflectionAnswers.dailyHabit.trim()) {
-      errors.push(getLocalizedText(
-        'Please describe the daily habit you want to develop',
-        'يرجى وصف العادة اليومية التي تريد تطويرها'
-      ));
+      errors.push('Please describe a daily habit');
     } else if (state.reflectionAnswers.dailyHabit.trim().length < 10) {
-      errors.push(getLocalizedText(
-        'Daily habit description must be at least 10 characters',
-        'وصف العادة اليومية يجب أن يكون على الأقل 10 أحرف'
-      ));
+      errors.push('Habit description must be at least 10 characters');
     } else if (state.reflectionAnswers.dailyHabit.trim().length > 500) {
-      errors.push(getLocalizedText(
-        'Daily habit description must be less than 500 characters',
-        'وصف العادة اليومية يجب أن يكون أقل من 500 حرف'
-      ));
+      errors.push('Habit description cannot exceed 500 characters');
     }
 
-    setValidationErrors(errors);
-    return errors.length === 0;
-  };
+    return { isValid: errors.length === 0, errors };
+  }, [state.reflectionAnswers]);
+
+  // Update validation errors when validation changes
+  useEffect(() => {
+    const validation = validateReflection();
+    setValidationErrors(validation.errors);
+  }, [validateReflection]);
 
   // Auto-save when reflection answers change
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       if (hasUnsavedChanges && state.reflectionAnswers.strongestStruggle && state.reflectionAnswers.dailyHabit) {
-        if (validateReflection()) {
+        if (validateReflection().isValid) {
           setAutoSaveStatus('saving');
           try {
             await saveToAPI(3);
@@ -109,7 +96,7 @@ export default function ReflectionPage() {
   };
 
   const generatePreview = async () => {
-    if (!validateReflection()) return;
+    if (!validateReflection().isValid) return;
 
     setShowPreview(true);
 
@@ -117,38 +104,17 @@ export default function ReflectionPage() {
     // This is a simplified version as mentioned in the requirements
     const mockPreview: ReflectionPreview = {
       personalizedHabits: [
-        getLocalizedText(
-          'Morning dhikr (5 minutes daily)',
-          'الذكر الصباحي (5 دقائق يومياً)'
-        ),
-        getLocalizedText(
-          'Evening reflection and istighfar',
-          'التأمل المسائي والاستغفار'
-        ),
-        getLocalizedText(
-          'Daily gratitude practice',
-          'ممارسة الشكر اليومية'
-        )
+        t('mockPreview.personalizedHabits.morningDhikr'),
+        t('mockPreview.personalizedHabits.eveningReflection'),
+        t('mockPreview.personalizedHabits.dailyGratitude')
       ],
       takhliyahFocus: [
-        getLocalizedText(
-          'Purification from envy through gratitude',
-          'التطهر من الحسد بالشكر'
-        ),
-        getLocalizedText(
-          'Overcoming arrogance through humility',
-          'التغلب على الكبر بالتواضع'
-        )
+        t('mockPreview.takhliyahFocus.purificationFromEnvy'),
+        t('mockPreview.takhliyahFocus.overcomingArrogance')
       ],
       tahliyahFocus: [
-        getLocalizedText(
-          'Cultivating patience in daily interactions',
-          'تنمية الصبر في التفاعلات اليومية'
-        ),
-        getLocalizedText(
-          'Developing tawakkul (trust in Allah)',
-          'تطوير التوكل على الله'
-        )
+        t('mockPreview.tahliyahFocus.cultivatingPatience'),
+        t('mockPreview.tahliyahFocus.developingTawakkul')
       ]
     };
 
@@ -156,7 +122,7 @@ export default function ReflectionPage() {
   };
 
   const handleContinue = async () => {
-    if (!validateReflection()) return;
+    if (!validateReflection().isValid) return;
 
     // Save before proceeding
     const saveSuccess = await saveToAPI(3);
@@ -200,7 +166,8 @@ export default function ReflectionPage() {
     }
   };
 
-  const isComplete = validateReflection();
+  const validation = validateReflection();
+  const isComplete = validation.isValid;
   const currentProgress = 75 + (isComplete ? 25 : 0); // 75% base + 25% for completion
 
   return (
@@ -228,27 +195,12 @@ export default function ReflectionPage() {
           variants={headerVariants}
         >
           <h1 className="text-2xl sm:text-3xl font-bold text-sage-900 mb-2">
-            {getLocalizedText('Reflection & Insights', 'التأمل والاستبصار')}
+            {translations.pages.reflection.title}
           </h1>
           <p className="text-sage-600 max-w-2xl mx-auto leading-relaxed">
-            {getLocalizedText(
-              'Share your deeper reflections to receive personalized guidance for your spiritual journey.',
-              'شارك تأملاتك العميقة لتحصل على إرشاد شخصي لرحلتك الروحية.'
-            )}
+            {translations.pages.reflection.subtitle}
           </p>
 
-          {/* Language Toggle */}
-          <motion.button
-            onClick={toggleLanguage}
-            className="mt-4 text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-2 mx-auto"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-            </svg>
-            {language === 'en' ? 'عربي' : 'English'}
-          </motion.button>
         </motion.div>
 
         {/* Reflection Questions */}
@@ -260,26 +212,17 @@ export default function ReflectionPage() {
           >
             <div className={`mb-4 ${language === 'ar' ? 'text-right' : ''}`}>
               <h3 className={`text-lg font-semibold text-sage-900 mb-2 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                {getLocalizedText(
-                  '1. What is your strongest spiritual struggle right now?',
-                  '1. ما هو أكبر صراع روحي تواجهه الآن؟'
-                )}
+                1. {translations.reflection.strongestStruggle.label}
               </h3>
               <p className={`text-sage-600 text-sm ${language === 'ar' ? 'arabic-body' : ''}`}>
-                {getLocalizedText(
-                  'Describe the spiritual challenge that affects you most in your daily life.',
-                  'صف التحدي الروحي الذي يؤثر عليك أكثر في حياتك اليومية.'
-                )}
+                {translations.reflection.strongestStruggle.description}
               </p>
             </div>
 
             <textarea
               value={state.reflectionAnswers.strongestStruggle}
               onChange={(e) => handleStrongestStruggleChange(e.target.value)}
-              placeholder={getLocalizedText(
-                'Share your thoughts honestly and thoughtfully...',
-                'شارك أفكارك بصدق وتأمل...'
-              )}
+              placeholder={translations.reflection.strongestStruggle.placeholder}
               className={`
                 w-full p-4 border border-sage-200 rounded-lg
                 focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300
@@ -291,10 +234,10 @@ export default function ReflectionPage() {
             />
             <div className={`flex justify-between items-center mt-2 text-xs text-sage-500 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
               <span>
-                {state.reflectionAnswers.strongestStruggle.length}/500 {getLocalizedText('characters', 'حرف')}
+                {state.reflectionAnswers.strongestStruggle.length}/500 {t('common.characters')}
               </span>
               <span>
-                {getLocalizedText('Minimum 10 characters', 'الحد الأدنى 10 أحرف')}
+                {t('common.minimumCharacters')}
               </span>
             </div>
           </motion.div>
@@ -306,26 +249,17 @@ export default function ReflectionPage() {
           >
             <div className={`mb-4 ${language === 'ar' ? 'text-right' : ''}`}>
               <h3 className={`text-lg font-semibold text-sage-900 mb-2 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                {getLocalizedText(
-                  '2. What daily spiritual habit would you like to develop?',
-                  '2. ما العادة الروحية اليومية التي تريد تطويرها؟'
-                )}
+                {t('reflection.dailyHabit.label')}
               </h3>
               <p className={`text-sage-600 text-sm ${language === 'ar' ? 'arabic-body' : ''}`}>
-                {getLocalizedText(
-                  'Describe a specific practice or habit that would help strengthen your relationship with Allah.',
-                  'صف ممارسة أو عادة محددة من شأنها أن تساعد في تقوية علاقتك بالله.'
-                )}
+                {t('reflection.dailyHabit.description')}
               </p>
             </div>
 
             <textarea
               value={state.reflectionAnswers.dailyHabit}
               onChange={(e) => handleDailyHabitChange(e.target.value)}
-              placeholder={getLocalizedText(
-                'Describe the habit you want to cultivate...',
-                'صف العادة التي تريد تنميتها...'
-              )}
+              placeholder={t('reflection.dailyHabit.placeholder')}
               className={`
                 w-full p-4 border border-sage-200 rounded-lg
                 focus:ring-2 focus:ring-emerald-300/50 focus:border-emerald-300
@@ -337,10 +271,10 @@ export default function ReflectionPage() {
             />
             <div className={`flex justify-between items-center mt-2 text-xs text-sage-500 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
               <span>
-                {state.reflectionAnswers.dailyHabit.length}/500 {getLocalizedText('characters', 'حرف')}
+                {state.reflectionAnswers.dailyHabit.length}/500 {t('common.characters')}
               </span>
               <span>
-                {getLocalizedText('Minimum 10 characters', 'الحد الأدنى 10 أحرف')}
+                {t('common.minimumCharacters')}
               </span>
             </div>
           </motion.div>
@@ -359,10 +293,7 @@ export default function ReflectionPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {getLocalizedText(
-                '✨ Generate AI Preview',
-                '✨ إنشاء معاينة بالذكاء الاصطناعي'
-              )}
+              {t('reflection.preview.generateAI')}
             </motion.button>
           </motion.div>
         )}
@@ -378,13 +309,13 @@ export default function ReflectionPage() {
             >
               <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-200">
                 <h3 className={`text-lg font-semibold text-emerald-900 mb-4 ${language === 'ar' ? 'arabic-heading text-right' : ''}`}>
-                  {getLocalizedText('Your Personalized Spiritual Plan Preview', 'معاينة خطتك الروحية الشخصية')}
+                  {t('reflection.preview.personalizedPlan')}
                 </h3>
 
                 {/* Personalized Habits */}
                 <div className="mb-6">
                   <h4 className={`font-medium text-emerald-800 mb-2 ${language === 'ar' ? 'arabic-heading text-right' : ''}`}>
-                    {getLocalizedText('📋 Personalized Habit Recommendations', '📋 توصيات العادات الشخصية')}
+                    {t('reflection.preview.habitRecommendations')}
                   </h4>
                   <ul className={`space-y-1 ${language === 'ar' ? 'text-right' : ''}`}>
                     {preview.personalizedHabits.map((habit, index) => (
@@ -398,7 +329,7 @@ export default function ReflectionPage() {
                 {/* Takhliyah Focus */}
                 <div className="mb-6">
                   <h4 className={`font-medium text-emerald-800 mb-2 ${language === 'ar' ? 'arabic-heading text-right' : ''}`}>
-                    {getLocalizedText('🧹 Takhliyah Focus (Purification)', '🧹 تركيز التخلية (التطهير)')}
+                    {t('reflection.preview.takhliyahFocus')}
                   </h4>
                   <ul className={`space-y-1 ${language === 'ar' ? 'text-right' : ''}`}>
                     {preview.takhliyahFocus.map((focus, index) => (
@@ -412,7 +343,7 @@ export default function ReflectionPage() {
                 {/* Tahliyah Focus */}
                 <div>
                   <h4 className={`font-medium text-emerald-800 mb-2 ${language === 'ar' ? 'arabic-heading text-right' : ''}`}>
-                    {getLocalizedText('🌱 Tahliyah Focus (Virtue Cultivation)', '🌱 تركيز التحلية (تنمية الفضائل)')}
+                    {t('reflection.preview.tahliyahFocus')}
                   </h4>
                   <ul className={`space-y-1 ${language === 'ar' ? 'text-right' : ''}`}>
                     {preview.tahliyahFocus.map((focus, index) => (
@@ -424,10 +355,7 @@ export default function ReflectionPage() {
                 </div>
 
                 <div className={`mt-4 text-xs text-emerald-600 ${language === 'ar' ? 'text-right arabic-body' : ''}`}>
-                  {getLocalizedText(
-                    'This is a preview. Your complete results will include detailed guidance and Islamic content.',
-                    'هذه معاينة. ستتضمن نتائجك الكاملة إرشادات مفصلة ومحتوى إسلامي.'
-                  )}
+                  {t('reflection.preview.previewNote')}
                 </div>
               </div>
             </motion.div>
@@ -447,7 +375,7 @@ export default function ReflectionPage() {
               </svg>
               <div>
                 <h3 className="text-sm font-medium text-red-800 mb-1">
-                  {getLocalizedText('Please complete all questions', 'يرجى إكمال جميع الأسئلة')}
+                  {t('reflection.validation.completeQuestions')}
                 </h3>
                 <ul className="text-sm text-red-700">
                   {validationErrors.map((error, index) => (
@@ -490,9 +418,9 @@ export default function ReflectionPage() {
               </svg>
             )}
             <span>
-              {autoSaveStatus === 'saving' && getLocalizedText('Saving responses...', 'جاري حفظ الإجابات...')}
-              {autoSaveStatus === 'saved' && getLocalizedText('All responses saved', 'تم حفظ جميع الإجابات')}
-              {autoSaveStatus === 'error' && getLocalizedText('Failed to save - will retry', 'فشل الحفظ - سيتم المحاولة مرة أخرى')}
+              {autoSaveStatus === 'saving' && t('status.saving')}
+              {autoSaveStatus === 'saved' && t('status.saved')}
+              {autoSaveStatus === 'error' && t('status.error')}
             </span>
           </motion.div>
         )}
@@ -507,7 +435,7 @@ export default function ReflectionPage() {
           <NavigationButtons
             onBack={handleBack}
             onNext={handleContinue}
-            nextLabel={getLocalizedText('View Results', 'عرض النتائج')}
+            nextLabel={t('reflection.navigation.viewResults')}
             nextDisabled={!isComplete}
             loading={isLoading}
             showBack={true}
@@ -523,8 +451,8 @@ export default function ReflectionPage() {
           }}
         >
           <p>
-            {getLocalizedText('Reflection Phase:', 'مرحلة التأمل:')} {isComplete ? getLocalizedText('Complete', 'مكتملة') : getLocalizedText('In Progress', 'قيد التقدم')}
-            {isComplete && ` • ${getLocalizedText('Ready to view results!', 'جاهز لعرض النتائج!')}`}
+            {t('reflection.navigation.reflectionPhase')} {isComplete ? t('common.complete') : t('common.inProgress')}
+            {isComplete && ` • ${t('reflection.navigation.readyToView')}`}
           </p>
         </motion.div>
       </motion.div>

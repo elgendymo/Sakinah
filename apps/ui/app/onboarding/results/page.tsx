@@ -9,7 +9,7 @@ import { useSurveyLanguage } from '@/components/survey/hooks/useSurveyLanguage';
 import type { SurveyResults, Disease } from '@sakinah/types';
 
 // Helper function to transform diseases into positive virtues
-const getSpiritualVirtues = (diseaseScores: Record<Disease, number>) => {
+const getSpiritualVirtues = () => {
   return {
     envy: { name: 'Contentment', icon: '🌱', description: 'Growing in gratitude and appreciation' },
     arrogance: { name: 'Humility', icon: '🕊️', description: 'Cultivating modesty and humbleness' },
@@ -31,25 +31,31 @@ const getGrowthIndicator = (score: number) => {
     level: 'Strong',
     percentage: 85,
     color: 'emerald',
-    message: 'Thriving'
+    message: 'Thriving',
+    emoji: '✨',
+    status: 'Flourishing'
   };
   if (score === 3) return {
     level: 'Growing',
     percentage: 65,
     color: 'blue',
-    message: 'Developing'
+    message: 'Developing',
+    emoji: '🌱',
+    status: 'Growing'
   };
   return {
     level: 'Emerging',
     percentage: 40,
     color: 'rose',
-    message: 'Beginning'
+    message: 'Beginning',
+    emoji: '🌅',
+    status: 'Emerging'
   };
 };
 
 export default function ResultsPage() {
   const router = useRouter();
-  const { language, toggleLanguage, getLocalizedText } = useSurveyLanguage();
+  const { language, t, translations } = useSurveyLanguage();
 
   const [results, setResults] = useState<SurveyResults | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +67,7 @@ export default function ResultsPage() {
     const loadResults = async () => {
       try {
         setIsLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
         const response = await fetch(`${apiUrl}/v1/onboarding/results`, {
           method: 'GET',
           headers: {
@@ -83,129 +89,20 @@ export default function ResultsPage() {
       }
     };
 
-    loadResults();
+    void loadResults();
   }, []);
 
-  // Get spiritual insights based on scores
-  const getSpiritualInsights = (diseaseScores: Record<Disease, number>) => {
-    const diseaseLabels: Record<Disease, { en: string; ar: string; insight: { en: string; ar: string } }> = {
-      envy: {
-        en: 'Contentment',
-        ar: 'القناعة',
-        insight: {
-          en: 'Your heart seeks contentment and gratitude for Allah\'s blessings',
-          ar: 'قلبك يسعى للقناعة والامتنان لنعم الله'
-        }
-      },
-      arrogance: {
-        en: 'Humility',
-        ar: 'التواضع',
-        insight: {
-          en: 'Growing in humility brings you closer to Allah\'s mercy',
-          ar: 'النمو في التواضع يقربك من رحمة الله'
-        }
-      },
-      selfDeception: {
-        en: 'Self-Awareness',
-        ar: 'الوعي الذاتي',
-        insight: {
-          en: 'Honest self-reflection is a gift from Allah for growth',
-          ar: 'التأمل الصادق في الذات هدية من الله للنمو'
-        }
-      },
-      lust: {
-        en: 'Purity',
-        ar: 'الطهارة',
-        insight: {
-          en: 'Seeking purity of heart leads to spiritual clarity',
-          ar: 'السعي لطهارة القلب يؤدي إلى الوضوح الروحي'
-        }
-      },
-      anger: {
-        en: 'Patience',
-        ar: 'الصبر',
-        insight: {
-          en: 'Patience is a strength that brings inner peace',
-          ar: 'الصبر قوة تجلب السكينة الداخلية'
-        }
-      },
-      malice: {
-        en: 'Forgiveness',
-        ar: 'الصفح',
-        insight: {
-          en: 'Forgiveness frees your heart and brings Allah\'s blessings',
-          ar: 'الصفح يحرر قلبك ويجلب بركات الله'
-        }
-      },
-      backbiting: {
-        en: 'Kind Speech',
-        ar: 'الكلام الطيب',
-        insight: {
-          en: 'Kind words are charity that purifies the soul',
-          ar: 'الكلمات الطيبة صدقة تطهر الروح'
-        }
-      },
-      suspicion: {
-        en: 'Good Thoughts',
-        ar: 'حسن الظن',
-        insight: {
-          en: 'Thinking well of others reflects your pure heart',
-          ar: 'حسن الظن بالآخرين يعكس طهارة قلبك'
-        }
-      },
-      loveOfDunya: {
-        en: 'Focus on Akhirah',
-        ar: 'التركيز على الآخرة',
-        insight: {
-          en: 'Your heart yearns for the eternal beauty of the Hereafter',
-          ar: 'قلبك يشتاق لجمال الآخرة الأبدي'
-        }
-      },
-      laziness: {
-        en: 'Motivation',
-        ar: 'النشاط',
-        insight: {
-          en: 'Every small step towards Allah is beloved to Him',
-          ar: 'كل خطوة صغيرة نحو الله محبوبة إليه'
-        }
-      },
-      despair: {
-        en: 'Hope',
-        ar: 'الرجاء',
-        insight: {
-          en: 'Allah\'s mercy is infinite, and hope in Him never disappoints',
-          ar: 'رحمة الله لا حدود لها، والرجاء فيه لا يخيب أبداً'
-        }
-      }
-    };
-
-    return diseaseLabels;
+  // Get spiritual insights from localization
+  const getSpiritualInsights = () => {
+    return translations.virtues;
   };
 
-  // Helper function to get growth level description
-  const getGrowthLevel = (score: number) => {
-    if (score <= 2) return {
-      level: getLocalizedText('Flourishing', 'مزدهر'),
-      color: 'emerald',
-      description: getLocalizedText('This area is a strength for you', 'هذا المجال نقطة قوة لك')
-    };
-    if (score === 3) return {
-      level: getLocalizedText('Growing', 'نامي'),
-      color: 'amber',
-      description: getLocalizedText('This area has beautiful potential for growth', 'هذا المجال له إمكانات جميلة للنمو')
-    };
-    return {
-      level: getLocalizedText('Nurturing', 'يحتاج رعاية'),
-      color: 'rose',
-      description: getLocalizedText('This area deserves gentle attention and care', 'هذا المجال يستحق انتباهاً ورعاية لطيفة')
-    };
-  };
 
   const handleExport = async (format: 'pdf' | 'json') => {
     if (!results) return;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
       const response = await fetch(`${apiUrl}/v1/onboarding/export/${format}/${results.id}`, {
         method: 'GET',
       });
@@ -271,7 +168,7 @@ export default function ResultsPage() {
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             />
             <p className="text-sage-600">
-              {getLocalizedText('Generating your results...', 'جاري إنشاء نتائجك...')}
+              {t('common.loading')}
             </p>
           </div>
         </motion.div>
@@ -292,14 +189,14 @@ export default function ResultsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <h3 className="text-lg font-semibold text-red-800 mb-2">
-              {getLocalizedText('Error Loading Results', 'خطأ في تحميل النتائج')}
+              {t('common.error')}
             </h3>
             <p className="text-red-700 mb-4">{error}</p>
             <button
               onClick={() => router.push('/onboarding/reflection')}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
             >
-              {getLocalizedText('Go Back', 'العودة')}
+              {t('common.back')}
             </button>
           </div>
         </motion.div>
@@ -341,35 +238,17 @@ export default function ResultsPage() {
             </motion.div>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-4">
-            {getLocalizedText('Your Spiritual Journey Insights', 'رؤى رحلتك الروحية')}
+            {translations.results.title}
           </h1>
           <p className="text-slate-600 max-w-3xl mx-auto leading-relaxed text-lg">
-            {getLocalizedText(
-              'Allah has guided you through this reflection. These insights are a gift to help you grow closer to Him.',
-              'الله قد هداك خلال هذا التأمل. هذه الرؤى هدية لمساعدتك على الاقتراب منه.'
-            )}
+            {translations.results.subtitle}
           </p>
           <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 max-w-2xl mx-auto">
             <p className={`text-blue-800 font-medium ${language === 'ar' ? 'arabic-body' : ''}`}>
-              {getLocalizedText(
-                '"And whoever relies upon Allah - then He is sufficient for him. Indeed, Allah will accomplish His purpose." - Quran 65:3',
-                '"ومن يتوكل على الله فهو حسبه إن الله بالغ أمره" - القرآن 65:3'
-              )}
+              {t('results.overview.quotation')}
             </p>
           </div>
 
-          {/* Language Toggle */}
-          <motion.button
-            onClick={toggleLanguage}
-            className="mt-4 text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-2 mx-auto"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-            </svg>
-            {language === 'en' ? 'عربي' : 'English'}
-          </motion.button>
         </motion.div>
 
         {/* Gentle Tab Navigation */}
@@ -379,9 +258,9 @@ export default function ResultsPage() {
         >
           <div className="bg-white rounded-2xl p-2 flex gap-2 shadow-lg shadow-slate-100">
             {[
-              { id: 'overview', label: getLocalizedText('Your Heart\'s Reflection', 'انعكاس قلبك'), icon: '💫' },
-              { id: 'habits', label: getLocalizedText('Gentle Practices', 'ممارسات لطيفة'), icon: '🌸' },
-              { id: 'plan', label: getLocalizedText('Growth Journey', 'رحلة النمو'), icon: '🌿' }
+              { id: 'overview', label: translations.results.tabs.overview, icon: '💫' },
+              { id: 'habits', label: translations.results.tabs.habits, icon: '🌸' },
+              { id: 'plan', label: translations.results.tabs.plan, icon: '🌿' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -438,13 +317,10 @@ export default function ResultsPage() {
                     <span className="text-3xl">💫</span>
                   </motion.div>
                   <h2 className={`text-2xl font-bold text-slate-800 mb-4 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                    {getLocalizedText('The Mirror of Your Heart', 'مرآة قلبك')}
+                    {t('results.overview.mirrorOfHeart')}
                   </h2>
                   <p className={`text-slate-600 leading-relaxed max-w-2xl mx-auto ${language === 'ar' ? 'arabic-body' : ''}`}>
-                    {getLocalizedText(
-                      'Every soul is on a unique journey towards Allah. These reflections show not weaknesses, but opportunities for beautiful growth and closeness to the Divine.',
-                      'كل روح في رحلة فريدة نحو الله. هذه التأملات لا تظهر نقاط ضعف، بل فرصاً للنمو الجميل والقرب من الإلهي.'
-                    )}
+                    {t('results.overview.soulJourneyDesc')}
                   </p>
                 </div>
               </div>
@@ -452,8 +328,10 @@ export default function ResultsPage() {
               {/* Interactive Virtue Garden */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {Object.entries(results.diseaseScores).map(([disease, score], index) => {
-                  const virtues = getSpiritualVirtues(results.diseaseScores);
+                  const virtues = getSpiritualVirtues();
+                  const insights = getSpiritualInsights();
                   const virtue = virtues[disease as Disease];
+                  const insight = insights[disease as Disease];
                   const growth = getGrowthIndicator(score);
 
                   if (!virtue) return null;
@@ -606,17 +484,23 @@ export default function ResultsPage() {
                         </motion.div>
                       </motion.div>
 
-                      {/* Interactive Tooltip */}
+                      {/* Interactive Tooltip with Spiritual Insight */}
                       <motion.div
-                        className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 bg-black/90 text-white text-sm px-4 py-3 rounded-2xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 whitespace-nowrap z-30 max-w-xs text-center"
+                        className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 bg-black/90 text-white text-sm px-4 py-3 rounded-2xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 z-30 max-w-xs text-center"
                         initial={{ scale: 0.8, y: 10 }}
                         whileHover={{ scale: 1, y: 0 }}
                       >
                         <motion.div
                           animate={{ y: [0, -2, 0] }}
                           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                          className="space-y-2"
                         >
-                          ✨ {virtue.description}
+                          <div>✨ {virtue.description}</div>
+                          {insight && (
+                            <div className={`text-xs opacity-90 border-t border-white/20 pt-2 ${language === 'ar' ? 'arabic-body' : ''}`}>
+                              💫 {insight.insight}
+                            </div>
+                          )}
                         </motion.div>
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-8 border-transparent border-t-black/90"></div>
                       </motion.div>
@@ -624,6 +508,72 @@ export default function ResultsPage() {
                   );
                 })}
               </div>
+
+              {/* Spiritual Insights Section */}
+              <motion.div
+                className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-8 border border-blue-100 relative overflow-hidden"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0 }}
+              >
+                <div className="text-center mb-6">
+                  <motion.div
+                    className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full mb-4"
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <span className="text-2xl">💫</span>
+                  </motion.div>
+                  <h3 className={`text-xl font-semibold text-blue-800 mb-2 ${language === 'ar' ? 'arabic-heading' : ''}`}>
+                    {t('results.overview.spiritualInsights')}
+                  </h3>
+                  <p className={`text-blue-600 text-sm ${language === 'ar' ? 'arabic-body' : ''}`}>
+                    {t('results.overview.gentleWisdom')}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(results.diseaseScores)
+                    .sort(([,a], [,b]) => b - a) // Show areas needing most attention first
+                    .slice(0, 6) // Show top 6 insights
+                    .map(([disease, score], index) => {
+                      const insights = getSpiritualInsights();
+                      const insight = insights[disease as Disease];
+
+                      if (!insight) return null;
+
+                      return (
+                        <motion.div
+                          key={disease}
+                          initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.8 + index * 0.1 }}
+                          className="bg-white/70 rounded-2xl p-4 border border-blue-100 hover:shadow-md transition-all duration-300"
+                        >
+                          <div className={`flex items-start gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                            <div className="flex-shrink-0">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                score <= 2 ? 'bg-emerald-100 text-emerald-600' :
+                                score === 3 ? 'bg-blue-100 text-blue-600' :
+                                'bg-rose-100 text-rose-600'
+                              }`}>
+                                <span className="text-lg">💎</span>
+                              </div>
+                            </div>
+                            <div className={`flex-1 ${language === 'ar' ? 'text-right' : ''}`}>
+                              <h4 className={`font-medium text-blue-800 mb-1 text-sm ${language === 'ar' ? 'arabic-heading' : ''}`}>
+                                {insight.name}
+                              </h4>
+                              <p className={`text-blue-600 text-xs leading-relaxed ${language === 'ar' ? 'arabic-body' : ''}`}>
+                                {insight.insight}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                </div>
+              </motion.div>
 
               {/* Animated Stats Dashboard */}
               <motion.div
@@ -681,7 +631,7 @@ export default function ResultsPage() {
                         ✨
                       </motion.span>
                       <span className="text-sm font-bold text-emerald-700 uppercase tracking-wide">
-                        {getLocalizedText('Mastery', 'إتقان')}
+                        {t('results.overview.mastery')}
                       </span>
                     </div>
                   </motion.div>
@@ -707,7 +657,7 @@ export default function ResultsPage() {
                         🌱
                       </motion.span>
                       <span className="text-sm font-bold text-blue-700 uppercase tracking-wide">
-                        {getLocalizedText('Growing', 'في نمو')}
+                        {t('results.overview.growing')}
                       </span>
                     </div>
                   </motion.div>
@@ -733,7 +683,7 @@ export default function ResultsPage() {
                         🌅
                       </motion.span>
                       <span className="text-sm font-bold text-rose-700 uppercase tracking-wide">
-                        {getLocalizedText('Emerging', 'في ظهور')}
+                        {t('results.overview.emerging')}
                       </span>
                     </div>
                   </motion.div>
@@ -763,7 +713,7 @@ export default function ResultsPage() {
                     animate={{ y: [0, -5, 0] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   >
-                    ✨ {getLocalizedText('Keep Growing', 'استمر في النمو')} ✨
+                    ✨ {t('results.overview.keepGrowing')} ✨
                   </motion.div>
                 </div>
 
@@ -823,13 +773,10 @@ export default function ResultsPage() {
                     <span className="text-2xl">🌸</span>
                   </motion.div>
                   <h2 className={`text-2xl font-bold text-slate-800 mb-4 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                    {getLocalizedText('Your Gentle Path Forward', 'طريقك اللطيف إلى الأمام')}
+                    {t('results.habits.gentlePath')}
                   </h2>
                   <p className={`text-slate-600 leading-relaxed max-w-2xl mx-auto ${language === 'ar' ? 'arabic-body' : ''}`}>
-                    {getLocalizedText(
-                      'These practices are lovingly chosen for you. Start small, be consistent, and trust that Allah will bless every sincere effort.',
-                      'هذه الممارسات اختيرت لك بمحبة. ابدأ بخطوات صغيرة، كن ثابتاً، وثق أن الله سيبارك كل جهد صادق.'
-                    )}
+                    {t('results.habits.practicesDesc')}
                   </p>
                 </div>
               </div>
@@ -858,10 +805,7 @@ export default function ResultsPage() {
                             {habit.title}
                           </h3>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colors.badge} ${colors.text}`}>
-                            {getLocalizedText(
-                              habit.difficultyLevel === 'easy' ? 'Gentle Start' : habit.difficultyLevel === 'moderate' ? 'Steady Growth' : 'Deeper Journey',
-                              habit.difficultyLevel === 'easy' ? 'بداية لطيفة' : habit.difficultyLevel === 'moderate' ? 'نمو مستقر' : 'رحلة أعمق'
-                            )}
+                            {habit.difficultyLevel === 'easy' ? t('results.habits.gentleStart') : habit.difficultyLevel === 'moderate' ? t('results.habits.steadyGrowth') : t('results.habits.deeperJourney')}
                           </span>
                         </div>
                         <motion.span
@@ -881,19 +825,19 @@ export default function ResultsPage() {
                         <div className={`flex items-center gap-2 text-sm ${colors.text} ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                           <span className="font-medium">⏰</span>
                           <span className={language === 'ar' ? 'arabic-body' : ''}>
-                            {getLocalizedText('How often:', 'كم مرة:')} {habit.frequency}
+                            {t('results.habits.howOften')} {habit.frequency}
                           </span>
                         </div>
                         <div className={`flex items-center gap-2 text-sm ${colors.text} ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                           <span className="font-medium">⏳</span>
                           <span className={language === 'ar' ? 'arabic-body' : ''}>
-                            {getLocalizedText('Time needed:', 'الوقت المطلوب:')} {habit.estimatedDuration}
+                            {t('results.habits.timeNeeded')} {habit.estimatedDuration}
                           </span>
                         </div>
                         <div className={`flex items-center gap-2 text-sm ${colors.text} ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                           <span className="font-medium">🎯</span>
                           <span className={language === 'ar' ? 'arabic-body' : ''}>
-                            {getLocalizedText('Nurtures:', 'يرعى:')} {habit.targetDisease}
+                            {t('results.habits.nurtures')} {habit.targetDisease}
                           </span>
                         </div>
                       </div>
@@ -907,13 +851,10 @@ export default function ResultsPage() {
                 <div className="text-center">
                   <span className="text-3xl mb-4 block">✨</span>
                   <h3 className={`text-xl font-semibold text-amber-800 mb-3 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                    {getLocalizedText('Start Where You Are', 'ابدأ من حيث أنت')}
+                    {t('results.habits.startWhereYouAre')}
                   </h3>
                   <p className={`text-amber-700 leading-relaxed ${language === 'ar' ? 'arabic-body' : ''}`}>
-                    {getLocalizedText(
-                      'Choose one practice that resonates with your heart. Allah values consistency over perfection. Even the smallest sincere action, when done regularly, can transform your soul.',
-                      'اختر ممارسة واحدة تتردد أصداؤها في قلبك. الله يقدر الثبات أكثر من الكمال. حتى أصغر عمل صادق، عند القيام به بانتظام، يمكن أن يحول روحك.'
-                    )}
+                    {t('results.habits.startWhereDesc')}
                   </p>
                 </div>
               </div>
@@ -941,18 +882,15 @@ export default function ResultsPage() {
                     <span className="text-2xl">🌿</span>
                   </motion.div>
                   <h2 className={`text-2xl font-bold text-slate-800 mb-4 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                    {getLocalizedText('Your Tazkiyah Journey', 'رحلة التزكية الخاصة بك')}
+                    {t('results.plan.tazkiyahJourney')}
                   </h2>
                   <p className={`text-slate-600 leading-relaxed max-w-2xl mx-auto mb-4 ${language === 'ar' ? 'arabic-body' : ''}`}>
-                    {getLocalizedText(
-                      'This is your personalized roadmap to spiritual growth. Like a garden that flourishes with gentle care, your soul will bloom through patient, consistent nurturing.',
-                      'هذه خارطة طريقك الشخصية للنمو الروحي. مثل الحديقة التي تزدهر بالرعاية اللطيفة، ستزهر روحك من خلال الرعاية الصبورة والمستمرة.'
-                    )}
+                    {t('results.plan.journeyDesc')}
                   </p>
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 rounded-full border border-indigo-200">
                     <span className="text-sm font-medium text-indigo-800">🕰️</span>
                     <span className={`text-sm text-indigo-700 ${language === 'ar' ? 'arabic-body' : ''}`}>
-                      {getLocalizedText('Estimated Journey:', 'الرحلة المقدرة:')} {results.tazkiyahPlan.expectedDuration}
+                      {t('results.plan.estimatedJourney')} {results.tazkiyahPlan.expectedDuration}
                     </span>
                   </div>
                 </div>
@@ -963,7 +901,7 @@ export default function ResultsPage() {
                 <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-6 border border-teal-200">
                   <h3 className={`text-lg font-semibold text-teal-800 mb-4 flex items-center gap-2 ${language === 'ar' ? 'arabic-heading flex-row-reverse' : ''}`}>
                     <span>🎯</span>
-                    {getLocalizedText('Areas Deserving Special Attention', 'المجالات التي تستحق اهتماماً خاصاً')}
+                    {t('results.plan.specialAttention')}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {results.tazkiyahPlan.criticalDiseases.map((disease, index) => (
@@ -986,7 +924,7 @@ export default function ResultsPage() {
               {/* Journey Phases */}
               <div className="space-y-6">
                 <h3 className={`text-xl font-semibold text-slate-800 text-center mb-6 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                  {getLocalizedText('Your Growth Phases', 'مراحل نموك')}
+                  {t('results.plan.growthPhases')}
                 </h3>
                 {results.tazkiyahPlan.phases.map((phase, index) => (
                   <motion.div
@@ -1022,7 +960,7 @@ export default function ResultsPage() {
                     <div className="mb-4">
                       <h5 className={`font-medium text-slate-700 mb-3 flex items-center gap-2 ${language === 'ar' ? 'arabic-heading flex-row-reverse' : ''}`}>
                         <span>🌸</span>
-                        {getLocalizedText('Gentle Practices for This Phase:', 'الممارسات اللطيفة لهذه المرحلة:')}
+                        {t('results.plan.gentlePractices')}
                       </h5>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {phase.practices.map((practice, practiceIndex) => (
@@ -1050,7 +988,7 @@ export default function ResultsPage() {
                     <div>
                       <h5 className={`font-medium text-slate-700 mb-3 flex items-center gap-2 ${language === 'ar' ? 'arabic-heading flex-row-reverse' : ''}`}>
                         <span>✨</span>
-                        {getLocalizedText('Growth Milestones:', 'معالم النمو:')}
+                        {t('results.plan.growthMilestones')}
                       </h5>
                       <div className="space-y-2">
                         {phase.checkpoints.map((checkpoint, checkpointIndex) => (
@@ -1072,7 +1010,7 @@ export default function ResultsPage() {
                 <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-3xl p-8 border border-violet-100">
                   <h3 className={`text-xl font-semibold text-violet-800 mb-6 text-center flex items-center justify-center gap-2 ${language === 'ar' ? 'arabic-heading' : ''}`}>
                     <span>🏔️</span>
-                    {getLocalizedText('Journey Milestones', 'معالم الرحلة')}
+                    {t('results.plan.journeyMilestones')}
                   </h3>
                   <div className="space-y-4">
                     {results.tazkiyahPlan.milestones.map((milestone, index) => (
@@ -1113,13 +1051,10 @@ export default function ResultsPage() {
                 <div className="text-center">
                   <span className="text-4xl mb-4 block">🌙</span>
                   <h3 className={`text-xl font-semibold text-emerald-800 mb-3 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-                    {getLocalizedText('Trust the Process', 'ثق في العملية')}
+                    {t('results.plan.trustProcess')}
                   </h3>
                   <p className={`text-emerald-700 leading-relaxed ${language === 'ar' ? 'arabic-body' : ''}`}>
-                    {getLocalizedText(
-                      'Growth is not always linear, and that\'s perfectly natural. Some days will feel easier than others. What matters is your sincere intention and gentle persistence. Allah sees your efforts and will guide each step of your journey.',
-                      'النمو ليس خطياً دائماً، وهذا طبيعي تماماً. ستبدو بعض الأيام أسهل من أخرى. المهم هو نيتك الصادقة والمثابرة اللطيفة. الله يرى جهودك وسيرشد كل خطوة في رحلتك.'
-                    )}
+                    {t('results.plan.trustProcessDesc')}
                   </p>
                 </div>
               </div>
@@ -1141,7 +1076,7 @@ export default function ResultsPage() {
               whileTap={{ scale: 0.98 }}
             >
               <span className="text-xl">📜</span>
-              {getLocalizedText('Save My Journey', 'احفظ رحلتي')}
+{translations.results.actions.saveJourney}
             </motion.button>
 
             <motion.button
@@ -1151,7 +1086,7 @@ export default function ResultsPage() {
               whileTap={{ scale: 0.98 }}
             >
               <span className="text-xl">📊</span>
-              {getLocalizedText('Export Data', 'تصدير البيانات')}
+{translations.results.actions.exportData}
             </motion.button>
 
             <motion.button
@@ -1161,17 +1096,14 @@ export default function ResultsPage() {
               whileTap={{ scale: 0.98 }}
             >
               <span className="text-xl">🏠</span>
-              {getLocalizedText('Begin My Practice', 'ابدأ ممارستي')}
+{translations.results.actions.beginPractice}
             </motion.button>
           </div>
 
           {/* Gentle Encouragement */}
           <div className="text-center max-w-2xl mx-auto">
             <p className={`text-slate-500 text-sm ${language === 'ar' ? 'arabic-body' : ''}`}>
-              {getLocalizedText(
-                'Take your time to reflect on these insights. When you\'re ready, your dashboard awaits to help you put these practices into your daily life.',
-                'خذ وقتك للتأمل في هذه الرؤى. عندما تكون مستعداً، ستنتظرك لوحة التحكم لمساعدتك في تطبيق هذه الممارسات في حياتك اليومية.'
-              )}
+              {t('results.completion.reflectOnInsights')}
             </p>
           </div>
         </motion.div>
@@ -1199,34 +1131,25 @@ export default function ResultsPage() {
             </motion.div>
 
             <h3 className={`text-2xl font-bold text-amber-900 mb-4 ${language === 'ar' ? 'arabic-heading' : ''}`}>
-              {getLocalizedText('A Beautiful Beginning', 'بداية جميلة')}
+              {t('results.plan.beautifulBeginning')}
             </h3>
 
             <div className="max-w-3xl mx-auto space-y-4">
               <p className={`text-amber-800 text-lg leading-relaxed ${language === 'ar' ? 'arabic-body' : ''}`}>
-                {getLocalizedText(
-                  'You have taken a profound step in understanding your heart. This is not an ending, but the gentle beginning of a lifelong journey towards Allah.',
-                  'لقد اتخذت خطوة عميقة في فهم قلبك. هذه ليست نهاية، بل بداية لطيفة لرحلة تدوم مدى الحياة نحو الله.'
-                )}
+                {t('results.plan.beginningDesc')}
               </p>
 
               <div className="bg-white/60 rounded-2xl p-6 border border-amber-100">
                 <p className={`text-amber-900 font-semibold mb-2 ${language === 'ar' ? 'arabic-body' : ''}`}>
-                  {getLocalizedText(
-                    '“And whoever relies upon Allah - then He is sufficient for him.”',
-                    '“ومن يتوكل على الله فهو حسبه”'
-                  )}
+                  {t('results.overview.quotation').split(' - ')[0]}
                 </p>
                 <p className={`text-amber-700 text-sm ${language === 'ar' ? 'arabic-body' : ''}`}>
-                  {getLocalizedText('- Quran 65:3', '- القرآن 65:3')}
+                  {t('results.plan.quotationRef')}
                 </p>
               </div>
 
               <p className={`text-amber-700 ${language === 'ar' ? 'arabic-body' : ''}`}>
-                {getLocalizedText(
-                  'May Allah bless your efforts and guide every step of your journey. Remember, He loves those who strive to purify their hearts.',
-                  'بارك الله في جهودك وهدى كل خطوة في رحلتك. تذكر أنه يحب الذين يسعون لتطهير قلوبهم.'
-                )}
+                {t('results.completion.blessing')}
               </p>
             </div>
           </div>

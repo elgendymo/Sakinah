@@ -137,12 +137,13 @@ export function useSurveyState(): UseSurveyStateReturn {
   const saveToAPI = useCallback(async (phase: number): Promise<boolean> => {
     setIsLoading(true);
 
-    try {
-      let endpoint = '';
-      let payload: any = {};
+    let endpoint = '';
+    let payload: any = {};
 
-      // Get API base URL from environment or default to localhost:3002/api
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+    try {
+
+      // Get API base URL - hardcode for now since env vars seem to be an issue
+      const apiBaseUrl = 'http://localhost:3001/api';
 
       // Ensure we don't have double slashes by trimming trailing slash from base URL
       const cleanBaseUrl = apiBaseUrl.replace(/\/$/, '');
@@ -236,20 +237,40 @@ export function useSurveyState(): UseSurveyStateReturn {
         console.log(`Phase ${phase} saved successfully to API`);
         return true;
       } else {
-        const errorText = await response.text();
+        let errorDetails: {};
+        try {
+          const errorText = await response.text();
+          // Try to parse as JSON first
+          try {
+            errorDetails = JSON.parse(errorText);
+          } catch {
+            errorDetails = { message: errorText };
+          }
+        } catch (e) {
+          errorDetails = { message: 'Failed to read error response' };
+        }
+
         console.error(`API save failed for phase ${phase}:`, {
           status: response.status,
           statusText: response.statusText,
           url: endpoint,
-          error: errorText
+          error: errorDetails,
+          payload: payload
         });
+
+        // Show more user-friendly error based on status
+        if (response.status === 403) {
+          console.log(`Phase ${phase} may have already been completed or access denied`);
+        }
+
         return false;
       }
     } catch (error) {
       console.error(`Failed to save phase ${phase} to API:`, {
-        error,
-        endpoint,
-        payload
+        error: error instanceof Error ? error.message : error,
+        endpoint: endpoint || 'unknown',
+        payload: payload || {},
+        stack: error instanceof Error ? error.stack : undefined
       });
       return false;
     } finally {

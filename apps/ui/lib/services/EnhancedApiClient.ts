@@ -473,7 +473,7 @@ export class EnhancedApiClient {
 }
 
 // Create enhanced API client instance
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 export const enhancedApiClient = new EnhancedApiClient(API_BASE_URL);
 
 // Export for use in services

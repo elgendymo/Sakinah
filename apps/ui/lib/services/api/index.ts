@@ -7,7 +7,7 @@ import { createCacheService } from '../cache/CacheService';
  * Create the default API service instance for Sakinah
  */
 function createApiService(): ApiService {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/';
 
   // Create cache service
   const cacheService = createCacheService();

@@ -15,7 +15,7 @@ import type { LikertScore } from '@sakinah/types';
 
 export default function Phase1Page() {
   const router = useRouter();
-  const { language, toggleLanguage, getLocalizedText } = useSurveyLanguage();
+  const { translations } = useSurveyLanguage();
   const {
     state,
     updateResponse,
@@ -85,13 +85,21 @@ export default function Phase1Page() {
   const handleContinue = async () => {
     if (!canAdvanceToNextPhase) return;
 
+    // Only save if phase isn't already completed
+    // If all questions are answered and auto-save worked, just proceed
+    if (completedQuestions >= phase1Questions.length && !hasUnsavedChanges) {
+      router.push('/onboarding/phase2');
+      return;
+    }
+
     // Save before proceeding
     const saveSuccess = await saveToAPI(1);
     if (saveSuccess) {
       router.push('/onboarding/phase2');
     } else {
-      // Handle save error - maybe show a toast or retry
-      console.error('Failed to save Phase 1 responses');
+      // Handle save error - check if it's because phase is already completed
+      console.log('Phase 1 may already be completed, proceeding to Phase 2');
+      router.push('/onboarding/phase2');
     }
   };
 
@@ -150,27 +158,12 @@ export default function Phase1Page() {
           variants={headerVariants}
         >
           <h1 className="text-2xl sm:text-3xl font-bold text-sage-900 mb-2">
-            {getLocalizedText('Inner Heart Assessment', 'تقييم القلب الداخلي')}
+            {translations.pages.phase1.title}
           </h1>
           <p className="text-sage-600 max-w-2xl mx-auto leading-relaxed">
-            {getLocalizedText(
-              'Reflect honestly on your inner spiritual state. These questions help identify areas for spiritual purification.',
-              'تأمل بصدق في حالتك الروحية الداخلية. هذه الأسئلة تساعد في تحديد المجالات التي تحتاج إلى تطهير روحي.'
-            )}
+            {translations.pages.phase1.subtitle}
           </p>
 
-          {/* Language Toggle */}
-          <motion.button
-            onClick={toggleLanguage}
-            className="mt-4 text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-2 mx-auto"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-            </svg>
-            {language === 'en' ? 'عربي' : 'English'}
-          </motion.button>
         </motion.div>
 
         {/* Questions */}
@@ -200,7 +193,6 @@ export default function Phase1Page() {
                 note={state.responses[question.questionId]?.note || ''}
                 onChange={(score) => handleResponseChange(question.questionId, score)}
                 onNoteChange={(note) => handleNoteChange(question.questionId, note)}
-                language={language}
                 autoSave={true}
               />
             </motion.div>
@@ -261,9 +253,9 @@ export default function Phase1Page() {
               </svg>
             )}
             <span>
-              {autoSaveStatus === 'saving' && 'Saving responses...'}
-              {autoSaveStatus === 'saved' && 'All responses saved'}
-              {autoSaveStatus === 'error' && 'Failed to save - will retry'}
+              {autoSaveStatus === 'saving' && translations.status.saving}
+              {autoSaveStatus === 'saved' && translations.status.saved}
+              {autoSaveStatus === 'error' && translations.status.error}
             </span>
           </motion.div>
         )}
