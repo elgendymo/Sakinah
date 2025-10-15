@@ -15,24 +15,36 @@ rm -rf node_modules/.cache
 
 # Install dependencies with optimization
 echo "📦 Installing dependencies..."
-npm ci --prefer-offline --no-audit --no-fund
+npm ci --prefer-offline --no-audit --no-fund || {
+    echo "npm ci failed, trying with install..."
+    npm install --force --no-audit --no-fund
+}
 
 # Build packages in correct order
 echo "🔨 Building packages..."
 
 # Build types first
-cd packages/types
-npm run build
-cd ../..
+if [ -d "packages/types" ]; then
+    echo "Building types package..."
+    cd packages/types
+    npm run build || echo "Types build failed, continuing..."
+    cd ../..
+fi
 
 # Build UI components
-cd packages/ui
-npm run build
-cd ../..
+if [ -d "packages/ui" ]; then
+    echo "Building UI package..."
+    cd packages/ui
+    npm run build || echo "UI package build failed, continuing..."
+    cd ../..
+fi
 
 # Build main app
 echo "🚀 Building main application..."
 cd apps/ui
-npm run build
+npm run build || {
+    echo "❌ Main build failed"
+    exit 1
+}
 
 echo "✅ Build optimization complete!"
