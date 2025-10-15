@@ -1,6 +1,11 @@
 {
+  "framework": "nextjs",
   "buildCommand": "cd apps/ui && npm run build",
   "outputDirectory": "apps/ui/.next",
-  "installCommand": "npm install",
-  "framework": "nextjs"
+  "installCommand": "npm ci --prefer-offline",
+  "nodeVersion": "18.x",
+  "env": {
+    "NODE_OPTIONS": "--max_old_space_size=4096",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  }
 }
