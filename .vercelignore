@@ -56,7 +56,7 @@ playwright-report/
 *.sqlite
 *.db
 
-# Lockfiles (Vercel will generate its own)
+# Lockfiles (let Vercel generate fresh ones)
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
