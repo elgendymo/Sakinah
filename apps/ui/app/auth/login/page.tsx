@@ -53,8 +53,9 @@ function LoginForm() {
     }
 
     try {
-      // Call the login API endpoint
-      const response = await fetch('/api/auth/login', {
+      // Call the backend login API endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

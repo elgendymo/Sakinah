@@ -10,6 +10,7 @@ import {
   PersonAdd
 } from '@mui/icons-material';
 import Link from 'next/link';
+import { setAuthTokens } from '@/lib/auth-helpers';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
@@ -67,8 +68,9 @@ function SignupForm() {
     }
 
     try {
-      // Call the signup API endpoint
-      const response = await fetch('/api/auth/signup', {
+      // Call the backend signup API endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/v1/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,10 +89,17 @@ function SignupForm() {
         throw new Error(result.error?.message || 'Signup failed');
       }
 
-      // Success - redirect to onboarding
+      // Success - save tokens if provided and redirect
+      if (result.data.accessToken) {
+        setAuthTokens(result.data.accessToken, result.data.refreshToken);
+      }
+
       setMessage('Account created successfully! Redirecting...');
+      
+      // Use the redirect URL from the response or default to onboarding
+      const redirectUrl = result.data.redirectTo || '/onboarding/welcome';
       setTimeout(() => {
-        window.location.href = '/onboarding/welcome';
+        window.location.href = redirectUrl;
       }, 500);
 
     } catch (error: any) {
