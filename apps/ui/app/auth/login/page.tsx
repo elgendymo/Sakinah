@@ -1,42 +1,27 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   AccountBalance,
   Email,
   AutoAwesome,
-  Build,
   Warning,
   CheckCircle,
   ArrowBack
 } from '@mui/icons-material';
 import AnimatedButton from '@/components/ui/AnimatedButton';
-import { setMockAuthCookie, setAuthTokens, isDevMode, getRedirectUrl } from '@/lib/auth-helpers';
-import AuthDebugger from '@/components/AuthDebugger';
-// import { createClient } from '@/lib/supabase-browser';
+import { setAuthTokens, getRedirectUrl } from '@/lib/auth-helpers';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [isDevelopment, setIsDevelopment] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
-  // const supabase = createClient();
 
   useEffect(() => {
-    // Check if we're in development mode
-    const isDev = isDevMode();
-    setIsDevelopment(isDev);
-
-    // Pre-fill email for development
-    if (isDev) {
-      setEmail('dev@sakinah.app');
-    }
-
     // Check for error messages from auth callback
     const error = searchParams.get('error');
     if (error) {
@@ -68,27 +53,7 @@ function LoginForm() {
     }
 
     try {
-      if (isDevelopment) {
-        // Development mode - simulate login and redirect
-        setMessage('Development mode: Logging you in...');
-
-        // Set mock authentication cookie for middleware
-        setMockAuthCookie();
-
-        // Simulate a brief loading period
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Get redirect URL from query params
-        const redirectTo = getRedirectUrl(searchParams, '/dashboard');
-
-        console.log('Development login: redirecting to', redirectTo);
-
-        // Use window.location.href for reliable redirect
-        window.location.href = redirectTo;
-        return;
-      }
-
-      // Call the new login API endpoint
+      // Call the login API endpoint
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -114,7 +79,7 @@ function LoginForm() {
       setMessage('Login successful! Redirecting...');
 
       const redirectTo = getRedirectUrl(searchParams, '/dashboard');
-      console.log('Production login: redirecting to', redirectTo);
+      console.log('Login successful: redirecting to', redirectTo);
 
       setTimeout(() => {
         window.location.href = redirectTo;
@@ -149,16 +114,17 @@ function LoginForm() {
             <div className="p-8">
               {/* Back Button */}
               <div className="mb-6">
-                <AnimatedButton
-                  onClick={() => router.push('/')}
-                  variant="outline"
-                  size="sm"
-                  icon={<ArrowBack sx={{ fontSize: 16 }} />}
-                  iconPosition="left"
-                  className="border-sage-300 text-sage-600 hover:bg-sage-50"
-                >
-                  Back to Home
-                </AnimatedButton>
+                <Link href="/">
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    icon={<ArrowBack sx={{ fontSize: 16 }} />}
+                    iconPosition="left"
+                    className="border-sage-300 text-sage-600 hover:bg-sage-50"
+                  >
+                    Back to Home
+                  </AnimatedButton>
+                </Link>
               </div>
 
               {/* Header */}
@@ -226,22 +192,9 @@ function LoginForm() {
                     handleLogin();
                   }}
                 >
-                  {isDevelopment ? 'Enter App (Dev Mode)' : 'Sign In'}
+                  Sign In
                 </AnimatedButton>
               </form>
-
-              {/* Development Mode Notice */}
-              {isDevelopment && (
-                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Build sx={{ color: '#2563eb', fontSize: 20 }} />
-                    <span className="font-medium text-blue-800">Development Mode</span>
-                  </div>
-                  <p className="text-sm text-blue-700 text-center leading-relaxed">
-                    Click the button above to enter with mock authentication
-                  </p>
-                </div>
-              )}
 
               {/* Message Display */}
               {message && (
@@ -273,17 +226,11 @@ function LoginForm() {
                     Sign up
                   </Link>
                 </p>
-                {!isDevelopment ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-sage-500">
-                      Secure email and password authentication | Privacy-focused platform
-                    </p>
-                  </div>
-                ) : (
+                <div className="space-y-2">
                   <p className="text-xs text-sage-500">
-                    Development mode active | Real authentication disabled for testing
+                    Secure email and password authentication | Privacy-focused platform
                   </p>
-                )}
+                </div>
               </div>
 
               {/* Decorative bottom element */}
@@ -331,7 +278,6 @@ export default function LoginPage() {
       </div>
     }>
       <LoginForm />
-      <AuthDebugger />
     </Suspense>
   );
 }
