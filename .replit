@@ -56,3 +56,8 @@ externalPort = 80
 [[ports]]
 localPort = 45501
 externalPort = 3000
+
+[deployment]
+deploymentTarget = "vm"
+run = ["bash", "-c", "npm run dev --prefix apps/api & npm run dev --prefix apps/ui"]
+build = ["npm", "install"]
