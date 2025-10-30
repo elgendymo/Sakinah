@@ -86,10 +86,10 @@ function SignupForm() {
         // Set mock authentication cookie for middleware
         setMockAuthCookie();
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         console.log('Development signup: redirecting to /onboarding/welcome');
-        router.push('/onboarding/welcome');
+        window.location.href = '/onboarding/welcome';
         return;
       }
 
@@ -116,8 +116,8 @@ function SignupForm() {
       // Success - redirect to onboarding
       setMessage('Account created successfully! Redirecting...');
       setTimeout(() => {
-        router.push('/onboarding/welcome');
-      }, 1000);
+        window.location.href = '/onboarding/welcome';
+      }, 500);
 
     } catch (error: any) {
       setMessage(error.message || 'An error occurred');
