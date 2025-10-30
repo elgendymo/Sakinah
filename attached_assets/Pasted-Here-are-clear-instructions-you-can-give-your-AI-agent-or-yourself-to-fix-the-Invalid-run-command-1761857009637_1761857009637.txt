@@ -1,0 +1,50 @@
+Here are clear instructions you can give your AI agent (or yourself) to fix the “Invalid run command” issue in Replit. Make sure you adjust them for your specific project (language, entrypoint file, build steps).
+
+---
+
+### 🎯 Instructions for the agent
+
+1. **Open the project** in Replit.
+2. Enable **hidden files** in the file tree (so you can see `.replit`). See docs: the `.replit` file controls the run command. ([docs.replit.com][1])
+3. Open the `.replit` file.
+4. Inspect the existing `run` or `[deployment] run` setting (if any).
+
+   * If there is a `run = "…"` or `run = ["…", "…"]` specify what command is being used.
+   * If there is a `[deployment] run = …` section (since you are publishing/deploying) check that too. ([docs.replit.com][1])
+5. Determine the correct command for your project. For example:
+
+   * If it’s a Python project and your main file is `main.py`, the command could be: `python3 main.py` or `["python3","main.py"]`.
+   * If it’s a Node.js project with `package.json` and a `start` script, it might be: `npm start`.
+   * If you have a build step and then run, include that appropriately.
+6. Update the `.replit` file accordingly. For example (Python):
+
+   ```toml
+   entrypoint = "main.py"
+   [deployment]
+   run = ["python3", "main.py"]
+   ```
+
+   Or (Node.js):
+
+   ```toml
+   entrypoint = "index.js"
+   [deployment]
+   run = "npm start"
+   ```
+
+   Refer to docs: the `run` can be array or string. ([docs.replit.com][1])
+7. Save the changes.
+8. **Test locally** within Replit by clicking Run / previewing the app to ensure it starts correctly.
+9. Then try to publish/deploy again.
+10. If publishing still fails:
+
+    * Check that your app listens on `0.0.0.0` and correct port if it’s a web server (for deployed environment) — see docs for deployment. ([Stack Overflow][2])
+    * Make sure there is no invalid shell syntax in the command (avoid weird placeholders like `$0`, `$1` unless you know what you’re doing).
+    * Check the deployment logs for specific errors to adjust further.
+
+---
+
+If you like, I can **generate a templated `.replit` file** specific to *your project’s language and entrypoint file* (tell me if it’s Python, Node.js, or something else) so you can copy-paste it. Would you like that?
+
+[1]: https://docs.replit.com/replit-app/configuration?utm_source=chatgpt.com "Replit App Configuration"
+[2]: https://stackoverflow.com/questions/79235369/why-does-my-replit-deployment-work-in-webview-but-fail-to-load-on-the-production?utm_source=chatgpt.com "Why does my Replit deployment work in Webview but fail to load on ..."
