@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import {
   Email,
   AutoAwesome,
-  Build,
   Warning,
   CheckCircle,
   PersonAdd
 } from '@mui/icons-material';
 import Link from 'next/link';
-import { setMockAuthCookie, isDevMode } from '@/lib/auth-helpers';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
@@ -20,21 +18,10 @@ function SignupForm() {
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [isDevelopment, setIsDevelopment] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const isDev = isDevMode();
-    setIsDevelopment(isDev);
-
-    if (isDev) {
-      setEmail('dev@sakinah.app');
-      setFirstName('Dev User');
-      setGender('male');
-    }
-
     const error = searchParams.get('error');
     if (error) {
       const errorMessages = {
@@ -80,25 +67,13 @@ function SignupForm() {
     }
 
     try {
-      if (isDevelopment) {
-        setMessage('Development mode: Creating account...');
-
-        // Set mock authentication cookie for middleware
-        setMockAuthCookie();
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        console.log('Development signup: redirecting to /onboarding/welcome');
-        router.push('/onboarding/welcome');
-        return;
-      }
-
-      // Call the new signup API endpoint
+      // Call the Next.js API route which handles Supabase auth with HttpOnly cookies
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: include cookies
         body: JSON.stringify({
           email,
           password,
@@ -113,11 +88,14 @@ function SignupForm() {
         throw new Error(result.error?.message || 'Signup failed');
       }
 
-      // Success - redirect to onboarding
+      // Success - cookies are set automatically by the server
       setMessage('Account created successfully! Redirecting...');
+      
+      // Use the redirect URL from the response or default to onboarding
+      const redirectUrl = result.data.redirectTo || '/onboarding/welcome';
       setTimeout(() => {
-        router.push('/onboarding/welcome');
-      }, 1000);
+        window.location.href = redirectUrl;
+      }, 500);
 
     } catch (error: any) {
       setMessage(error.message || 'An error occurred');
@@ -270,28 +248,13 @@ function SignupForm() {
                       </>
                     ) : (
                       <>
-                        <span>{isDevelopment ? 'Create Account (Dev Mode)' : 'Create Account'}</span>
+                        <span>Create Account</span>
                         <AutoAwesome sx={{ fontSize: 18 }} />
                       </>
                     )}
                   </button>
                 </div>
               </form>
-
-              {/* Development Mode Notice */}
-              {isDevelopment && (
-                <div className={`mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50 transition-all duration-700 delay-500 transform ${
-                  isFormVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Build sx={{ color: '#2563eb', fontSize: 20 }} className="animate-spin-slow" />
-                    <span className="font-medium text-blue-800">Development Mode</span>
-                  </div>
-                  <p className="text-sm text-blue-700 text-center leading-relaxed">
-                    Click the button above to create account with mock authentication
-                  </p>
-                </div>
-              )}
 
               {/* Message Display */}
               {message && (
@@ -325,17 +288,11 @@ function SignupForm() {
                     Sign in
                   </Link>
                 </p>
-                {!isDevelopment ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-sage-500">
-                      Secure email and password authentication | Privacy-focused platform
-                    </p>
-                  </div>
-                ) : (
+                <div className="space-y-2">
                   <p className="text-xs text-sage-500">
-                    Development mode active | Real authentication disabled for testing
+                    Secure email and password authentication | Privacy-focused platform
                   </p>
-                )}
+                </div>
               </div>
 
               {/* Animated bottom line */}

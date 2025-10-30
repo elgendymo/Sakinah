@@ -104,15 +104,10 @@ function withLocale(response: NextResponse, locale: Locale): NextResponse {
 }
 
 function getAuthToken(req: NextRequest): string | null {
-    // Look for a real auth cookie first
+    // Look for auth cookies
     for (const key of AUTH_COOKIE_KEYS) {
         const val = req.cookies.get(key)?.value;
         if (val) return val.startsWith("Bearer ") ? val : `Bearer ${val}`;
-    }
-    // In dev, allow a mock auth cookie for local testing
-    if (isDev) {
-        const mock = req.cookies.get("mock-auth")?.value;
-        if (mock) return mock.startsWith("Bearer ") ? mock : `Bearer ${mock}`;
     }
     return null;
 }

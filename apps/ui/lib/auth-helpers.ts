@@ -1,22 +1,6 @@
 /**
- * Authentication helper functions for development and production
+ * Authentication helper functions
  */
-
-export function setMockAuthCookie() {
-  if (typeof document !== 'undefined') {
-    // Set mock authentication cookie for development
-    document.cookie = 'mock-auth=dev-user; path=/; max-age=86400; SameSite=Lax';
-    console.log('Mock auth cookie set for development mode');
-  }
-}
-
-export function clearMockAuthCookie() {
-  if (typeof document !== 'undefined') {
-    // Clear mock authentication cookie
-    document.cookie = 'mock-auth=; path=/; max-age=0';
-    console.log('Mock auth cookie cleared');
-  }
-}
 
 export function setAuthTokens(accessToken: string, refreshToken: string) {
   if (typeof localStorage !== 'undefined') {
@@ -25,7 +9,7 @@ export function setAuthTokens(accessToken: string, refreshToken: string) {
   }
 
   if (typeof document !== 'undefined') {
-    // Also set as httpOnly-style cookie for middleware
+    // Set auth token as cookie for middleware
     document.cookie = `auth-token=${accessToken}; path=/; max-age=86400; SameSite=Lax`;
   }
 }
@@ -40,11 +24,6 @@ export function clearAuthTokens() {
     // Clear auth cookie
     document.cookie = 'auth-token=; path=/; max-age=0';
   }
-}
-
-export function isDevMode(): boolean {
-  return process.env.NODE_ENV === 'development' &&
-         process.env.NEXT_PUBLIC_USE_SUPABASE !== 'true';
 }
 
 export function getRedirectUrl(searchParams: URLSearchParams, defaultUrl: string = '/dashboard'): string {
