@@ -12,7 +12,7 @@ import {
   ArrowBack
 } from '@mui/icons-material';
 import AnimatedButton from '@/components/ui/AnimatedButton';
-import { setAuthTokens, getRedirectUrl } from '@/lib/auth-helpers';
+import { getRedirectUrl } from '@/lib/auth-helpers';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -53,13 +53,13 @@ function LoginForm() {
     }
 
     try {
-      // Call the backend login API endpoint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/v1/auth/login`, {
+      // Call the Next.js API route which handles Supabase auth with HttpOnly cookies
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: include cookies
         body: JSON.stringify({
           email,
           password
@@ -72,11 +72,7 @@ function LoginForm() {
         throw new Error(result.error?.message || 'Login failed');
       }
 
-      // Success - store tokens and redirect
-      if (result.data.accessToken) {
-        setAuthTokens(result.data.accessToken, result.data.refreshToken);
-      }
-
+      // Success - cookies are set automatically by the server
       setMessage('Login successful! Redirecting...');
 
       const redirectTo = getRedirectUrl(searchParams, '/dashboard');

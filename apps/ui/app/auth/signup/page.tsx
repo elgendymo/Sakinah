@@ -10,7 +10,6 @@ import {
   PersonAdd
 } from '@mui/icons-material';
 import Link from 'next/link';
-import { setAuthTokens } from '@/lib/auth-helpers';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
@@ -68,13 +67,13 @@ function SignupForm() {
     }
 
     try {
-      // Call the backend signup API endpoint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/v1/auth/signup`, {
+      // Call the Next.js API route which handles Supabase auth with HttpOnly cookies
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: include cookies
         body: JSON.stringify({
           email,
           password,
@@ -89,11 +88,7 @@ function SignupForm() {
         throw new Error(result.error?.message || 'Signup failed');
       }
 
-      // Success - save tokens if provided and redirect
-      if (result.data.accessToken) {
-        setAuthTokens(result.data.accessToken, result.data.refreshToken);
-      }
-
+      // Success - cookies are set automatically by the server
       setMessage('Account created successfully! Redirecting...');
       
       // Use the redirect URL from the response or default to onboarding
