@@ -7,7 +7,7 @@ import { configureDependencies } from './infrastructure/di/container';
 import { createApp } from './server';
 import { logger } from './shared/logger';
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3001;
 
 // Initialize DI container and start server
 (async () => {

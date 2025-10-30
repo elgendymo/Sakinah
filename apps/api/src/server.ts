@@ -32,8 +32,33 @@ export async function createApp(): Promise<Express> {
 
   // Security middleware
   app.use(helmet());
+  
+  // CORS configuration for Replit compatibility
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    'http://localhost:3004',
+    'http://localhost:5000'
+  ];
+  
+  if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
+  
+  if (process.env.REPLIT_DOMAINS) {
+    const replitDomain = process.env.REPLIT_DOMAINS.split(',')[0];
+    allowedOrigins.push(`https://${replitDomain}`);
+    allowedOrigins.push(`http://${replitDomain}`);
+  }
+  
   app.use(cors({
-    origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3004'],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
   }));
 
