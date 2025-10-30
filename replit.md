@@ -77,14 +77,43 @@ Cons: Requires manual translation management (no automatic translation)
 
 ### Authentication & Authorization
 
-**System**: Supabase Auth with passwordless magic links
+**System**: Supabase Auth with Email/Password Authentication
 
-- JWT-based stateless authentication
-- Row Level Security (RLS) at database level for data isolation
-- Cookie-based session management
-- Middleware for protected route enforcement
+**Security Architecture** (Updated: October 30, 2025):
+- **HttpOnly Cookies**: Auth tokens stored in secure, HttpOnly cookies (prevents XSS attacks)
+- **Next.js API Routes**: Authentication handled via Next.js API routes at `/api/auth/*`
+- **Direct Supabase Integration**: Frontend calls Next.js API routes which communicate directly with Supabase
+- **JWT-based Sessions**: Stateless authentication with access tokens (1-hour expiry) and refresh tokens (30-day expiry)
+- **Automatic Token Refresh**: Session endpoint automatically refreshes expired access tokens using refresh token
+- **Row Level Security (RLS)**: Database-level data isolation in Supabase
+- **Middleware Protection**: Next.js middleware enforces authentication on protected routes
 
-The passwordless approach aligns with Islamic values of simplicity while maintaining security. Alternative password-based auth was rejected for better UX and reduced password management burden.
+**Cookie Names**:
+- `sb-access-token`: JWT access token (HttpOnly, secure in production, 1-hour expiry)
+- `sb-refresh-token`: Refresh token for session renewal (HttpOnly, secure in production, 30-day expiry)
+
+**Authentication Flow**:
+1. User submits credentials via frontend form
+2. Frontend calls `/api/auth/login` or `/api/auth/signup` (Next.js API route)
+3. API route authenticates with Supabase using service role key
+4. On success, sets HttpOnly cookies with tokens (access: 1hr, refresh: 30 days)
+5. Middleware validates cookies on subsequent requests
+6. When access token expires, `/api/auth/session` automatically refreshes it using the refresh token
+7. Protected routes automatically redirect to login if unauthenticated
+
+**API Endpoints**:
+- `POST /api/auth/login`: Authenticate user and set cookies
+- `POST /api/auth/signup`: Create new user and set cookies
+- `POST /api/auth/logout`: Clear authentication cookies
+- `GET /api/auth/session`: Check session (auto-refreshes expired access tokens)
+- `POST /api/auth/refresh`: Manually refresh access token
+
+**Security Rationale**: 
+- HttpOnly cookies prevent JavaScript access to tokens (XSS protection)
+- Next.js API routes provide a secure bridge between frontend and Supabase in Replit environment
+- No tokens stored in localStorage (vulnerable to XSS attacks)
+- SameSite=Lax cookie policy prevents CSRF attacks
+- Automatic token refresh maintains user session without re-login for up to 30 days
 
 ### State Management
 

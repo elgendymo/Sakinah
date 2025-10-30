@@ -105,11 +105,12 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
     // Set secure HttpOnly cookies
+    // Access token expires in 1 hour (Supabase default), refresh token in 30 days
     response.cookies.set('sb-access-token', sessionData.session.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      maxAge: 60 * 60, // 1 hour to match Supabase token expiry
       path: '/'
     });
 
