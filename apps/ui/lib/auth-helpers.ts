@@ -43,8 +43,15 @@ export function clearAuthTokens() {
 }
 
 export function isDevMode(): boolean {
-  return process.env.NODE_ENV === 'development' &&
-         process.env.NEXT_PUBLIC_USE_SUPABASE !== 'true';
+  const isDev = typeof window !== 'undefined' 
+    ? window.location.hostname === 'localhost' || window.location.hostname.includes('.replit.dev')
+    : process.env.NODE_ENV === 'development';
+  
+  const useSupabase = typeof window !== 'undefined'
+    ? (window as any).__NEXT_DATA__?.props?.pageProps?.useSupabase
+    : process.env.NEXT_PUBLIC_USE_SUPABASE === 'true';
+  
+  return isDev && !useSupabase;
 }
 
 export function getRedirectUrl(searchParams: URLSearchParams, defaultUrl: string = '/dashboard'): string {
