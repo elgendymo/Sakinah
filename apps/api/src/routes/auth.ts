@@ -109,7 +109,25 @@ router.post('/signup', validateRequest(SignupRequestSchema), async (req: Request
       // Don't fail the signup, but log the error
     }
 
-    requestLogger.info('User created successfully', {
+    // Sign in the newly created user to get session tokens
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (sessionError || !sessionData.session) {
+      requestLogger.error('Auto-login after signup failed', { error: sessionError?.message });
+      // User was created but couldn't be logged in - they'll need to login manually
+      const response = createSuccessResponse({
+        message: 'User created successfully. Please log in.',
+        userId: data.user.id,
+        redirectTo: '/auth/login'
+      }, traceId);
+      res.status(201).json(response);
+      return;
+    }
+
+    requestLogger.info('User created and logged in successfully', {
       email,
       firstName,
       gender,
@@ -119,6 +137,12 @@ router.post('/signup', validateRequest(SignupRequestSchema), async (req: Request
     const response = createSuccessResponse({
       message: 'User created successfully',
       userId: data.user.id,
+      accessToken: sessionData.session.access_token,
+      refreshToken: sessionData.session.refresh_token,
+      user: {
+        id: sessionData.user.id,
+        email: sessionData.user.email
+      },
       redirectTo: '/onboarding/welcome'
     }, traceId);
     res.status(201).json(response);
