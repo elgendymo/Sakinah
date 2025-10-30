@@ -4,6 +4,7 @@ const withNextIntl = require('next-intl/plugin')('./i18n.ts');
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@sakinah/types', '@sakinah/ui'],
+  allowedDevOrigins: process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',') : undefined,
   experimental: {
     serverActions: {
       allowedOrigins: ['*']
