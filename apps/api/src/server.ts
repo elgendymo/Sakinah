@@ -53,10 +53,15 @@ export async function createApp(): Promise<Express> {
   
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(null, true);
+        callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
