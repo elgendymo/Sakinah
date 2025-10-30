@@ -43,15 +43,16 @@ export function clearAuthTokens() {
 }
 
 export function isDevMode(): boolean {
-  const isDev = typeof window !== 'undefined' 
-    ? window.location.hostname === 'localhost' || window.location.hostname.includes('.replit.dev')
-    : process.env.NODE_ENV === 'development';
+  // Dev mode = NOT using real Supabase authentication
+  // We use Supabase auth when explicitly enabled OR in production
+  const forceSupabase = process.env.NEXT_PUBLIC_USE_SUPABASE === 'true';
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  const useSupabase = typeof window !== 'undefined'
-    ? (window as any).__NEXT_DATA__?.props?.pageProps?.useSupabase
-    : process.env.NEXT_PUBLIC_USE_SUPABASE === 'true';
+  // Use real Supabase auth if forced OR in production
+  const usingSupabaseAuth = forceSupabase || isProduction;
   
-  return isDev && !useSupabase;
+  // Dev mode is when NOT using Supabase auth
+  return !usingSupabaseAuth;
 }
 
 export function getRedirectUrl(searchParams: URLSearchParams, defaultUrl: string = '/dashboard'): string {

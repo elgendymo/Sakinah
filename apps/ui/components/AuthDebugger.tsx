@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { isDevMode } from '@/lib/auth-helpers';
 
 export default function AuthDebugger() {
   const [authInfo, setAuthInfo] = useState<{
@@ -26,8 +27,7 @@ export default function AuthDebugger() {
         }
       });
 
-      const isDev = process.env.NODE_ENV === 'development' &&
-                    process.env.NEXT_PUBLIC_USE_SUPABASE !== 'true';
+      const isDev = isDevMode();
 
       setAuthInfo({
         cookies,

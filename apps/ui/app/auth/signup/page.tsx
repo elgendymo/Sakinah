@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import {
   Email,
   AutoAwesome,
@@ -22,7 +22,6 @@ function SignupForm() {
   const [message, setMessage] = useState('');
   const [isDevelopment, setIsDevelopment] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
