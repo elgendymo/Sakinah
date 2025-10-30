@@ -6,18 +6,21 @@ node_modules/
 .next/
 out/
 dist/
-.vercel/
 .turbo/
 
-# env
+# env files (never commit these!)
 .env
+.env*
 .env*.local
+.env.production
+.env.development
 
 # logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
 # misc
 .DS_Store
@@ -36,4 +39,6 @@ coverage/
 
 # typescript
 *.tsbuildinfo
-.vercel
+
+# Replit
+.replit_cache/
