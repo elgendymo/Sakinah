@@ -8,7 +8,7 @@ ADD COLUMN gender VARCHAR(20) CHECK (gender IN ('male', 'female'));
 
 -- Survey responses table - stores individual question responses
 CREATE TABLE survey_responses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     phase_number INTEGER NOT NULL CHECK (phase_number BETWEEN 1 AND 3),
     question_id VARCHAR(50) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE survey_responses (
 
 -- Survey results table - stores final analysis and recommendations
 CREATE TABLE survey_results (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
     disease_scores JSONB NOT NULL, -- {envy: 4, arrogance: 2, ...}
     critical_diseases JSONB NOT NULL, -- List of diseases with scores 4-5 for Tazkiyah plan
