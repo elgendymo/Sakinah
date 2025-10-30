@@ -1,5 +1,5 @@
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Users table (extends Supabase auth.users)
 CREATE TABLE users (
@@ -18,7 +18,7 @@ CREATE TABLE profiles (
 
 -- Content snippets (admin-seeded)
 CREATE TABLE content_snippets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type TEXT CHECK (type IN ('ayah', 'hadith', 'dua', 'note')) NOT NULL,
   text TEXT NOT NULL,
   ref TEXT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE content_snippets (
 
 -- Plans table
 CREATE TABLE plans (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   kind TEXT CHECK (kind IN ('takhliyah', 'tahliyah')) NOT NULL,
   target TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE plans (
 
 -- Habits table
 CREATE TABLE habits (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   plan_id UUID REFERENCES plans(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE habits (
 
 -- Habit completions table
 CREATE TABLE habit_completions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   habit_id UUID REFERENCES habits(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   completed_on DATE NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE habit_completions (
 
 -- Check-ins table
 CREATE TABLE checkins (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
   mood SMALLINT CHECK (mood >= -2 AND mood <= 2),
@@ -74,7 +74,7 @@ CREATE TABLE checkins (
 
 -- Journals table
 CREATE TABLE journals (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   content TEXT NOT NULL,
   tags TEXT[],

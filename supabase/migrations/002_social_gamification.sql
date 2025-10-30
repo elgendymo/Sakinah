@@ -2,7 +2,7 @@
 
 -- Social Circles table
 CREATE TABLE circles (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL CHECK (length(name) >= 3 AND length(name) <= 100),
   description TEXT CHECK (length(description) <= 500),
   creator_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE circles (
 
 -- Circle memberships table
 CREATE TABLE circle_memberships (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   circle_id UUID REFERENCES circles(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   role TEXT CHECK (role IN ('creator', 'member')) DEFAULT 'member',
@@ -25,7 +25,7 @@ CREATE TABLE circle_memberships (
 
 -- Circle encouragements table
 CREATE TABLE circle_encouragements (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   circle_id UUID REFERENCES circles(id) ON DELETE CASCADE NOT NULL,
   from_user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   to_user_id UUID REFERENCES users(id) ON DELETE SET NULL,

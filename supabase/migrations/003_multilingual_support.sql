@@ -7,7 +7,7 @@ ALTER TABLE profiles ADD COLUMN preferred_font TEXT DEFAULT 'default';
 
 -- Create multilingual content table for translatable content
 CREATE TABLE content_translations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   content_id UUID REFERENCES content_snippets(id) ON DELETE CASCADE NOT NULL,
   locale TEXT CHECK (locale IN ('en', 'ar')) NOT NULL,
   title TEXT,
