@@ -76,15 +76,15 @@ function LoginForm() {
         setMockAuthCookie();
 
         // Simulate a brief loading period
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Get redirect URL from query params
         const redirectTo = getRedirectUrl(searchParams, '/dashboard');
 
         console.log('Development login: redirecting to', redirectTo);
 
-        // Redirect to the intended destination
-        router.push(redirectTo);
+        // Use window.location.href for reliable redirect
+        window.location.href = redirectTo;
         return;
       }
 
@@ -117,8 +117,8 @@ function LoginForm() {
       console.log('Production login: redirecting to', redirectTo);
 
       setTimeout(() => {
-        router.push(redirectTo);
-      }, 1000);
+        window.location.href = redirectTo;
+      }, 500);
 
     } catch (error: any) {
       setMessage(error.message || 'An error occurred');
