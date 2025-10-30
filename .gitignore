@@ -43,18 +43,4 @@ coverage/
 # Replit
 .replit_cache/
 
-# Sensitive setup and configuration files (never commit these!)
-SSH_KEY_SETUP.md
-SUPABASE_SETUP.md
-REPLIT_DEPLOYMENT.md
-CHANGES_SUMMARY.txt
-MIGRATION_COMPLETE.md
-setup-github-auth.sh
-setup-ssh-key.sh
-verify-supabase.sh
-build-replit.sh
-start-production.sh
-*.vercelignore
-vercel.json
-tsconfig.build.json
 
