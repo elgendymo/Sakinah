@@ -8,9 +8,9 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
-    "build": "npm run build --prefix apps/api && npm run build --prefix apps/ui",
+    "build": "npm --prefix apps/api run build && npm --prefix apps/ui run build",
     "build:turbo": "turbo run build",
-    "start": "npm run start --prefix apps/api & npm run start --prefix apps/ui",
+    "start": "npm --prefix apps/api run start & npm --prefix apps/ui run start",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:e2e": "playwright test",

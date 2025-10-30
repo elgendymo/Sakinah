@@ -54,10 +54,14 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 34243
+externalPort = 3002
+
+[[ports]]
 localPort = 45501
 externalPort = 3000
 
 [deployment]
 deploymentTarget = "vm"
-build = ["bash", "-c", "npm install --legacy-peer-deps && npm run build --prefix apps/api && npm run build --prefix apps/ui"]
-run = ["bash", "-c", "npm run start --prefix apps/api & npm run start --prefix apps/ui & wait"]
+build = ["bash", "-c", "npm install --legacy-peer-deps && npm --prefix apps/api run build && npm --prefix apps/ui run build"]
+run = ["bash", "-c", "npm --prefix apps/api run start & npm --prefix apps/ui run start & wait"]

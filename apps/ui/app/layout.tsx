@@ -62,8 +62,6 @@ export default async function RootLayout({
         <link rel="apple-touch-startup-image" href="/icons/apple-splash-1242-2208.jpg" sizes="1242x2208" />
         <link rel="apple-touch-startup-image" href="/icons/apple-splash-750-1334.jpg" sizes="750x1334" />
         <link rel="apple-touch-startup-image" href="/icons/apple-splash-828-1792.jpg" sizes="828x1792" />
-
-        <title></title>
       </head>
       <body
         className={`font-sans antialiased ${isRTL ? 'rtl arabic-body' : 'ltr'}`}
