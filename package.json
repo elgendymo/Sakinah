@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "build:prod": "npm install --legacy-peer-deps && npm run build",
+    "start:prod": "./start-production.sh",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:e2e": "playwright test",
@@ -37,8 +39,7 @@
     "@googlemaps/js-api-loader": "1.16.10",
     "adhan": "4.4.3",
     "framer-motion": "^12.23.22",
-    "react-google-autocomplete": "2.7.5",
-    "vercel": "^41.0.2"
+    "react-google-autocomplete": "2.7.5"
   },
   "overrides": {
     "simple-swizzle": "0.2.4",

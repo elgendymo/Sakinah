@@ -1,9 +1,14 @@
 modules = ["web", "nodejs-20"]
+
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
+
+[deployment]
+build = ["sh", "-c", "npm install --legacy-peer-deps && npm run build"]
+run = ["sh", "-c", "./start-production.sh"]
 
 [workflows]
 runButton = "Project"
