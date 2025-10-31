@@ -61,6 +61,13 @@ Layered structure:
 
 Alternatives considered: Microservices were rejected due to complexity overhead for the current scale. The modular monolith provides clear boundaries while maintaining deployment simplicity.
 
+**Production Build Configuration** (Added: October 31, 2025):
+- Dedicated `tsconfig.build.json` for production TypeScript compilation
+- Excludes test files, development scripts, and tooling from production builds
+- Outputs compiled JavaScript to `dist/` directory with source maps and type declarations
+- Build command: `npm run build` (runs `tsc --project tsconfig.build.json`)
+- Entry point: `dist/index.js` as specified in package.json
+
 ### Internationalization (i18n)
 
 **Library**: next-intl v4.3.9
