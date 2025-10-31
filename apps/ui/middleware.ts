@@ -139,7 +139,7 @@ function makeSurveyAccess(progress: NonNullable<ProgressPayload["data"]>["progre
                 case Phase.Welcome:
                     return true;
                 case Phase.Phase1:
-                    return currentPhase >= Phase.Phase1;
+                    return currentPhase === Phase.Welcome || (currentPhase >= Phase.Phase1 && !phase1Completed);
                 case Phase.Phase2:
                     return phase1Completed && currentPhase >= Phase.Phase2;
                 case Phase.Reflection:
