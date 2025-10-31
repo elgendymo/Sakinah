@@ -8,7 +8,7 @@ channel = "stable-25_05"
 
 [deployment]
 build = ["bash", "-c", "npm install --legacy-peer-deps && npm run build"]
-run = ["bash", "-c", "cd apps/api && npm start & cd apps/ui && npm start"]
+run = ["bash", "-c", "./start-production.sh"]
 deploymentTarget = "autoscale"
 
 [workflows]
