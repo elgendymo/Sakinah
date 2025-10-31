@@ -224,7 +224,7 @@ export class ConnectionMonitor {
 
     let disconnectionCount = 0;
     let totalOfflineTime = 0;
-    let reconnectTimes: number[] = [];
+    const reconnectTimes: number[] = [];
     let currentOfflineStart: number | null = null;
 
     for (let i = 0; i < recentHistory.length; i++) {

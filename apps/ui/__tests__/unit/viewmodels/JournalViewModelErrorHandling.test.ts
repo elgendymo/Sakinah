@@ -156,7 +156,7 @@ describe('JournalViewModel Error Handling Improvements', () => {
 
     // Mock ViewModel state handler
     const createMockState = () => {
-      let state = {
+      const state = {
         isLoadingEntries: false,
         error: null as Error | null,
         entries: [] as any[],
