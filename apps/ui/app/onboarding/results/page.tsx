@@ -7,6 +7,7 @@ import PageContainer from '@/components/PageContainer';
 import ProgressIndicator from '@/components/survey/ui/ProgressIndicator';
 import { useSurveyLanguage } from '@/components/survey/hooks/useSurveyLanguage';
 import type { SurveyResults, Disease } from '@sakinah/types';
+import { buildApiUrl } from '@/lib/utils/apiUrl';
 
 // Helper function to transform diseases into positive virtues
 const getSpiritualVirtues = () => {
@@ -67,8 +68,7 @@ export default function ResultsPage() {
     const loadResults = async () => {
       try {
         setIsLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-        const response = await fetch(`${apiUrl}/v1/onboarding/results`, {
+        const response = await fetch(buildApiUrl('/v1/onboarding/results'), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -102,8 +102,7 @@ export default function ResultsPage() {
     if (!results) return;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/v1/onboarding/export/${format}/${results.id}`, {
+      const response = await fetch(buildApiUrl(`/v1/onboarding/export/${format}/${results.id}`), {
         method: 'GET',
       });
 
