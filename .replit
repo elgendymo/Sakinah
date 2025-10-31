@@ -7,9 +7,9 @@ expertMode = true
 channel = "stable-25_05"
 
 [deployment]
-build = ["bash", "-c", "npm install --legacy-peer-deps && npm run build"]
-run = ["bash", "-c", "./start-production.sh"]
-deploymentTarget = "autoscale"
+build = ["sh", "-c", "npm install --legacy-peer-deps && npm run build"]
+run = ["sh", "-c", "./start-production.sh"]
+deploymentTarget = "cloudvm"
 
 [run]
 command = ["bash", "-c", "./start-dev-replit.sh"]
@@ -62,6 +62,3 @@ externalPort = 3001
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 45501
-externalPort = 3000

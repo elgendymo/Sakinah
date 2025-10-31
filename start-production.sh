@@ -75,10 +75,10 @@ if ! kill -0 $API_PID 2>/dev/null; then
 fi
 echo "✅ API server is running"
 
-# Start Next.js frontend on port 3000
-echo "🌐 Starting Next.js frontend on port 3000..."
+# Start Next.js frontend on port 5000 (mapped to external 80)
+echo "🌐 Starting Next.js frontend on port 5000..."
 # In Replit, use 0.0.0.0 to accept connections from the proxy
-(cd "${REPO_ROOT}/apps/ui" && PORT=3000 HOST=0.0.0.0 npx next start -p 3000 -H 0.0.0.0) > "${REPO_ROOT}/frontend.log" 2>&1 &
+(cd "${REPO_ROOT}/apps/ui" && PORT=5000 HOST=0.0.0.0 npx next start -p 5000 -H 0.0.0.0) > "${REPO_ROOT}/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 echo "   Frontend server PID: $FRONTEND_PID"
 
@@ -98,7 +98,7 @@ echo ""
 echo "✨ Both servers started successfully!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  📊 API:      http://localhost:3001  (PID: $API_PID)"
-echo "  🖥️  Frontend: http://localhost:3000  (PID: $FRONTEND_PID)"
+echo "  🖥️  Frontend: http://localhost:5000  (PID: $FRONTEND_PID)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "📝 Logs:"
