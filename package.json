@@ -39,6 +39,8 @@
     "@googlemaps/js-api-loader": "1.16.10",
     "adhan": "4.4.3",
     "framer-motion": "^12.23.22",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-google-autocomplete": "2.7.5",
     "vercel": "^41.0.2"
   },
