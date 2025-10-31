@@ -1,15 +1,27 @@
 # Sakinah - Muslim Spiritual Growth Platform
 
-A privacy-first, Shariah-compliant web application for spiritual purification (tazkiyah), habit building, and righteous companionship.
+Sakinah is a privacy-first, Shariah-compliant digital companion for Muslims seeking purposeful spiritual growth. It weaves classical disciplines of tazkiyah with modern habit design to help you purify the heart, nurture consistent worship, and stay anchored in righteous companionship—without compromising sincerity or data ownership.
+
+Whether you're rebuilding your routine after hardship, guiding a halaqah, or simply striving for more intentional worship, Sakinah gathers the reminders, plans, and reflections you need into one spiritually safe space.
+
+### Highlights
+
+- **Holistic transformation** – Pair takhlīyah (removing diseases) with taḥlīyah (adorning virtues) through guided programs and micro-habits.
+- **Guided daily rhythm** – Begin each morning with sincere intentions and end every evening with muḥāsabah-driven reflection.
+- **Supportive companionship** – Form intimate circles for du'a, encouragement, and accountability without the noise of public timelines.
+- **Built on trust** – Privacy-first architecture, RLS-secured data, and no vanity metrics to protect ikhlāṣ.
 
 ## Features
 
 ### Core Modules
-- **Tazkiyah Engine**: Takhliyah (purification from diseases) & Taḥliyah (adorning with virtues)
-- **Daily Rituals**: Morning intentions and evening muhasabah (self-accountability)
-- **Habit Tracker**: Build consistent spiritual habits with streak tracking
-- **AI Suggestions**: Rule-based or LLM-powered spiritual guidance
-- **Privacy-First**: All data private by default, no social validation metrics
+- **Tazkiyah Engine**: Diagnose spiritual diseases and cultivate virtues with scholar-informed plans and AI-assisted suggestions.
+- **Daily Rituals**: Structure mornings and evenings around dhikr, intentions, and reflective prompts grounded in Quran and Sunnah.
+- **Habit Tracker**: Build consistent acts of worship with streaks, reminders, and context-aware nudges.
+- **Spiritual Journal**: Capture private reflections, victories, and lessons with thematic tags and Islamic prompts.
+- **Social Circles**: Stay connected to a small, righteous cohort through anonymous encouragement and shared goals.
+- **AI Suggestions**: Access rule-based or LLM-powered guidance reviewed for spiritual safety.
+- **Khayr Gamification**: Celebrate steady progress through spiritually grounded achievements and Khayr XP.
+- **Privacy-First**: Own your data with RLS-secured Supabase storage, optional local-first modes, and zero public profiles.
 
 ## Tech Stack
 
@@ -101,4 +113,4 @@ This project aims to help Muslims in their spiritual journey. Contributions that
 
 ## License
 
-This project is intended for the benefit of the Muslim ummah. Please use responsibly and in accordance with Islamic principles.
+This project is intended for the benefit of the Muslim ummah. Please use it responsibly and in accordance with Islamic principles.
