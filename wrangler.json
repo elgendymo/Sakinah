@@ -1,5 +1,5 @@
 {
-  "name": "sakinah-app",
+  "name": "sakinah",
   "compatibility_date": "2025-10-01",
   "main": "worker.js",
   "send_metrics": false
