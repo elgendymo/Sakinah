@@ -11,6 +11,9 @@ build = ["bash", "-c", "npm install --legacy-peer-deps && npm run build"]
 run = ["bash", "-c", "./start-production.sh"]
 deploymentTarget = "autoscale"
 
+[run]
+command = ["bash", "-c", "./start-dev-replit.sh"]
+
 [workflows]
 runButton = "Project"
 
@@ -37,7 +40,7 @@ outputType = "webview"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd apps/ui && npm run dev"
-waitForPort = 5000
+waitForPort = 3000
 
 [[workflows.workflow]]
 name = "api"

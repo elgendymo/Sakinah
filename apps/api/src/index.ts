@@ -1,3 +1,11 @@
+// Configure module-alias before any imports that use path aliases
+import { addAliases } from 'module-alias';
+
+// Set up path aliases - __dirname will be dist folder, so alias points to dist
+addAliases({
+  '@': __dirname,
+});
+
 import 'reflect-metadata';
 import dotenv from 'dotenv';
 

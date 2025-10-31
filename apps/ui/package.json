@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 5000 -H 0.0.0.0",
+    "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "next build",
     "build:cf": "next build && npx @cloudflare/next-on-pages",
-    "start": "next start -p 5000 -H 0.0.0.0",
+    "start": "next start -p 3000 -H 0.0.0.0",
     "lint": "node ../../node_modules/eslint/bin/eslint.js --ext .ts,.tsx --format unix .",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf .next .turbo"
