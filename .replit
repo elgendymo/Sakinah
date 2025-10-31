@@ -7,8 +7,9 @@ expertMode = true
 channel = "stable-25_05"
 
 [deployment]
-build = ["sh", "-c", "npm install --legacy-peer-deps && npm run build"]
-run = ["sh", "-c", "./start-production.sh"]
+build = ["bash", "-c", "npm install --legacy-peer-deps && npm run build"]
+run = ["bash", "-c", "cd apps/api && npm start & cd apps/ui && npm start"]
+deploymentTarget = "autoscale"
 
 [workflows]
 runButton = "Project"
