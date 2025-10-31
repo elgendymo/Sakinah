@@ -2,12 +2,13 @@ import { ApiService } from './ApiService';
 import { InterceptorChain } from './interceptors';
 import { TransformBuilder } from './transformers';
 import { createCacheService } from '../cache/CacheService';
+import { getApiBaseUrlWithTrailingSlash } from '@/lib/utils/apiUrl';
 
 /**
  * Create the default API service instance for Sakinah
  */
 function createApiService(): ApiService {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/';
+  const baseUrl = getApiBaseUrlWithTrailingSlash();
 
   // Create cache service
   const cacheService = createCacheService();

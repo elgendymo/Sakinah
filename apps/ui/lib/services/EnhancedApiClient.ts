@@ -2,6 +2,7 @@ import { ErrorCode } from '../constants/errorCodes';
 import { normalizeErrorCode } from '../ui/errorMap';
 import { errorService, ErrorContext, RecoveryAction } from './ErrorService';
 import { ApiRequestError } from '../net/apiFetch.client';
+import { getApiBaseUrlWithTrailingSlash } from '@/lib/utils/apiUrl';
 
 /**
  * Enhanced API Request Options with error handling capabilities
@@ -473,7 +474,7 @@ export class EnhancedApiClient {
 }
 
 // Create enhanced API client instance
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = getApiBaseUrlWithTrailingSlash();
 export const enhancedApiClient = new EnhancedApiClient(API_BASE_URL);
 
 // Export for use in services

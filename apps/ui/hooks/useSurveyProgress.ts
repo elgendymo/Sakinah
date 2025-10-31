@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { buildApiUrl } from '@/lib/utils/apiUrl';
 
 export interface SurveyProgress {
   userId: string;
@@ -87,8 +88,7 @@ export function useSurveyProgress(): SurveyProgressHook {
    */
   const fetchProgress = useCallback(async (): Promise<SurveyProgress | null> => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/v1/onboarding/progress`, {
+      const response = await fetch(buildApiUrl('/v1/onboarding/progress'), {
         method: 'GET',
         credentials: 'include',
         headers: {

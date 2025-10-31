@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { LikertScore } from '@sakinah/types';
+import { buildApiUrl } from '@/lib/utils/apiUrl';
 
 export interface SurveyResponse {
   score: LikertScore;
@@ -142,14 +143,8 @@ export function useSurveyState(): UseSurveyStateReturn {
 
     try {
 
-      // Get API base URL - hardcode for now since env vars seem to be an issue
-      const apiBaseUrl = 'http://localhost:3001/api';
-
-      // Ensure we don't have double slashes by trimming trailing slash from base URL
-      const cleanBaseUrl = apiBaseUrl.replace(/\/$/, '');
-
       if (phase === 1) {
-        endpoint = `${cleanBaseUrl}/v1/onboarding/phase1`;
+        endpoint = buildApiUrl('/v1/onboarding/phase1');
         // Transform responses to Phase 1 format
         payload = {
           envyScore: state.responses.envy?.score,
@@ -162,7 +157,7 @@ export function useSurveyState(): UseSurveyStateReturn {
           lustNote: state.responses.lust?.note || ''
         };
       } else if (phase === 2) {
-        endpoint = `${cleanBaseUrl}/v1/onboarding/phase2`;
+        endpoint = buildApiUrl('/v1/onboarding/phase2');
         // Transform responses to Phase 2 format
         payload = {
           angerScore: state.responses.anger?.score,
@@ -181,7 +176,7 @@ export function useSurveyState(): UseSurveyStateReturn {
           despairNote: state.responses.despair?.note || ''
         };
       } else if (phase === 3) {
-        endpoint = `${cleanBaseUrl}/v1/onboarding/reflection`;
+        endpoint = buildApiUrl('/v1/onboarding/reflection');
         payload = state.reflectionAnswers;
       }
 
