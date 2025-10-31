@@ -232,7 +232,7 @@ export function useSurveyState(): UseSurveyStateReturn {
         console.log(`Phase ${phase} saved successfully to API`);
         return true;
       } else {
-        let errorDetails: {};
+        let errorDetails: Record<string, unknown>;
         try {
           const errorText = await response.text();
           // Try to parse as JSON first

@@ -15,8 +15,8 @@ function ensureApiSuffix(url: string): string {
  * Preference order:
  * 1. Explicit API URL env vars (NEXT_PUBLIC_API_URL, API_URL)
  * 2. Site URL env vars (NEXT_PUBLIC_SITE_URL, SITE_URL) with `/api` suffix
- * 3. Browser location (for client-side only) with `/api` suffix
- * 4. Replit domain configuration (if available) with `/api` suffix
+ * 3. Replit domain configuration (if available) with `/api` suffix
+ * 4. Browser location (for client-side only) with `/api` suffix
  * 5. Local development default (`http://localhost:3001/api`)
  */
 export function getApiBaseUrl(): string {
@@ -28,10 +28,6 @@ export function getApiBaseUrl(): string {
   const siteEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
   if (siteEnv && siteEnv.trim().length > 0) {
     return ensureApiSuffix(siteEnv);
-  }
-
-  if (typeof window !== 'undefined' && window.location) {
-    return ensureApiSuffix(window.location.origin);
   }
 
   const replitDomains = process.env.NEXT_PUBLIC_REPLIT_DOMAINS || process.env.REPLIT_DOMAINS;
@@ -48,6 +44,10 @@ export function getApiBaseUrl(): string {
 
       return ensureApiSuffix(sanitizedDomain);
     }
+  }
+
+  if (typeof window !== 'undefined' && window.location) {
+    return ensureApiSuffix(window.location.origin);
   }
 
   return trimTrailingSlashes(DEFAULT_API_URL);

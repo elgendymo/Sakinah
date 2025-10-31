@@ -77,7 +77,7 @@ export default function CheckinPage() {
           if (checkinData.reflection) {
             const parts = checkinData.reflection.split('\n\n');
             let mainReflection = '';
-            let extractedGratitude: string[] = ['', '', ''];
+            const extractedGratitude: string[] = ['', '', ''];
             let extractedImprovements = '';
 
             for (const part of parts) {
