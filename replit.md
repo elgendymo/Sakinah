@@ -203,9 +203,23 @@ The rules-based approach ensures authenticity and avoids hallucinations, while L
 
 ### Deployment Platforms
 
-**Frontend**: Vercel (Next.js native deployment)
-**Backend**: Vercel serverless functions (current) or dedicated Node.js server (alternative)
-**Database**: Supabase cloud hosting
-**Cache**: Redis Cloud (optional, for production scaling)
+**Replit Autoscale Deployment** (Current, Updated: October 31, 2025):
+- **Deployment Type**: Autoscale (stateless web applications)
+- **Build Command**: `npm install --legacy-peer-deps && npm run build`
+  - Installs all dependencies with legacy peer deps flag
+  - Runs Turborepo build to compile all packages (API, UI, types, ui-lib)
+- **Run Command**: `./start-production.sh`
+  - Starts both API (port 3001) and Frontend (port 5000) in parallel
+  - Port mapping: Frontend 5000 → External 80, API 3001 → External 3001
+- **Production Scripts**:
+  - API: `npm start` → `node dist/index.js` (compiled TypeScript)
+  - Frontend: `npm start` → `next start -p 5000 -H 0.0.0.0` (Next.js production server)
+- **Rationale**: Autoscale provides automatic scaling based on traffic, cost-effective for variable workloads, and zero-downtime deployments
 
-The Vercel deployment provides zero-config deployments, automatic HTTPS, and global CDN, making it ideal for the Next.js application while keeping infrastructure complexity low.
+**Vercel Deployment** (Alternative):
+- **Frontend**: Vercel (Next.js native deployment)
+- **Backend**: Vercel serverless functions or dedicated Node.js server
+- **Database**: Supabase cloud hosting
+- **Cache**: Redis Cloud (optional, for production scaling)
+
+The Replit Autoscale deployment is optimized for the monorepo structure, allowing both frontend and backend to run as a single deployment unit. Vercel deployment remains an alternative for separate frontend/backend deployments with CDN benefits.
